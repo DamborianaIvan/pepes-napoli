@@ -5,34 +5,35 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 require('dotenv').config();
 
-// Registro
-router.post('/register', async (req, res) => {
-  const { nombreUsuario, password, nombre, rol, email } = req.body;
-    console.log(req.body) 
-  try {
-    const existingUser = await Usuario.findOne({ nombreUsuario });
-    if (existingUser) {
-      return res.status(400).json({ message: 'El nombre de usuario ya está en uso' });
-    }
+// // Registro
+// router.post('/register', async (req, res) => {
+//   const { nombreUsuario, password, nombre, rol, email } = req.body;
+//     console.log(req.body) 
+//   try {
+//     const existingUser = await Usuario.findOne({ nombreUsuario });
+//     if (existingUser) {
+//       return res.status(400).json({ message: 'El nombre de usuario ya está en uso' });
+//     }
 
-    const nuevoUsuario = new Usuario({ nombreUsuario, password, nombre, rol, email });
-    await nuevoUsuario.save();
+//     const nuevoUsuario = new Usuario({ nombreUsuario, password, nombre, rol, email });
+//     await nuevoUsuario.save();
 
-    res.status(201).json({ message: 'Usuario creado con éxito' });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Error al registrar el usuario' });
-  }
-});
+//     res.status(201).json({ message: 'Usuario creado con éxito' });
+//   } catch (err) {
+//     console.error(err);
+//     res.status(500).json({ message: 'Error al registrar el usuario' });
+//   }
+// });
 
 // Login
 router.post('/login', async (req, res) => {
   const { nombreUsuario, password } = req.body;
-console.log(req.body) 
   try {
     const usuario = await Usuario.findOne({ nombreUsuario });
     if (!usuario) {
-      return res.status(400).json({ message: 'Usuario o contraseña incorrectos', usuario:nombreUsuario });
+      return res.status(400).json({
+      message: 'Usuario o contraseña incorrectos'
+    });
     }
 
     const isMatch = await usuario.matchPassword(password);
@@ -67,50 +68,6 @@ module.exports = router;
  * tags:
  *   name: Auth
  *   description: Autenticación de usuarios
- */
-
-/**
- * @swagger
- * /api/auth/register:
- *   post:
- *     summary: Registrar un nuevo usuario
- *     tags: [Auth]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - nombre
- *               - email
- *               - password
- *               - rol
- *             properties:
- *               nombre:
- *                 type: string
- *               email:
- *                 type: string
- *                 format: email
- *               password:
- *                 type: string
- *               rol:
- *                 type: string
- *                 enum: [owner, delivery]
- *     responses:
- *       200:
- *         description: Usuario registrado exitosamente con token JWT
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 token:
- *                   type: string
- *       400:
- *         description: Email ya registrado
- *       500:
- *         description: Error en el servidor
  */
 
 /**
