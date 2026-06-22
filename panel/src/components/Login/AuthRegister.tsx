@@ -166,7 +166,7 @@ export const AuthRegister = () => {
             onChange={(e) => setRol(e.target.value)}
             label="Rol"
           >
-            <MenuItem value="owner">Owner</MenuItem>
+            <MenuItem value="admin">admin</MenuItem>
             <MenuItem value="delivery">Delivery</MenuItem>
           </Select>
         </FormControl>

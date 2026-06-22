@@ -20,8 +20,8 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
-// ✅ Crear producto (solo "owner")
-router.post('/', protect, restrictTo('owner'), upload.single("image"), async (req, res) => {
+// ✅ Crear producto (solo "admin")
+router.post('/', protect, restrictTo('admin'), upload.single("image"), async (req, res) => {
   try {
     const { category, name, description, price, image, disponible } = req.body;
 
@@ -68,8 +68,8 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// ✅ Actualizar producto (solo "owner")
-router.put('/:id', protect, restrictTo('owner'), upload.single("image"), async (req, res) => {
+// ✅ Actualizar producto (solo "admin")
+router.put('/:id', protect, restrictTo('admin'), upload.single("image"), async (req, res) => {
   try {
     const productoActualizado = await Producto.findByIdAndUpdate(req.params.id, req.body, {
       new: true,
@@ -85,8 +85,8 @@ router.put('/:id', protect, restrictTo('owner'), upload.single("image"), async (
   }
 });
 
-// ✅ Eliminar producto (solo "owner")
-router.delete('/:id', protect, restrictTo('owner'), async (req, res) => {
+// ✅ Eliminar producto (solo "admin")
+router.delete('/:id', protect, restrictTo('admin'), async (req, res) => {
   try {
     const productoEliminado = await Producto.findByIdAndDelete(req.params.id);
     if (!productoEliminado) return res.status(404).json({ message: 'Producto no encontrado' });
@@ -98,7 +98,7 @@ router.delete('/:id', protect, restrictTo('owner'), async (req, res) => {
 });
 
 // ✅ Cambiar disponibilidad de un producto (individual)
-router.patch('/:id/disponible', protect, restrictTo('owner'), async (req, res) => {
+router.patch('/:id/disponible', protect, restrictTo('admin'), async (req, res) => {
   try {
     const { disponible } = req.body;
     if (typeof disponible !== "boolean") {
@@ -133,7 +133,7 @@ router.get('/configuracion/stock-general', async (req, res) => {
 });
 
 // ✅ Actualizar stock general (activar / desactivar todos)
-router.patch('/configuracion/stock-general', protect, restrictTo('owner'), async (req, res) => {
+router.patch('/configuracion/stock-general', protect, restrictTo('admin'), async (req, res) => {
   try {
     const { stockGeneralActivo } = req.body;
     if (typeof stockGeneralActivo !== "boolean") {
@@ -268,7 +268,7 @@ module.exports = router;
  *         description: Error al obtener productos
  *
  *   post:
- *     summary: Crear un nuevo producto (solo owner)
+ *     summary: Crear un nuevo producto (solo admin)
  *     tags: [Productos]
  *     security:
  *       - bearerAuth: []
@@ -340,7 +340,7 @@ module.exports = router;
  *       500:
  *         description: Error al obtener el producto
  *   put:
- *     summary: Actualizar un producto (solo owner)
+ *     summary: Actualizar un producto (solo admin)
  *     tags: [Productos]
  *     security:
  *       - bearerAuth: []
@@ -390,7 +390,7 @@ module.exports = router;
  *       500:
  *         description: Error al actualizar el producto
  *   delete:
- *     summary: Eliminar un producto (solo owner)
+ *     summary: Eliminar un producto (solo admin)
  *     tags: [Productos]
  *     security:
  *       - bearerAuth: []
@@ -423,7 +423,7 @@ module.exports = router;
  * @swagger
  * /api/productos/{id}/disponible:
  *   patch:
- *     summary: Cambiar disponibilidad de un producto (solo owner)
+ *     summary: Cambiar disponibilidad de un producto (solo admin)
  *     tags: [Productos]
  *     security:
  *       - bearerAuth: []
@@ -479,7 +479,7 @@ module.exports = router;
  *       500:
  *         description: Error al obtener configuración global
  *   patch:
- *     summary: Actualizar estado del stock general (solo owner)
+ *     summary: Actualizar estado del stock general (solo admin)
  *     tags: [ConfiguracionGlobal]
  *     security:
  *       - bearerAuth: []

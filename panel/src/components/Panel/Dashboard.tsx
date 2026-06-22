@@ -286,8 +286,8 @@ export const Dashboard = () => {
                 </TextField>
               )}
 
-            {/* Select para owner */}
-            {rol === "owner" && (
+            {/* Select para admin */}
+            {rol === "admin" && (
               <TextField
                 select
                 label="Estado"

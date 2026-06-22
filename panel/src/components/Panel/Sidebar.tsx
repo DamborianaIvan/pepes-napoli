@@ -48,7 +48,7 @@ const Sidebar = () => {
             HOME
           </Link>
 
-          {rol?.toLowerCase() === "owner" && (
+          {rol?.toLowerCase() === "admin" && (
             <>
               <Link to="/panel/crear-producto" onClick={() => setOpen(false)}>
                 <AddCircleIcon className="sidebar-icon" />

@@ -5,25 +5,25 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 require('dotenv').config();
 
-// // Registro
-// router.post('/register', async (req, res) => {
-//   const { nombreUsuario, password, nombre, rol, email } = req.body;
-//     console.log(req.body) 
-//   try {
-//     const existingUser = await Usuario.findOne({ nombreUsuario });
-//     if (existingUser) {
-//       return res.status(400).json({ message: 'El nombre de usuario ya está en uso' });
-//     }
+// Registro
+router.post('/register', async (req, res) => {
+  const { nombreUsuario, password, nombre, rol, email } = req.body;
+    console.log(req.body) 
+  try {
+    const existingUser = await Usuario.findOne({ nombreUsuario });
+    if (existingUser) {
+      return res.status(400).json({ message: 'El nombre de usuario ya está en uso' });
+    }
 
-//     const nuevoUsuario = new Usuario({ nombreUsuario, password, nombre, rol, email });
-//     await nuevoUsuario.save();
+    const nuevoUsuario = new Usuario({ nombreUsuario, password, nombre, rol, email });
+    await nuevoUsuario.save();
 
-//     res.status(201).json({ message: 'Usuario creado con éxito' });
-//   } catch (err) {
-//     console.error(err);
-//     res.status(500).json({ message: 'Error al registrar el usuario' });
-//   }
-// });
+    res.status(201).json({ message: 'Usuario creado con éxito' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Error al registrar el usuario' });
+  }
+});
 
 // Login
 router.post('/login', async (req, res) => {
