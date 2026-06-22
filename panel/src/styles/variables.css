@@ -1,0 +1,10 @@
+:root {
+  --color-primary: #a3cd1d; /* naranja */
+  --color-secondary: #ae3235; /* rojo */
+  --color-contrast: #1a1a1a; /* oscuro para contraste */
+  --color-bg: #ece6e6;
+  --color-white: #ffffff;
+  --title: 2rem;
+  --overlay-dark: rgba(0, 0, 0, 0.45);
+  --color-hover: #93b71a;;
+}
