@@ -4,33 +4,45 @@ const ProductoSchema = new mongoose.Schema({
   categoria: {
     type: String,
     required: true,
-    trim: true
+    enum: [
+      'PIZZAS',
+      'EMPANADAS',
+      'BEBIDAS',
+      'POSTRES',
+      'ADICIONALES'
+    ]
   },
+
   nombre: {
     type: String,
     required: true,
     trim: true
   },
-  descrripcion: {
+
+  descripcion: {
     type: String,
     trim: true
   },
+
   precio: {
     type: Number,
     required: true
   },
+
   imagen: {
-    type: String, 
+    type: String,
     trim: true
   },
+
   disponible: {
     type: Boolean,
     default: true
   },
+
   fechaCreacion: {
     type: Date,
     default: Date.now
-  }, 
+  }
 });
 
 module.exports = mongoose.model('Producto', ProductoSchema);

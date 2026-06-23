@@ -69,7 +69,53 @@ module.exports = router;
  *   name: Auth
  *   description: Autenticación de usuarios
  */
-
+/**
+ * @swagger
+ * /api/auth/register:
+ *   post:
+ *     summary: Crear nuevo usuario
+ *     tags:
+ *       - Auth
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - nombre
+ *               - nombreUsuario
+ *               - email
+ *               - password
+ *             properties:
+ *               nombre:
+ *                 type: string
+ *                 example: Juan Perez
+ *               nombreUsuario:
+ *                 type: string
+ *                 example: juan
+ *               email:
+ *                 type: string
+ *                 example: juan@gmail.com
+ *               password:
+ *                 type: string
+ *                 example: 123456
+ *               rol:
+ *                 type: string
+ *                 enum:
+ *                   - admin
+ *                   - caja
+ *                   - cocina
+ *                   - mozo
+ *                 example: mozo
+ *     responses:
+ *       201:
+ *         description: Usuario creado correctamente
+ *       400:
+ *         description: Usuario o email ya existe
+ *       500:
+ *         description: Error interno del servidor
+ */
 /**
  * @swagger
  * /api/auth/login:

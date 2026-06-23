@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 
 const Pedido = require('../models/Pedido');
+const Mesa = require('../models/Mesa');
 const { protect } = require('../middleware/auth');
 
 /**
@@ -14,10 +15,41 @@ router.post('/', protect, async (req, res) => {
       usuarioId: req.usuario.id
     };
 
+    if (
+      pedidoData.tipoPedido === 'SALON' &&
+      pedidoData.mesaId
+    ) {
+
+      const mesa = await Mesa.findById(
+        pedidoData.mesaId
+      );
+
+      if (!mesa) {
+        return res.status(404).json({
+          message: 'Mesa no encontrada'
+        });
+      }
+
+      if (mesa.estado !== 'LIBRE') {
+        return res.status(400).json({
+          message: 'La mesa ya está ocupada'
+        });
+      }
+    }
     const pedido = new Pedido(pedidoData);
 
     await pedido.save();
-
+    if (
+      pedido.tipoPedido === 'SALON' &&
+      pedido.mesaId
+    ) {
+      await Mesa.findByIdAndUpdate(
+        pedido.mesaId,
+        {
+          estado: 'OCUPADA'
+        }
+      );
+    }
     res.status(201).json(pedido);
   } catch (error) {
     console.error('Error creando pedido:', error);
@@ -105,6 +137,18 @@ router.patch('/:id/estado', protect, async (req, res) => {
     pedido.estado = estado;
 
     await pedido.save();
+
+    if (
+      estado === 'PAGADO' &&
+      pedido.mesaId
+    ) {
+      await Mesa.findByIdAndUpdate(
+        pedido.mesaId,
+        {
+          estado: 'LIBRE'
+        }
+      );
+    }
 
     res.json(pedido);
 

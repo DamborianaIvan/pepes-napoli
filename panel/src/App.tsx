@@ -4,6 +4,8 @@ import { AuthRegister } from "./components/Login/AuthRegister";
 import PanelLayout from "./components/Panel/PanelLayout";
 import { Dashboard } from "./components/Panel/Dashboard";
 import { ListaPedidos } from "./components/Panel/ListaPedidos";
+import Mesas from "./components/Panel/Mesas";
+import NuevoPedido from "./components/Panel/NuevoPedido";
 import { PrivateRoute } from "./components/Panel/PrivateRoute";
 import  Reportes  from "./components/Panel/Reportes";
 import  ProductoManager  from "./components/Panel/ProductoManager";
@@ -23,6 +25,8 @@ export default function App() {
             </PrivateRoute>
           }
         >
+          <Route path="mesas" element={<Mesas />} />
+          <Route path="nuevo-pedido" element={<NuevoPedido />} />
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="pedidos" element={<ListaPedidos />} />
           <Route path="reportes" element={<Reportes />} />

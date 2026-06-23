@@ -22,8 +22,8 @@ const UsuarioSchema = new mongoose.Schema({
   },
   rol: {
     type: String,
-    enum: ['admin', 'caja', 'cocina', 'mozo'],
-    default: 'mozo'
+    enum: ['admin'],
+    default: 'admin'
   },
   fechaCreacion: {
     type: Date,

@@ -7,6 +7,8 @@ import HomeIcon from "@mui/icons-material/Home";
 import AddCircleIcon from "@mui/icons-material/AddCircle";
 import InventoryIcon from "@mui/icons-material/Inventory";
 import AssessmentIcon from "@mui/icons-material/Assessment";
+import TableRestaurantIcon from "@mui/icons-material/TableRestaurant";
+import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
 import LogoutIcon from "@mui/icons-material/Logout";
 import MenuIcon from "@mui/icons-material/Menu";
 import PersonIcon from "@mui/icons-material/Person";
@@ -50,13 +52,21 @@ const Sidebar = () => {
 
           {rol?.toLowerCase() === "admin" && (
             <>
-              <Link to="/panel/crear-producto" onClick={() => setOpen(false)}>
+              <Link to="/panel/mesas" onClick={() => setOpen(false)}>
+                <TableRestaurantIcon className="sidebar-icon" />
+                MESAS
+              </Link>
+              <Link to="/panel/nuevo-pedido" onClick={() => setOpen(false)}>
                 <AddCircleIcon className="sidebar-icon" />
-                MENÚ
+                NUEVO PEDIDO
               </Link>
               <Link to="/panel/pedidos" onClick={() => setOpen(false)}>
                 <InventoryIcon className="sidebar-icon" />
-                HISTORIAL PEDIDOS
+                PEDIDOS
+              </Link>
+              <Link to="/panel/crear-producto" onClick={() => setOpen(false)}>
+                <ReceiptLongIcon className="sidebar-icon" />
+                MENÚ
               </Link>
               <Link to="/panel/reportes" onClick={() => setOpen(false)}>
                 <AssessmentIcon className="sidebar-icon" />
@@ -65,7 +75,7 @@ const Sidebar = () => {
             </>
           )}
 
-          {rol?.toLowerCase() === "delivery" && (
+          {rol?.toLowerCase() === "mozo" && (
             <Link to="/panel/pedidos" onClick={() => setOpen(false)}>
               <InventoryIcon className="sidebar-icon" />
               PEDIDOS
