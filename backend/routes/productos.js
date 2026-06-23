@@ -48,9 +48,11 @@ const StockGeneral = require("../models/StockGeneral");
  *     tags:
  *       - Productos
  *
+ *     security:
+ *       - bearerAuth: []
+ *
  *     requestBody:
  *       required: true
- *
  *       content:
  *         application/json:
  *           schema:
@@ -62,6 +64,7 @@ const StockGeneral = require("../models/StockGeneral");
  */
 router.post('/', protect, restrictTo('admin'), async (req, res) => {
   try {
+
     const {
       categoria,
       nombre,
@@ -71,20 +74,101 @@ router.post('/', protect, restrictTo('admin'), async (req, res) => {
       disponible
     } = req.body;
 
+    // Validar obligatorios
+
+    if (!categoria || !nombre || precio === undefined) {
+      return res.status(400).json({
+        message: 'Categoria, nombre y precio son obligatorios'
+      });
+    }
+
+    // Validar categorias
+
+    const categoriasValidas = [
+      'PIZZAS',
+      'EMPANADAS',
+      'BEBIDAS',
+      'POSTRES',
+      'ADICIONALES'
+    ];
+
+    if (!categoriasValidas.includes(categoria)) {
+      return res.status(400).json({
+        message: 'Categoria invalida'
+      });
+    }
+
+    // Validar nombre
+
+    const nombreLimpio = nombre.trim();
+
+    if (nombreLimpio.length < 3) {
+      return res.status(400).json({
+        message: 'El nombre debe tener al menos 3 caracteres'
+      });
+    }
+
+    if (nombreLimpio.length > 80) {
+      return res.status(400).json({
+        message: 'El nombre es demasiado largo'
+      });
+    }
+
+    // Validar precio
+
+    if (isNaN(precio)) {
+      return res.status(400).json({
+        message: 'Precio invalido'
+      });
+    }
+
+    if (Number(precio) <= 0) {
+      return res.status(400).json({
+        message: 'El precio debe ser mayor a 0'
+      });
+    }
+
+    // Verificar duplicado
+
+    const productoExistente = await Producto.findOne({
+      nombre: {
+        $regex: new RegExp(
+          `^${nombreLimpio}$`,
+          'i'
+        )
+      }
+    });
+
+    if (productoExistente) {
+      return res.status(409).json({
+        message: 'Ya existe un producto con ese nombre'
+      });
+    }
+
     const nuevoProducto = new Producto({
       categoria,
-      nombre,
+      nombre: nombreLimpio,
       descripcion,
-      precio,
+      precio: Number(precio),
       imagen,
       disponible
     });
 
     await nuevoProducto.save();
-    res.status(201).json({ message: 'Producto creado correctamente', producto: nuevoProducto });
+
+    res.status(201).json({
+      message: 'Producto creado correctamente',
+      producto: nuevoProducto
+    });
+
   } catch (error) {
+
     console.error(error);
-    res.status(500).json({ message: 'Error al crear el producto' });
+
+    res.status(500).json({
+      message: 'Error al crear el producto'
+    });
+
   }
 });
 

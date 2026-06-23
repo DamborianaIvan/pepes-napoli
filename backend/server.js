@@ -19,12 +19,6 @@ const swaggerOptions = {
       version: '1.0.0',
       description: 'Documentación de la API para pedidos y productos'
     },
-    servers: [
-      {
-        url: process.env.BASE_URL,
-        description: 'Servidor local'
-      }
-    ],
     components: {
     securitySchemes: {
         bearerAuth: {
@@ -33,7 +27,13 @@ const swaggerOptions = {
           bearerFormat: 'JWT'
         }
       }
-    }
+    },
+    servers: [
+      {
+        url: process.env.BASE_URL,
+        description: 'Servidor local'
+      }
+    ]
   },
   apis: ['./routes/*.js']
 };
