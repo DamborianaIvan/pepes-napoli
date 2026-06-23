@@ -8,16 +8,25 @@ const swaggerUi = require('swagger-ui-express');
 const authRoutes = require('./routes/auth');
 const productosRoutes = require('./routes/productos');
 const pedidosRoutes = require('./routes/pedidos');
-
+const mesasRoutes = require('./routes/mesas');
 dotenv.config();
 
 const swaggerOptions = {
   swaggerDefinition: {
     openapi: '3.0.0',
     info: {
-      title: 'API Sushi Fresco',
+      title: 'API Pepes Pizza',
       version: '1.0.0',
       description: 'Documentación de la API para pedidos y productos'
+    },
+    components: {
+    securitySchemes: {
+        bearerAuth: {
+          type: 'http',
+          scheme: 'bearer',
+          bearerFormat: 'JWT'
+        }
+      }
     },
     servers: [
       {
@@ -33,16 +42,23 @@ const swaggerDocs = swaggerJsDoc(swaggerOptions);
 const app = express();
 app.use(cors());
 app.use(express.json());
-
-mongoose.connect(process.env.MONGODB_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
-}).then(() => console.log('MongoDB conectado'))
-  .catch(err => console.log(err));
+app.use(
+  '/api-docs',
+  swaggerUi.serve,
+  swaggerUi.setup(swaggerDocs)
+);
+mongoose.connect(process.env.MONGODB_URI)
+  .then(() => {
+    console.log('MongoDB conectado');
+  })
+  .catch((err) => {
+    console.error('Error MongoDB:', err.message);
+});
 
 app.use('/api/auth', authRoutes);
 app.use('/api/productos', productosRoutes);
 app.use('/api/pedidos', pedidosRoutes);
+app.use('/api/mesas', mesasRoutes);
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 
 const PORT = process.env.PORT || 5000;

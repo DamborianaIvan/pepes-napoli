@@ -63,7 +63,7 @@ export const AuthLogin = () => {
       setSnackbarOpen(true);
 
       setTimeout(() => {
-        if (data.rol === "owner" || data.rol === "delivery") {
+        if (data.rol === "admin" || data.rol === "delivery") {
           navigate("/panel/dashboard");
         } else {
           navigate("/");

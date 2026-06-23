@@ -15,21 +15,30 @@ import AddCircleIcon from "@mui/icons-material/AddCircle";
 import CircularProgress from "@mui/material/CircularProgress";
 import Checkbox from "@mui/material/Checkbox";
 import FormControlLabel from "@mui/material/FormControlLabel";
+import MenuItem from "@mui/material/MenuItem";
 
 import "./ProductoManager.css";
 import { Typography } from "@mui/material";
 
 interface Producto {
   _id: string;
-  name: string;
-  category: string;
-  description: string;
-  price: number;
+  nombre: string;
+  categoria: string;
+  descripcion: string;
+  precio: number;
   disponible: boolean;
-  image: string;
+  imagen: string;
 }
 
 const API_URL = import.meta.env.VITE_API_URL;
+
+const CATEGORIAS = [
+  "PIZZAS",
+  "EMPANADAS",
+  "BEBIDAS",
+  "POSTRES",
+  "ADICIONALES"
+];
 
 const ProductoManager = () => {
   const [productos, setProductos] = useState<Producto[]>([]);
@@ -44,14 +53,16 @@ const ProductoManager = () => {
     message: "",
     severity: "info",
   });
-  const [formData, setFormData] = useState<Omit<Producto, "_id">>({
-    name: "",
-    category: "",
-    description: "",
-    price: undefined as any,
-    disponible: true,
-    image: "",
-  });
+  
+ const [formData, setFormData] = useState({
+  nombre: "",
+  categoria: "",
+  descripcion: "",
+  precio: undefined,
+  disponible: true,
+  imagen: "",
+});
+
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [stockGeneralActivo, setStockGeneralActivo] = useState<boolean>(false);
 
@@ -108,16 +119,16 @@ const ProductoManager = () => {
   if (producto) {
     setEditingProduct(producto);
     setFormData({ ...producto });
-    setImagePreview(producto.image);
+    setImagePreview(producto.imagen);
   } else {
     setEditingProduct(null);
     setFormData({
-      name: "",
-      category: "",
-      description: "",
-      price: undefined as any,
+      nombre: "",
+      categoria: "",
+      descripcion: "",
+      precio: undefined as any,
       disponible: true,
-      image: "",
+      imagen: "",
     });
     setImagePreview(null);
   }
@@ -134,7 +145,7 @@ const ProductoManager = () => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: name === "price" ? Number(value) : value,
+      [name]: name === "precio" ? Number(value) : value,
     }));
   };
 
@@ -151,10 +162,12 @@ const ProductoManager = () => {
   };
 
   const handleSubmit = async () => {
-    const errors: { name?: string; category?: string } = {};
+    const errors: { nombre?: string; categoria?: string } = {};
 
-    if (!formData.name.trim()) errors.name = "El nombre es obligatorio";
-    if (!formData.category.trim()) errors.category = "La categoría es obligatoria";
+    if (!formData.nombre.trim()) errors.nombre = "El nombre es obligatorio";
+    if (formData.nombre.trim().length < 3) errors.nombre = "El nombre debe tener al menos 3 caracteres";
+    if (!formData.categoria.trim()) errors.categoria = "La categoría es obligatoria";
+    
 
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors);
@@ -171,9 +184,15 @@ const ProductoManager = () => {
       }
       handleCloseDialog();
       fetchProductos();
-    } catch {
-      setSnackbar({ open: true, message: "Error al guardar el producto", severity: "error" });
-    }
+    } catch (error: any) {
+        setSnackbar({
+          open: true,
+          message:
+            error?.response?.data?.message ||
+            "Error al guardar el producto",
+          severity: "error"
+        });
+      }
   };
 
   const confirmDelete = async () => {
@@ -214,11 +233,14 @@ const ProductoManager = () => {
         <div className="producto-lista">
           {productos.map(producto => (
             <div className="producto-card" key={producto._id}>
-              <img src={producto.image} alt={producto.name} />
-              <h2>{producto.name}</h2>
-              <p>{producto.description}</p>
+              <img src={producto.imagen} alt={producto.nombre} />
+              <h2>{producto.nombre}</h2>
+              <span className="categoria-badge">
+                {producto.categoria}
+              </span>
+              <p>{producto.descripcion}</p>
               <h3>
-                  {new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", minimumFractionDigits: 0 }).format(producto.price)}
+                  {new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", minimumFractionDigits: 0 }).format(producto.precio)}
               </h3>
               <span className={`estado-producto ${producto.disponible ? "disponible" : "no-disponible"}`}>
                 {producto.disponible ? "Disponible" : "No disponible"}
@@ -239,26 +261,33 @@ const ProductoManager = () => {
         <DialogContent className="form-dialog">
           <TextField
             label="Nombre"
-            name="name"
+            name="nombre"
             fullWidth
-            value={formData.name}
+            value={formData.nombre}
             onChange={handleChange}
             placeholder="Ej: Sushi Salmón"
             error={!!formErrors.name}
             helperText={formErrors.name}
           />
           <TextField
-          label="Categoría"
-          name="category"
-          fullWidth
-          value={formData.category}
-          onChange={handleChange}
-          placeholder="Ej: Rolls"
-          error={!!formErrors.category}
-          helperText={formErrors.category}
-        />
-          <TextField label="Descripción" name="description" fullWidth multiline value={formData.description} onChange={handleChange} placeholder="Ej: Con queso y palta" />
-          <TextField label="Precio (ARS)" name="price" type="number" fullWidth value={formData.price ?? ""} onChange={handleChange} placeholder="Ej: 2500"  />
+            select
+            label="Categoría"
+            name="categoria"
+            fullWidth
+            value={formData.categoria}
+            onChange={handleChange}
+          >
+            {CATEGORIAS.map((categoria) => (
+              <MenuItem
+                key={categoria}
+                value={categoria}
+              >
+                {categoria}
+              </MenuItem>
+            ))}
+          </TextField>
+          <TextField label="Descripción" name="descripcion" fullWidth multiline value={formData.descripcion} onChange={handleChange} placeholder="Ej: Con queso y palta" />
+          <TextField label="Precio (ARS)" name="precio" type="number" fullWidth value={formData.precio ?? ""} onChange={handleChange} placeholder="Ej: 2500"  />
           <FormControlLabel control={<Checkbox checked={formData.disponible} onChange={(e) => setFormData(prev => ({ ...prev, disponible: e.target.checked }))} />} label="Producto disponible" />
           <input type="file" accept="image/*" onChange={handleImageUpload} />
           {imagePreview && <img src={imagePreview} className="preview" alt="preview" />}

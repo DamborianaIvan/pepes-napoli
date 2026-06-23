@@ -6,39 +6,53 @@ import "./Dashboard.css";
 
 interface Pedido {
   _id: string;
-  nombreCliente: string;
-  telefono: string;
+  tipoPedido:
+    | "SALON"
+    | "DELIVERY"
+    | "TAKEAWAY";
+
+  nombreCliente?: string;
+  telefono?: string;
+  direccion?: string;
+  comentario?: string;
   productos: {
-    producto: { nombre: string } | string;
+    producto: string;
     cantidad: number;
     precio: number;
   }[];
   total: number;
   metodoPago: string;
-  tipoEntrega: string;
-  address?: string;
-  comentario?: string;
-  estado: string;
+  estado:
+    | "ABIERTO"
+    | "CONFIRMADO"
+    | "EN_COCINA"
+    | "LISTO"
+    | "ENTREGADO"
+    | "PAGADO"
+    | "EN_CAMINO"
+    | "CANCELADO";
   fechaPedido: string;
 }
 
 const estadosTraducidos: Record<string, string> = {
-  pending: "Pendiente",
-  "in-preparation": "En preparación",
-  ready: "Listo para reparto",
-  "in-distribution": "En reparto",
-  entregado: "Entregado",
-  cancelado: "Cancelado",
+  ABIERTO: "Abierto",
+  CONFIRMADO: "Confirmado",
+  EN_COCINA: "En Cocina",
+  LISTO: "Listo",
+  EN_CAMINO: "En Camino",
+  ENTREGADO: "Entregado",
+  PAGADO: "Pagado",
+  CANCELADO: "Cancelado"
 };
 
 export const Dashboard = () => {
-  const [resumen, setResumen] = useState({
+ const [resumen, setResumen] = useState({
     totalMes: 0,
-    pendientes: 0,
-    dia: 0,
-    enReparto: 0,
-    pendienteReparto: 0,
-    pendienteTakeaway: 0,
+    pedidosAbiertos: 0,
+    pedidosDia: 0,
+    salonActivos: 0,
+    deliveryActivos: 0,
+    takeawayActivos: 0
   });
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [rol, setRol] = useState<string | null>(null);
@@ -46,102 +60,138 @@ export const Dashboard = () => {
   const [mostrarDashboardCards, setMostrarDashboardCards] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    const rolGuardado = localStorage.getItem("rol");
-    setRol(rolGuardado);
+    
 
-    const obtenerPedidos = () => {
-      fetch(`${import.meta.env.VITE_API_URL}/api/pedidos`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-        .then((res) => res.json())
-        .then((data) => {
-          if (!Array.isArray(data)) return;
-
-          const hoy = new Date();
-          const hoyStr = hoy.toDateString();
-          const mesActual = hoy.getMonth();
-          const añoActual = hoy.getFullYear();
-
-          const pedidosDelDia = data.filter((p: Pedido) => {
-            const fecha = new Date(p.fechaPedido);
-            return fecha.toDateString() === hoyStr;
-          });
-
-          const entregadosHoy = pedidosDelDia.filter((p) => {
-            if (rolGuardado === "delivery") {
-              return (
-                p.estado.toLowerCase() === "entregado" &&
-                p.tipoEntrega.toLowerCase() === "delivery"
-              );
-            }
-            return p.estado.toLowerCase() === "entregado";
-          });
-
-          const entregadosMes = data.filter((p: Pedido) => {
-            const fecha = new Date(p.fechaPedido);
-            return (
-              fecha.getMonth() === mesActual &&
-              fecha.getFullYear() === añoActual &&
-              p.estado.toLowerCase() === "entregado"
-            );
-          });
-
-          const visibles = pedidosDelDia
-            .filter((p) => {
-              if (rolGuardado === "delivery") {
-                return (
-                  p.tipoEntrega === "delivery" &&
-                  ["ready", "in-distribution", 'entregado'].includes(p.estado)
-                );
-              }
-              return true;
-            })
-            .sort((a, b) => new Date(b.fechaPedido).getTime() - new Date(a.fechaPedido).getTime());
-          
-          const nuevos = visibles.filter((p) =>
-            rolGuardado === "delivery" ? p.estado === "ready" : p.estado === "pending"
-          ).length;
-
-          const enReparto = visibles.filter(
-            (p) =>
-              p.estado === "in-distribution" &&
-              p.tipoEntrega.toLowerCase() === "delivery"
-          ).length;
-
-          const pendienteReparto = visibles.filter(
-            (p) =>
-              ["pending", "in-preparation", "ready"].includes(p.estado) &&
-              p.tipoEntrega.toLowerCase() === "delivery"
-          ).length;
-
-          const pendienteTakeaway = visibles.filter(
-            (p) =>
-              ["pending", "in-preparation"].includes(p.estado) &&
-              p.tipoEntrega.toLowerCase() === "takeaway"
-          ).length;
-
-          setResumen({
-            totalMes: entregadosMes.length,
-            pendientes: nuevos,
-            dia: entregadosHoy.length,
-            enReparto,
-            pendienteReparto,
-            pendienteTakeaway,
-          });
-
-          setPedidos(visibles);
-        })
-        .catch(() => {
-          setSnackbar({ mensaje: "❌ Error cargando pedidos", tipo: "error" });
-        });
-    };
+   
 
     obtenerPedidos();
     const intervalo = setInterval(obtenerPedidos, 65000);
     return () => clearInterval(intervalo);
   }, []);
 
+
+  const obtenerPedidos = () => {
+    const token = localStorage.getItem("token");
+    const rolGuardado = localStorage.getItem("rol");
+    setRol(rolGuardado);
+    fetch(`${import.meta.env.VITE_API_URL}/api/pedidos`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (!Array.isArray(data)) return;
+
+        const hoy = new Date();
+        const hoyStr = hoy.toDateString();
+        const mesActual = hoy.getMonth();
+        const añoActual = hoy.getFullYear();
+
+        const pedidosDelDia = data.filter((p: Pedido) => {
+          const fecha = new Date(p.fechaPedido);
+          return fecha.toDateString() === hoyStr;
+        });
+
+        const entregadosHoy = pedidosDelDia.filter((p) => {
+          if (rolGuardado === "delivery") {
+            return (
+              p.estado.toLowerCase() === "entregado" &&
+              p.tipoEntrega.toLowerCase() === "delivery"
+            );
+          }
+          return p.estado.toLowerCase() === "entregado";
+        });
+
+        const entregadosMes = data.filter((p: Pedido) => {
+          const fecha = new Date(p.fechaPedido);
+          return (
+            fecha.getMonth() === mesActual &&
+            fecha.getFullYear() === añoActual &&
+            p.estado.toLowerCase() === "entregado"
+          );
+        });
+
+        const visibles = pedidosDelDia
+          .filter((p) => {
+            if (rolGuardado === "delivery") {
+              return (
+                p.tipoEntrega === "DELIVERY" &&
+                ["LISTO", "EN_CAMINO", 'ENTREGADO'].includes(p.estado)
+              );
+            }
+            return true;
+          })
+          .sort((a, b) => new Date(b.fechaPedido).getTime() - new Date(a.fechaPedido).getTime());
+        
+        const nuevos = visibles.filter((p) =>
+            p.estado === "ABIERTO"
+        ).length;
+
+        const enReparto = visibles.filter(
+          (p) =>
+            p.estado === "in-distribution" &&
+            p.tipoEntrega.toLowerCase() === "delivery"
+        ).length;
+
+        const pedidosAbiertos = visibles.filter(
+          p =>
+            [
+              "ABIERTO",
+              "CONFIRMADO",
+              "EN_COCINA",
+              "LISTO",
+              "EN_CAMINO"
+            ].includes(p.estado)
+        ).length;
+
+        const salonActivos = visibles.filter(
+          p =>
+            p.tipoPedido === "SALON" &&
+            [
+              "ABIERTO",
+              "CONFIRMADO",
+              "EN_COCINA",
+              "LISTO"
+            ].includes(p.estado)
+        ).length;
+        const deliveryActivos = visibles.filter(
+          p =>
+            p.tipoPedido === "DELIVERY" &&
+            [
+              "ABIERTO",
+              "CONFIRMADO",
+              "EN_COCINA",
+              "LISTO",
+              "EN_CAMINO"
+            ].includes(p.estado)
+        ).length;
+
+        const takeawayActivos = visibles.filter(
+          p =>
+            p.tipoPedido === "TAKEAWAY" &&
+            [
+              "ABIERTO",
+              "CONFIRMADO",
+              "EN_COCINA",
+              "LISTO"
+            ].includes(p.estado)
+        ).length;
+
+        setResumen({
+          totalMes: entregadosMes.length,
+          pedidosAbiertos,
+          pedidosDia: entregadosHoy.length,
+          salonActivos,
+          deliveryActivos,
+          takeawayActivos
+        });
+        
+        setPedidos(visibles);
+
+      })
+      .catch(() => {
+        setSnackbar({ mensaje: "❌ Error cargando pedidos", tipo: "error" });
+      });
+  };
   const actualizarEstado = async (id: string, nuevoEstado: string) => {
     const token = localStorage.getItem("token");
     try {
@@ -156,6 +206,7 @@ export const Dashboard = () => {
 
       if (res.ok) {
         const actualizado = await res.json();
+        await obtenerPedidos();
         setPedidos((prev) =>
           prev.map((p) => (p._id === id ? { ...p, estado: actualizado.estado } : p))
         );
@@ -168,6 +219,51 @@ export const Dashboard = () => {
     }
 
     setTimeout(() => setSnackbar(null), 3000);
+  };
+
+  const obtenerEstadosPermitidos = (
+    tipoPedido: string
+  ) => {
+
+    switch (tipoPedido) {
+
+      case "SALON":
+        return [
+          "ABIERTO",
+          "CONFIRMADO",
+          "EN_COCINA",
+          "LISTO",
+          "PAGADO",
+          "CANCELADO"
+        ];
+
+      case "DELIVERY":
+        return [
+          "ABIERTO",
+          "CONFIRMADO",
+          "EN_COCINA",
+          "LISTO",
+          "EN_CAMINO",
+          "ENTREGADO",
+          "PAGADO",
+          "CANCELADO"
+        ];
+
+      case "TAKEAWAY":
+        return [
+          "ABIERTO",
+          "CONFIRMADO",
+          "EN_COCINA",
+          "LISTO",
+          "ENTREGADO",
+          "PAGADO",
+          "CANCELADO"
+        ];
+
+      default:
+        return [];
+    }
+
   };
 
   const formatoPesos = (monto: number) =>
@@ -199,32 +295,61 @@ export const Dashboard = () => {
 
       {mostrarDashboardCards && (
         <div className="dashboard-cards">
+
           <div className="card">
-            <div className="card-label">⏳NUEVOS PEDIDOS</div>
-            <div className="card-number highlight-orange">{resumen.pendientes}</div>
-          </div>
-          <div className="card">
-            <div className="card-label">📦 PENDIENTE REPARTO</div>
-            <div className="card-number">{resumen.pendienteReparto}</div>
-          </div>
-          {rol !== "delivery" && (
-            <div className="card">
-              <div className="card-label">🍱 PENDIENTE TAKEAWAY</div>
-              <div className="card-number">{resumen.pendienteTakeaway}</div>
+            <div className="card-label">
+              📋 PEDIDOS ABIERTOS
             </div>
-          )}
-          <div className="card">
-            <div className="card-label">🛵 EN REPARTO (HOY)</div>
-            <div className="card-number">{resumen.enReparto}</div>
+            <div className="card-number highlight-orange">
+              {resumen.pedidosAbiertos}
+            </div>
           </div>
+
           <div className="card">
-            <div className="card-label">📅TOTAL DEL DÍA</div>
-            <div className="card-number">{resumen.dia}</div>
+            <div className="card-label">
+              🍽️ SALÓN ACTIVOS
+            </div>
+            <div className="card-number">
+              {resumen.salonActivos}
+            </div>
           </div>
+
           <div className="card">
-            <div className="card-label">📈TOTAL DEL MES</div>
-            <div className="card-number highlight-blue">{resumen.totalMes}</div>
+            <div className="card-label">
+              🛵 DELIVERY ACTIVOS
+            </div>
+            <div className="card-number">
+              {resumen.deliveryActivos}
+            </div>
           </div>
+
+          <div className="card">
+            <div className="card-label">
+              🥡 TAKEAWAY ACTIVOS
+            </div>
+            <div className="card-number">
+              {resumen.takeawayActivos}
+            </div>
+          </div>
+
+          <div className="card">
+            <div className="card-label">
+              📅 PEDIDOS DEL DÍA
+            </div>
+            <div className="card-number">
+              {resumen.pedidosDia}
+            </div>
+          </div>
+
+          <div className="card">
+            <div className="card-label">
+              📈 PEDIDOS DEL MES
+            </div>
+            <div className="card-number highlight-blue">
+              {resumen.totalMes}
+            </div>
+          </div>
+
         </div>
       )}
 
@@ -252,15 +377,15 @@ export const Dashboard = () => {
             </ul>
             <p><strong>Total:</strong> {formatoPesos(pedido.total)}</p>
             <p><strong>Método Pago:</strong> {pedido.metodoPago}</p>
-            <p><strong>Entrega:</strong> {pedido.tipoEntrega}</p>
-            <p><strong>Dirección:</strong> {pedido.address || "-"}</p>
+            <p><strong>Entrega:</strong> {pedido.tipoPedido}</p>
+            <p><strong>Dirección:</strong> {pedido.direccion || "-"}</p>
             <p><strong>Comentario:</strong> {pedido.comentario || "-"}</p>
             <p><strong>Estado:</strong> {estadosTraducidos[pedido.estado] || pedido.estado}</p>
             <p><strong>Fecha:</strong> {new Date(pedido.fechaPedido).toLocaleString()}</p>
 
             {/* Select para delivery */}
             {rol === "delivery" &&
-              (pedido.estado === "ready" || pedido.estado === "in-distribution") && (
+              (pedido.estado === "LISTO" || pedido.estado === "EN_CAMINO") && (
                 <TextField
                   select
                   label="Estado"
@@ -271,13 +396,13 @@ export const Dashboard = () => {
                   variant="outlined"
                   style={{ marginTop: "0.5rem" }}
                 >
-                  {pedido.estado === "ready" &&
+                  {pedido.estado === "LISTO" &&
                     [
                       <MenuItem key="ready" value="ready">Listo para reparto</MenuItem>,
                       <MenuItem key="in-distribution" value="in-distribution">En reparto</MenuItem>,
                     ]
                   }
-                  {pedido.estado === "in-distribution" &&
+                  {pedido.estado === "EN_CAMINO" &&
                     [
                       <MenuItem key="in-distribution" value="in-distribution">En reparto</MenuItem>,
                       <MenuItem key="entregado" value="entregado">Entregado</MenuItem>,
@@ -286,8 +411,8 @@ export const Dashboard = () => {
                 </TextField>
               )}
 
-            {/* Select para owner */}
-            {rol === "owner" && (
+            {/* Select para admin */}
+            {rol === "admin" && (
               <TextField
                 select
                 label="Estado"
@@ -298,14 +423,24 @@ export const Dashboard = () => {
                 variant="outlined"
                 style={{ marginTop: "0.5rem" }}
               >
-                <MenuItem value="pending">Pendiente</MenuItem>
-                <MenuItem value="in-preparation">En preparación</MenuItem>
-                {pedido.tipoEntrega === "delivery" && [
-                  <MenuItem key="ready" value="ready">Listo para reparto</MenuItem>,
-                  <MenuItem key="in-distribution" value="in-distribution">En reparto</MenuItem>,
-                ]}
-                <MenuItem value="entregado">Entregado</MenuItem>
-                <MenuItem value="cancelado">Cancelado</MenuItem>
+               {
+                obtenerEstadosPermitidos(
+                  pedido.tipoPedido
+                ).map(
+                  estado => (
+                    <MenuItem
+                      key={estado}
+                      value={estado}
+                    >
+                      {
+                        estadosTraducidos[
+                          estado
+                        ]
+                      }
+                    </MenuItem>
+                  )
+                )
+}
               </TextField>
             )}
           </div>

@@ -1,56 +1,199 @@
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *
+ *     Producto:
+ *       type: object
+ *       properties:
+ *         _id:
+ *           type: string
+ *
+ *         categoria:
+ *           type: string
+ *           example: PIZZAS
+ *
+ *         nombre:
+ *           type: string
+ *           example: Pizza Muzzarella
+ *
+ *         descripcion:
+ *           type: string
+ *           example: Mozzarella y aceitunas
+ *
+ *         precio:
+ *           type: number
+ *           example: 12000
+ *
+ *         imagen:
+ *           type: string
+ *           example: ""
+ *
+ *         disponible:
+ *           type: boolean
+ *           example: true
+ */
 const express = require('express');
 const router = express.Router();
 const Producto = require('../models/Producto');
 const { protect, restrictTo } = require('../middleware/auth');
 const StockGeneral = require("../models/StockGeneral");
 
-const multer = require('multer');
-
-// Configuración básica para guardar archivos en disco en carpeta 'uploads/'
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, 'uploads/'); // crea la carpeta uploads si no existe
-  },
-  filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    // Guarda con un nombre único para evitar sobreescritura
-    cb(null, uniqueSuffix + '-' + file.originalname);
-  }
-});
-
-const upload = multer({ storage });
-
-// ✅ Crear producto (solo "owner")
-router.post('/', protect, restrictTo('owner'), upload.single("image"), async (req, res) => {
+// ✅ Crear producto (solo "admin")
+/**
+ * @swagger
+ * /api/productos:
+ *   post:
+ *     summary: Crear producto
+ *     tags:
+ *       - Productos
+ *
+ *     security:
+ *       - bearerAuth: []
+ *
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/Producto'
+ *
+ *     responses:
+ *       201:
+ *         description: Producto creado
+ */
+router.post('/', protect, restrictTo('admin'), async (req, res) => {
   try {
-    const { category, name, description, price, image, disponible } = req.body;
+
+    const {
+      categoria,
+      nombre,
+      descripcion,
+      precio,
+      imagen,
+      disponible
+    } = req.body;
+
+    // Validar obligatorios
+
+    if (!categoria || !nombre || precio === undefined) {
+      return res.status(400).json({
+        message: 'Categoria, nombre y precio son obligatorios'
+      });
+    }
+
+    // Validar categorias
+
+    const categoriasValidas = [
+      'PIZZAS',
+      'EMPANADAS',
+      'BEBIDAS',
+      'POSTRES',
+      'ADICIONALES'
+    ];
+
+    if (!categoriasValidas.includes(categoria)) {
+      return res.status(400).json({
+        message: 'Categoria invalida'
+      });
+    }
+
+    // Validar nombre
+
+    const nombreLimpio = nombre.trim();
+
+    if (nombreLimpio.length < 3) {
+      return res.status(400).json({
+        message: 'El nombre debe tener al menos 3 caracteres'
+      });
+    }
+
+    if (nombreLimpio.length > 80) {
+      return res.status(400).json({
+        message: 'El nombre es demasiado largo'
+      });
+    }
+
+    // Validar precio
+
+    if (isNaN(precio)) {
+      return res.status(400).json({
+        message: 'Precio invalido'
+      });
+    }
+
+    if (Number(precio) <= 0) {
+      return res.status(400).json({
+        message: 'El precio debe ser mayor a 0'
+      });
+    }
+
+    // Verificar duplicado
+
+    const productoExistente = await Producto.findOne({
+      nombre: {
+        $regex: new RegExp(
+          `^${nombreLimpio}$`,
+          'i'
+        )
+      }
+    });
+
+    if (productoExistente) {
+      return res.status(409).json({
+        message: 'Ya existe un producto con ese nombre'
+      });
+    }
 
     const nuevoProducto = new Producto({
-      category,
-      name,
-      description,
-      price,
-      image,
-      disponible,
+      categoria,
+      nombre: nombreLimpio,
+      descripcion,
+      precio: Number(precio),
+      imagen,
+      disponible
     });
 
     await nuevoProducto.save();
-    res.status(201).json({ message: 'Producto creado correctamente', producto: nuevoProducto });
+
+    res.status(201).json({
+      message: 'Producto creado correctamente',
+      producto: nuevoProducto
+    });
+
   } catch (error) {
+
     console.error(error);
-    res.status(500).json({ message: 'Error al crear el producto' });
+
+    res.status(500).json({
+      message: 'Error al crear el producto'
+    });
+
   }
 });
 
 // ✅ Obtener todos los productos (público)
+/**
+ * @swagger
+ * /api/productos:
+ *   get:
+ *     summary: Obtener todos los productos
+ *     tags:
+ *       - Productos
+ *
+ *     responses:
+ *       200:
+ *         description: Lista de productos
+ */
 router.get('/', async (req, res) => {
   try {
-    const productos = await Producto.find().lean();
-    const productosConId = productos.map(p => ({
-      ...p,
-      id: p._id.toString(), 
-    }));
-    res.json(productosConId);
+    const productos = await Producto.find()
+      .sort({
+        categoria: 1,
+        nombre: 1
+      });
+
+    res.json(productos);
   } catch (error) {
     res.status(500).json({ message: "Error al obtener productos" });
   }
@@ -68,25 +211,60 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// ✅ Actualizar producto (solo "owner")
-router.put('/:id', protect, restrictTo('owner'), upload.single("image"), async (req, res) => {
+// ✅ Actualizar producto (solo "admin")
+router.put('/:id', protect, restrictTo('admin'), async (req, res) => {
   try {
-    const productoActualizado = await Producto.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-      runValidators: true,
+
+    const {
+      categoria,
+      nombre,
+      descripcion,
+      precio,
+      imagen,
+      disponible
+    } = req.body;
+
+    const productoActualizado =
+      await Producto.findByIdAndUpdate(
+        req.params.id,
+        {
+          categoria,
+          nombre: nombre?.trim(),
+          descripcion,
+          precio,
+          imagen,
+          disponible
+        },
+        {
+          new: true,
+          runValidators: true
+        }
+      );
+
+    if (!productoActualizado) {
+      return res.status(404).json({
+        message: 'Producto no encontrado'
+      });
+    }
+
+    res.json({
+      message: 'Producto actualizado correctamente',
+      producto: productoActualizado
     });
 
-    if (!productoActualizado) return res.status(404).json({ message: 'Producto no encontrado' });
-
-    res.json({ message: 'Producto actualizado correctamente', producto: productoActualizado });
   } catch (error) {
+
     console.error(error);
-    res.status(500).json({ message: 'Error al actualizar el producto' });
+
+    res.status(500).json({
+      message: 'Error al actualizar el producto'
+    });
+ 
   }
 });
 
-// ✅ Eliminar producto (solo "owner")
-router.delete('/:id', protect, restrictTo('owner'), async (req, res) => {
+// ✅ Eliminar producto (solo "admin")
+router.delete('/:id', protect, restrictTo('admin'), async (req, res) => {
   try {
     const productoEliminado = await Producto.findByIdAndDelete(req.params.id);
     if (!productoEliminado) return res.status(404).json({ message: 'Producto no encontrado' });
@@ -98,7 +276,7 @@ router.delete('/:id', protect, restrictTo('owner'), async (req, res) => {
 });
 
 // ✅ Cambiar disponibilidad de un producto (individual)
-router.patch('/:id/disponible', protect, restrictTo('owner'), async (req, res) => {
+router.patch('/:id/disponible', protect, restrictTo('admin'), async (req, res) => {
   try {
     const { disponible } = req.body;
     if (typeof disponible !== "boolean") {
@@ -133,7 +311,7 @@ router.get('/configuracion/stock-general', async (req, res) => {
 });
 
 // ✅ Actualizar stock general (activar / desactivar todos)
-router.patch('/configuracion/stock-general', protect, restrictTo('owner'), async (req, res) => {
+router.patch('/configuracion/stock-general', protect, restrictTo('admin'), async (req, res) => {
   try {
     const { stockGeneralActivo } = req.body;
     if (typeof stockGeneralActivo !== "boolean") {
@@ -157,349 +335,3 @@ router.patch('/configuracion/stock-general', protect, restrictTo('owner'), async
 
 
 module.exports = router;
-/**
- * @swagger
- * tags:
- *   - name: Productos
- *     description: Gestión de productos
- *   - name: ConfiguracionGlobal
- *     description: Configuración general del stock
- *
- * components:
- *   schemas:
- *     Producto:
- *       type: object
- *       properties:
- *         _id:
- *           type: string
- *           example: "64ab1234cd56ef7890ab1234"
- *         category:
- *           type: string
- *           example: "Sushi"
- *         name:
- *           type: string
- *           example: "California Roll"
- *         description:
- *           type: string
- *           example: "Delicioso roll con aguacate y cangrejo"
- *         price:
- *           type: number
- *           example: 500
- *         image:
- *           type: string
- *           example: "https://tusitio.com/images/producto1.jpg"
- *         disponible:
- *           type: boolean
- *           example: true
- *         fechaCreacion:
- *           type: string
- *           format: date-time
- *           example: "2024-06-28T14:20:30.000Z"
- *     ProductoInput:
- *       type: object
- *       properties:
- *         category:
- *           type: string
- *           example: "Sushi"
- *         name:
- *           type: string
- *           example: "California Roll"
- *         description:
- *           type: string
- *           example: "Delicioso roll con aguacate y cangrejo"
- *         price:
- *           type: number
- *           example: 500
- *         image:
- *           type: string
- *           description: Base64 o URL o path de imagen
- *         disponible:
- *           type: boolean
- *           example: true
- *     DisponibilidadUpdate:
- *       type: object
- *       properties:
- *         disponible:
- *           type: boolean
- *           example: false
- *     StockGeneralConfig:
- *       type: object
- *       properties:
- *         stockGeneralActivo:
- *           type: boolean
- *           example: true
- *     StockGeneralResponse:
- *       type: object
- *       properties:
- *         message:
- *           type: string
- *           example: "Stock general activado"
- *         config:
- *           $ref: '#/components/schemas/StockGeneralConfig'
- */
-
-/**
- * @swagger
- * /api/productos:
- *   get:
- *     summary: Obtener todos los productos con filtros opcionales
- *     tags: [Productos]
- *     parameters:
- *       - in: query
- *         name: categoria
- *         schema:
- *           type: string
- *         description: Filtrar por categoría (insensible a mayúsculas)
- *       - in: query
- *         name: disponible
- *         schema:
- *           type: boolean
- *         description: Filtrar por disponibilidad
- *     responses:
- *       200:
- *         description: Lista de productos
- *         content:
- *           application/json:
- *             schema:
- *               type: array
- *               items:
- *                 $ref: '#/components/schemas/Producto'
- *       500:
- *         description: Error al obtener productos
- *
- *   post:
- *     summary: Crear un nuevo producto (solo owner)
- *     tags: [Productos]
- *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         multipart/form-data:
- *           schema:
- *             type: object
- *             properties:
- *               category:
- *                 type: string
- *               name:
- *                 type: string
- *               description:
- *                 type: string
- *               price:
- *                 type: number
- *               image:
- *                 type: string
- *                 format: binary
- *               disponible:
- *                 type: boolean
- *             required:
- *               - category
- *               - name
- *               - price
- *     responses:
- *       201:
- *         description: Producto creado correctamente
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: "Producto creado correctamente"
- *                 producto:
- *                   $ref: '#/components/schemas/Producto'
- *       401:
- *         description: No autorizado
- *       500:
- *         description: Error al crear el producto
- */
-
-/**
- * @swagger
- * /api/productos/{id}:
- *   get:
- *     summary: Obtener un producto por ID
- *     tags: [Productos]
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: ID del producto
- *     responses:
- *       200:
- *         description: Producto encontrado
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Producto'
- *       404:
- *         description: Producto no encontrado
- *       500:
- *         description: Error al obtener el producto
- *   put:
- *     summary: Actualizar un producto (solo owner)
- *     tags: [Productos]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *     requestBody:
- *       required: true
- *       content:
- *         multipart/form-data:
- *           schema:
- *             type: object
- *             properties:
- *               category:
- *                 type: string
- *               name:
- *                 type: string
- *               description:
- *                 type: string
- *               price:
- *                 type: number
- *               image:
- *                 type: string
- *                 format: binary
- *               disponible:
- *                 type: boolean
- *     responses:
- *       200:
- *         description: Producto actualizado correctamente
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: "Producto actualizado correctamente"
- *                 producto:
- *                   $ref: '#/components/schemas/Producto'
- *       404:
- *         description: Producto no encontrado
- *       401:
- *         description: No autorizado
- *       500:
- *         description: Error al actualizar el producto
- *   delete:
- *     summary: Eliminar un producto (solo owner)
- *     tags: [Productos]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *     responses:
- *       200:
- *         description: Producto eliminado correctamente
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: "Producto eliminado correctamente"
- *       404:
- *         description: Producto no encontrado
- *       401:
- *         description: No autorizado
- *       500:
- *         description: Error al eliminar el producto
- */
-
-/**
- * @swagger
- * /api/productos/{id}/disponible:
- *   patch:
- *     summary: Cambiar disponibilidad de un producto (solo owner)
- *     tags: [Productos]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: ID del producto
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: '#/components/schemas/DisponibilidadUpdate'
- *     responses:
- *       200:
- *         description: Disponibilidad actualizada
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: "Disponibilidad actualizada"
- *                 producto:
- *                   $ref: '#/components/schemas/Producto'
- *       400:
- *         description: Bad Request - campo disponible inválido
- *       404:
- *         description: Producto no encontrado
- *       401:
- *         description: No autorizado
- *       500:
- *         description: Error al actualizar disponibilidad
- */
-
-/**
- * @swagger
- * /api/productos/configuracion/stock-general:
- *   get:
- *     summary: Obtener estado del stock general
- *     tags: [ConfiguracionGlobal]
- *     responses:
- *       200:
- *         description: Estado actual del stock general
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/StockGeneralConfig'
- *       500:
- *         description: Error al obtener configuración global
- *   patch:
- *     summary: Actualizar estado del stock general (solo owner)
- *     tags: [ConfiguracionGlobal]
- *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: '#/components/schemas/StockGeneralConfig'
- *     responses:
- *       200:
- *         description: Estado actualizado del stock general
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/StockGeneralResponse'
- *       400:
- *         description: Bad Request - campo inválido
- *       401:
- *         description: No autorizado
- *       500:
- *         description: Error al actualizar stock general
- */

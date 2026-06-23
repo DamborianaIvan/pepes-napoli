@@ -28,11 +28,12 @@ router.post('/register', async (req, res) => {
 // Login
 router.post('/login', async (req, res) => {
   const { nombreUsuario, password } = req.body;
-console.log(req.body) 
   try {
     const usuario = await Usuario.findOne({ nombreUsuario });
     if (!usuario) {
-      return res.status(400).json({ message: 'Usuario o contraseña incorrectos', usuario:nombreUsuario });
+      return res.status(400).json({
+      message: 'Usuario o contraseña incorrectos'
+    });
     }
 
     const isMatch = await usuario.matchPassword(password);
@@ -68,13 +69,13 @@ module.exports = router;
  *   name: Auth
  *   description: Autenticación de usuarios
  */
-
 /**
  * @swagger
  * /api/auth/register:
  *   post:
- *     summary: Registrar un nuevo usuario
- *     tags: [Auth]
+ *     summary: Crear nuevo usuario
+ *     tags:
+ *       - Auth
  *     requestBody:
  *       required: true
  *       content:
@@ -83,36 +84,38 @@ module.exports = router;
  *             type: object
  *             required:
  *               - nombre
+ *               - nombreUsuario
  *               - email
  *               - password
- *               - rol
  *             properties:
  *               nombre:
  *                 type: string
+ *                 example: Juan Perez
+ *               nombreUsuario:
+ *                 type: string
+ *                 example: juan
  *               email:
  *                 type: string
- *                 format: email
+ *                 example: juan@gmail.com
  *               password:
  *                 type: string
+ *                 example: 123456
  *               rol:
  *                 type: string
- *                 enum: [owner, delivery]
+ *                 enum:
+ *                   - admin
+ *                   - caja
+ *                   - cocina
+ *                   - mozo
+ *                 example: mozo
  *     responses:
- *       200:
- *         description: Usuario registrado exitosamente con token JWT
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 token:
- *                   type: string
+ *       201:
+ *         description: Usuario creado correctamente
  *       400:
- *         description: Email ya registrado
+ *         description: Usuario o email ya existe
  *       500:
- *         description: Error en el servidor
+ *         description: Error interno del servidor
  */
-
 /**
  * @swagger
  * /api/auth/login:

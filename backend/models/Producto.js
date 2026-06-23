@@ -1,36 +1,49 @@
 const mongoose = require('mongoose');
 
 const ProductoSchema = new mongoose.Schema({
-  category: {
+  categoria: {
     type: String,
     required: true,
-    trim: true
+    enum: [
+      'PIZZAS',
+      'EMPANADAS',
+      'BEBIDAS',
+      'POSTRES',
+      'ADICIONALES'
+    ]
   },
-  name: {
+
+  nombre: {
     type: String,
     required: true,
-    trim: true
+    trim: true,
+    unique: true
   },
-  description: {
+
+  descripcion: {
     type: String,
     trim: true
   },
-  price: {
+
+  precio: {
     type: Number,
     required: true
   },
-  image: {
-    type: String, 
+
+  imagen: {
+    type: String,
     trim: true
   },
+
   disponible: {
     type: Boolean,
     default: true
   },
+
   fechaCreacion: {
     type: Date,
     default: Date.now
-  }, 
+  }
 });
 
 module.exports = mongoose.model('Producto', ProductoSchema);
