@@ -264,17 +264,33 @@ const NuevoPedido = () => {
         payload,
         axiosConfig
       );
-
+      console.log(response.data);
       
       setSnackbar({ open: true, message: "Pedido creado correctamente", severity: "success" });
-      setProductosPedido([]);
-      setMesaId("");
-      setNombreCliente("");
-      setTelefono("");
-      setDireccion("");
-      setComentario("");
-      setMetodoPago("EFECTIVO");
-      setTipoPedido("SALON");
+      if (
+        tipoPedido === "SALON" &&
+        mesaId
+      ) {
+
+        await axios.patch(
+          `${API_URL}/api/mesas/${mesaId}/estado`,
+          {
+            estado: "OCUPADA"
+          },
+          axiosConfig
+        );
+        await fetchMesas();
+      }
+
+        setProductosPedido([]);
+        setMesaId("");
+        setNombreCliente("");
+        setTelefono("");
+        setDireccion("");
+        setComentario("");
+        setMetodoPago("EFECTIVO");
+        setTipoPedido("SALON");
+      
   } catch (error: any) {
     console.error(error);
     alert(

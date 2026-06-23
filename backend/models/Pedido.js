@@ -86,6 +86,7 @@ const PedidoSchema = new mongoose.Schema({
       'LISTO',
       'ENTREGADO',
       'PAGADO',
+      'EN_CAMINO',
       'CANCELADO'
     ],
     default: 'ABIERTO',

@@ -134,6 +134,37 @@ router.put('/:id', protect, async (req, res) => {
   }
 });
 
+router.patch('/:id/estado', protect, async (req, res) => {
+    try {
+      const { estado } = req.body;
+      const mesa =
+        await Mesa.findById(
+          req.params.id
+        );
+      if (!mesa) {
+        return res
+          .status(404)
+          .json({
+            message:
+              'Mesa no encontrada'
+          });
+      }
+      mesa.estado = estado;
+      await mesa.save();
+      res.json({
+        message:
+          'Estado actualizado correctamente',
+        mesa
+      });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({
+        message:
+          'Error actualizando estado'
+      });
+    }
+  }
+);
 /**
  * Eliminar mesa
  */

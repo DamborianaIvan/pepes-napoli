@@ -117,6 +117,7 @@ router.patch('/:id/estado', protect, async (req, res) => {
       'LISTO',
       'ENTREGADO',
       'PAGADO',
+      'EN_CAMINO',
       'CANCELADO'
     ];
 
@@ -134,11 +135,13 @@ router.patch('/:id/estado', protect, async (req, res) => {
       });
     }
 
+    const estadoAnterior = pedido.estado;
     pedido.estado = estado;
 
     await pedido.save();
 
     if (
+      estadoAnterior !== 'PAGADO' &&
       estado === 'PAGADO' &&
       pedido.mesaId
     ) {
