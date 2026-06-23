@@ -25,6 +25,10 @@
  *           type: number
  *           example: 12000
  *
+ *         imagen:
+ *           type: string
+ *           example: ""
+ *
  *         disponible:
  *           type: boolean
  *           example: true
