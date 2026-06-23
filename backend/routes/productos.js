@@ -214,6 +214,7 @@ router.get('/:id', async (req, res) => {
 // ✅ Actualizar producto (solo "admin")
 router.put('/:id', protect, restrictTo('admin'), async (req, res) => {
   try {
+
     const {
       categoria,
       nombre,
@@ -223,12 +224,42 @@ router.put('/:id', protect, restrictTo('admin'), async (req, res) => {
       disponible
     } = req.body;
 
-    if (!productoActualizado) return res.status(404).json({ message: 'Producto no encontrado' });
+    const productoActualizado =
+      await Producto.findByIdAndUpdate(
+        req.params.id,
+        {
+          categoria,
+          nombre: nombre?.trim(),
+          descripcion,
+          precio,
+          imagen,
+          disponible
+        },
+        {
+          new: true,
+          runValidators: true
+        }
+      );
 
-    res.json({ message: 'Producto actualizado correctamente', producto: productoActualizado });
+    if (!productoActualizado) {
+      return res.status(404).json({
+        message: 'Producto no encontrado'
+      });
+    }
+
+    res.json({
+      message: 'Producto actualizado correctamente',
+      producto: productoActualizado
+    });
+
   } catch (error) {
+
     console.error(error);
-    res.status(500).json({ message: 'Error al actualizar el producto' });
+
+    res.status(500).json({
+      message: 'Error al actualizar el producto'
+    });
+ 
   }
 });
 

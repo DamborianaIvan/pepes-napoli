@@ -119,16 +119,16 @@ const ProductoManager = () => {
   if (producto) {
     setEditingProduct(producto);
     setFormData({ ...producto });
-    setImagePreview(producto.image);
+    setImagePreview(producto.imagen);
   } else {
     setEditingProduct(null);
     setFormData({
-      name: "",
-      category: "",
-      description: "",
-      price: undefined as any,
+      nombre: "",
+      categoria: "",
+      descripcion: "",
+      precio: undefined as any,
       disponible: true,
-      image: "",
+      imagen: "",
     });
     setImagePreview(null);
   }
@@ -145,7 +145,7 @@ const ProductoManager = () => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: name === "price" ? Number(value) : value,
+      [name]: name === "precio" ? Number(value) : value,
     }));
   };
 
