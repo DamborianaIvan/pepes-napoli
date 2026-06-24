@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./auth.css";
-import logo from "../../assets/FRESCO.png";
+import logo from "../../assets/pepes.png";
 import Snackbar from "@mui/material/Snackbar";
 import MuiAlert from "@mui/material/Alert";
 import TextField from "@mui/material/TextField";

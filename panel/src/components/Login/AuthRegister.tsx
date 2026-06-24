@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./auth.css";
-import logo from "../../assets/FRESCO.png";
+import logo from "../../assets/pepes.png";
 import {
   TextField,
   InputAdornment,

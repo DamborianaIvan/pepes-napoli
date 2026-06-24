@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import "./Sidebar.css";
-import logo from "../../assets/FRESCO.png";
+import logo from "../../assets/pepes.png";
 // Íconos MUI
 import HomeIcon from "@mui/icons-material/Home";
 import AddCircleIcon from "@mui/icons-material/AddCircle";
