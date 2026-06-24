@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { TextField, MenuItem, Box, Typography } from "@mui/material";
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import InventoryIcon from "@mui/icons-material/Inventory";
+import { Link } from "react-router-dom";
 import "./Dashboard.css";
 
 interface Pedido {
@@ -275,11 +276,12 @@ export const Dashboard = () => {
 
   return (
     <div className="panel-content">
+           
       <Box
         onClick={() => setMostrarDashboardCards(!mostrarDashboardCards)}
         sx={{
           display: "flex",
-          alignItems: "center",
+          alignItems: "flex-start",
           cursor: "pointer",
           userSelect: "none",
           gap: 1,
@@ -291,7 +293,13 @@ export const Dashboard = () => {
         <Typography variant="h4" component="span">
           DASHBOARD
         </Typography>
+         <Link to="/panel/nuevo-pedido">
+                  <button type="button" className="login-button">
+                    NUEVO PEDIDO
+                  </button>
+                </Link>
       </Box>
+
 
       {mostrarDashboardCards && (
         <div className="dashboard-cards">
@@ -359,9 +367,14 @@ export const Dashboard = () => {
         </div>
       )}
 
-      <Typography variant="h4" mb={2}>
-        <InventoryIcon /> PEDIDOS PARA HOY
-      </Typography>
+
+  <div className="pedidos-section">
+        <Typography variant="h4" mb={1}>
+          <InventoryIcon /> PEDIDOS PARA HOY
+        </Typography> 
+      </div>
+      
+   
       <div className="pedidos-cards">
         {pedidos.map((pedido) => (
           <div className="pedido-card" key={pedido._id} data-estado={pedido.estado}>

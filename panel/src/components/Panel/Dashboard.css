@@ -15,6 +15,19 @@
   font-size: 30px; 
 }
 
+.login-button {
+  background-color: var(--color-primary);
+  color: var(--color-white);
+  border: none;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  padding-bottom: 0.75rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  font-size: 1rem;
+}
+
 .dashboard-cards {
   display: flex;
   gap: 1rem;
@@ -204,6 +217,11 @@
   }
   .card-separator .mobile {
     display: none;
+  }
+
+  .login-button {
+    width: 100%;
+    margin-top: 10px;
   }
 }
 

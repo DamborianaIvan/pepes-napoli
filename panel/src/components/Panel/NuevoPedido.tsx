@@ -11,12 +11,21 @@ import {
   Divider,
   TextField,
   Alert,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Chip,
+  Stack,
   MenuItem
 } from "@mui/material";
+import AddCircleIcon from "@mui/icons-material/AddCircle";
 import AddIcon from '@mui/icons-material/Add';
 import RemoveIcon from '@mui/icons-material/Remove';
 import DeleteIcon from '@mui/icons-material/Delete';
 import IconButton from '@mui/material/IconButton';
+import { useNavigate } from "react-router-dom";
+import "./NuevoPedido.css";
 
 interface Producto {
   _id: string;
@@ -73,6 +82,13 @@ const NuevoPedido = () => {
     message: "",
     severity: "info",
   });
+  const navigate = useNavigate();
+
+    const [pedidoExitoso, setPedidoExitoso] =
+      useState(false);
+
+    const [pedidoCreado, setPedidoCreado] =
+      useState<any>(null);
 
   const token = localStorage.getItem("token") || "";
 
@@ -264,9 +280,14 @@ const NuevoPedido = () => {
         payload,
         axiosConfig
       );
-      console.log(response.data);
+      setPedidoCreado(response.data);
+      setPedidoExitoso(true);
       
-      setSnackbar({ open: true, message: "Pedido creado correctamente", severity: "success" });
+      setSnackbar({
+      open: true,
+      message: "Pedido creado correctamente",
+      severity: "success"
+    });
       if (
         tipoPedido === "SALON" &&
         mesaId
@@ -292,11 +313,13 @@ const NuevoPedido = () => {
         setTipoPedido("SALON");
       
   } catch (error: any) {
-    console.error(error);
-    alert(
-      error?.response?.data?.message ||
-      "Error al crear el pedido"
-    );
+    setSnackbar({
+      open: true,
+      message:
+        error?.response?.data?.message ||
+        "Error al crear el pedido",
+      severity: "error"
+    });
   }
   };
   //obtenemos el formato correcot para mostrar el total
@@ -313,23 +336,32 @@ const NuevoPedido = () => {
     );
 
   };
+
+  useEffect(() => {
+  if (pedidoExitoso) {
+    const timer = setTimeout(() => {
+      navigate("/panel");
+    }, 5000);
+
+    return () =>
+      clearTimeout(timer);
+  }
+}, [pedidoExitoso]);
+
   return (
-    <Box sx={{ p:3 }} display="flex" flexDirection="column" gap={2}>
-      <Typography
-        variant="h4"
-        fontWeight="bold"
-        mb={3}
-      >
-        Nuevo Pedido
-      </Typography>
-    
-      <Typography>
-        Productos cargados: {productos.length}
+    <Box className="nuevoPedido-container">
+    <Box className="nuevoPedido-header">
+      <Typography variant="h4" component="span">
+        NUEVO PEDIDO
       </Typography>
 
-      <Typography>
-        Mesas cargadas: {mesas.length}
+      <Typography
+        color="text.secondary"
+        sx={{ mt: 1 }}
+      >
+        Armá el pedido y confirmalo.
       </Typography>
+    </Box>
   
       
       <Grid
@@ -344,7 +376,7 @@ const NuevoPedido = () => {
             md: 7
           }}
         >
-          <Card>
+          <Card className="resumen-card">
             <CardContent>
 
               <Typography
@@ -393,32 +425,35 @@ const NuevoPedido = () => {
                                 sx={{
                                   cursor: "pointer"
                                 }}
+                                className="producto-card"
                                 onClick={() =>
                                   agregarProducto(producto)
                                 }
                               >
 
-                                <CardContent>
-
+                               <CardContent>
                                   <Typography
                                     variant="subtitle1"
-                                    fontWeight="bold"
+                                    fontWeight={700}
                                   >
                                     {producto.nombre}
                                   </Typography>
 
-                                  <Typography
-                                    color="success.main"
-                                  >
-                                    {
-                                      formatCurrency(
-                                        producto.precio
-                                      )
-                                    }
+                                  <Typography className="precio">
+                                    {formatCurrency(producto.precio)}
                                   </Typography>
 
+                                  <Button
+                                    fullWidth
+                                    variant="contained"
+                                    startIcon={<AddIcon />}
+                                    onClick={() =>
+                                      agregarProducto(producto)
+                                    }
+                                  >
+                                    Agregar
+                                  </Button>
                                 </CardContent>
-
                               </Card>
 
                             </Grid>
@@ -683,6 +718,76 @@ const NuevoPedido = () => {
           </Card>
         </Grid>
       </Grid>
+
+      <Dialog
+  open={pedidoExitoso}
+  maxWidth="sm"
+  fullWidth
+>
+  <DialogTitle>
+    Pedido creado correctamente
+  </DialogTitle>
+
+  <DialogContent>
+
+    <Stack
+      direction="row"
+      spacing={1}
+      sx={{ mb: 2 }}
+    >
+      <Chip
+        label={tipoPedido}
+        color="primary"
+      />
+
+      <Chip
+        label={metodoPago}
+        color="success"
+      />
+    </Stack>
+
+        {productosPedido.map(item => (
+          <Typography
+            key={item.producto}
+            sx={{ mb: 1 }}
+          >
+            • {item.producto}
+            {" x "}
+            {item.cantidad}
+          </Typography>
+        ))}
+
+        <Divider sx={{ my: 2 }} />
+
+        <Typography
+          variant="h6"
+          fontWeight="bold"
+        >
+          Total:
+          {" "}
+          {formatCurrency(total)}
+        </Typography>
+      </DialogContent>
+
+      <DialogActions>
+        <Button
+          onClick={() =>
+            setPedidoExitoso(false)
+          }
+        >
+          Seguir editando
+        </Button>
+
+        <Button
+          variant="contained"
+          onClick={() =>
+            navigate("/panel")
+          }
+        >
+          Ir al Dashboard
+        </Button>
+      </DialogActions>
+    </Dialog>
 
       <Snackbar open={snackbar.open} autoHideDuration={3000} onClose={() => setSnackbar(prev => ({ ...prev, open: false }))} anchorOrigin={{ vertical: "bottom", horizontal: "center" }}>
           <Alert severity={snackbar.severity} variant="filled" onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}>{snackbar.message}</Alert>
