@@ -350,26 +350,24 @@ const NuevoPedido = () => {
 
   return (
     <Box className="nuevoPedido-container">
-    <Box className="nuevoPedido-header">
-      <Typography variant="h4" component="span">
-        NUEVO PEDIDO
-      </Typography>
+      <Box className="nuevoPedido-header">
+        <Typography variant="h4" component="span">
+          NUEVO PEDIDO
+        </Typography>
 
-      <Typography
-        color="text.secondary"
-        sx={{ mt: 1 }}
-      >
-        Armá el pedido y confirmalo.
-      </Typography>
-    </Box>
-  
+        <Typography
+          color="text.secondary"
+          sx={{ mt: 1 }}
+        >
+          Armá el pedido y confirmalo.
+        </Typography>
+      </Box>
+    
       
       <Grid
         container
         spacing={3}
       >
-
-
         <Grid
           size={{
             xs: 12,
@@ -426,12 +424,12 @@ const NuevoPedido = () => {
                                   cursor: "pointer"
                                 }}
                                 className="producto-card"
-                                onClick={() =>
-                                  agregarProducto(producto)
-                                }
+                                // onClick={() =>
+                                // agregarProducto(producto)
+                                // }
                               >
 
-                               <CardContent>
+                                <CardContent>
                                   <Typography
                                     variant="subtitle1"
                                     fontWeight={700}
@@ -517,7 +515,7 @@ const NuevoPedido = () => {
                           TAKEAWAY
                         </MenuItem>
                       </TextField>
-                     
+                      
                       { //Pedido SALON
                           tipoPedido === "SALON" && (
                             <TextField
@@ -679,7 +677,7 @@ const NuevoPedido = () => {
 
                     </IconButton><IconButton
                       color="error"
-                       onClick={() =>
+                        onClick={() =>
                         eliminarProducto(
                           item.producto
                         )
@@ -718,76 +716,74 @@ const NuevoPedido = () => {
           </Card>
         </Grid>
       </Grid>
-
+           
       <Dialog
-  open={pedidoExitoso}
-  maxWidth="sm"
-  fullWidth
->
-  <DialogTitle>
-    Pedido creado correctamente
-  </DialogTitle>
-
-  <DialogContent>
-
-    <Stack
-      direction="row"
-      spacing={1}
-      sx={{ mb: 2 }}
-    >
-      <Chip
-        label={tipoPedido}
-        color="primary"
-      />
-
-      <Chip
-        label={metodoPago}
-        color="success"
-      />
-    </Stack>
-
-        {productosPedido.map(item => (
-          <Typography
-            key={item.producto}
-            sx={{ mb: 1 }}
-          >
-            • {item.producto}
-            {" x "}
-            {item.cantidad}
-          </Typography>
-        ))}
-
-        <Divider sx={{ my: 2 }} />
-
-        <Typography
-          variant="h6"
-          fontWeight="bold"
+          open={pedidoExitoso}
+          maxWidth="sm"
+          fullWidth
         >
-          Total:
-          {" "}
-          {formatCurrency(total)}
-        </Typography>
-      </DialogContent>
+          <DialogTitle>
+            Pedido creado correctamente
+          </DialogTitle>
 
-      <DialogActions>
-        <Button
-          onClick={() =>
-            setPedidoExitoso(false)
-          }
-        >
-          Seguir editando
-        </Button>
+          <DialogContent>
 
-        <Button
-          variant="contained"
-          onClick={() =>
-            navigate("/panel")
-          }
-        >
-          Ir al Dashboard
-        </Button>
-      </DialogActions>
-    </Dialog>
+            <Stack
+              direction="row"
+              spacing={1}
+              sx={{ mb: 2 }}
+            >
+              <Chip
+                label={tipoPedido}
+                color="primary"
+              />
+
+              <Chip
+                label={metodoPago}
+                color="success"
+              />
+            </Stack>
+              {productosPedido.map(item => (
+                <Typography
+                  key={item.producto}
+                  sx={{ mb: 1 }}
+                >
+                  • {item.producto}
+                  {" x "}
+                  {item.cantidad}
+                </Typography>
+              ))}
+
+              <Divider sx={{ my: 2 }} />
+
+              <Typography
+                  variant="h6"
+                  fontWeight="bold"
+                >
+                  Total:
+                  {" "}
+                  {formatCurrency(total)}
+                </Typography>
+          </DialogContent>
+          <DialogActions>
+            <Button
+              onClick={() =>
+                setPedidoExitoso(false)
+              }
+            >
+              Seguir editando
+            </Button>
+
+            <Button
+              variant="contained"
+              onClick={() =>
+                navigate("/panel")
+              }
+              >
+                Ir al Dashboard
+              </Button>
+          </DialogActions>
+      </Dialog>
 
       <Snackbar open={snackbar.open} autoHideDuration={3000} onClose={() => setSnackbar(prev => ({ ...prev, open: false }))} anchorOrigin={{ vertical: "bottom", horizontal: "center" }}>
           <Alert severity={snackbar.severity} variant="filled" onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}>{snackbar.message}</Alert>

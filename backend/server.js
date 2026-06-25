@@ -4,7 +4,6 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const swaggerJsDoc = require('swagger-jsdoc');
 const swaggerUi = require('swagger-ui-express');
-
 const authRoutes = require('./routes/auth');
 const productosRoutes = require('./routes/productos');
 const pedidosRoutes = require('./routes/pedidos');
@@ -53,6 +52,7 @@ mongoose.connect(process.env.MONGODB_URI)
   })
   .catch((err) => {
     console.error('Error MongoDB:', err.message);
+    console.log(err);
 });
 
 app.use('/api/auth', authRoutes);
