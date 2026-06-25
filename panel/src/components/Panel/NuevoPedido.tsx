@@ -17,7 +17,8 @@ import {
   DialogActions,
   Chip,
   Stack,
-  MenuItem
+  MenuItem,
+  Avatar
 } from "@mui/material";
 import AddCircleIcon from "@mui/icons-material/AddCircle";
 import AddIcon from '@mui/icons-material/Add';
@@ -47,6 +48,23 @@ interface ProductoPedido {
   producto: string;
   cantidad: number;
   precio: number;
+  subtotal: number;
+}
+
+interface PedidoCreado {
+  _id: string;
+  numeroPedido: number;
+  mesa?: string;
+  nombreCliente?: string;
+  telefono?: string;
+  direccion?: string;
+  comentario?: string;
+  tipoPedido: "SALON" | "DELIVERY" | "RETIRO";
+  metodoPago: "EFECTIVO" | "TRANSFERENCIA" | "MERCADOPAGO" | "TARJETA";
+  productos: ProductoPedido[];
+  total: number;
+  estado: string;
+  createdAt: string;
 }
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -59,7 +77,9 @@ const NuevoPedido = () => {
 }, []);
   const [productos, setProductos] = useState<Producto[]>([]);
   const [mesas, setMesas] = useState<Mesa[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [dialogConfirmar, setDialogConfirmar] = useState(false);
+  const [guardandoPedido, setGuardandoPedido] = useState(false);
+  const [loading, setLoading] = useState(false); 
   const [tipoPedido, setTipoPedido] =
   useState<
     "SALON" |
@@ -72,6 +92,10 @@ const NuevoPedido = () => {
   const [comentario, setComentario] = useState("");
   const [metodoPago, setMetodoPago] = useState("EFECTIVO");
   const [mesaId, setMesaId] = useState<string>("");
+  const [pedidoCreado, setPedidoCreado] = useState<PedidoCreado | null>(null);
+  const mesaSeleccionada = mesas.find(
+    (mesa) => mesa._id === mesaId
+  );
   const mesasLibres =mesas.filter(
     mesa =>
       mesa.estado === "LIBRE"
@@ -83,20 +107,15 @@ const NuevoPedido = () => {
     severity: "info",
   });
   const navigate = useNavigate();
-
-    const [pedidoExitoso, setPedidoExitoso] =
-      useState(false);
-
-    const [pedidoCreado, setPedidoCreado] =
-      useState<any>(null);
-
+  const [pedidoExitoso, setPedidoExitoso] = useState(false);
   const token = localStorage.getItem("token") || "";
-
   const axiosConfig = {
     headers: {
       Authorization: `Bearer ${token}`,
     },
   };
+
+
   //fetch PRODUCTOS
   const fetchProductos = async () => {
   try {
@@ -162,9 +181,8 @@ const NuevoPedido = () => {
         return prev.map(p =>
           p.producto === producto.nombre
             ? {
-                ...p,
-                cantidad:
-                  p.cantidad + 1
+                  ...p,
+                  cantidad: p.cantidad + 1,
               }
             : p
         );
@@ -196,8 +214,7 @@ const NuevoPedido = () => {
         ) {
           return {
             ...item,
-            cantidad:
-              item.cantidad - 1
+            cantidad:item.cantidad - 1
           };
         }
         return item;
@@ -223,7 +240,55 @@ const NuevoPedido = () => {
 
   };
 
+  //Fuyncion que abre dialog de confirmacion
+
+ 
+  const abrirConfirmacion = () => {
+    if (productosPedido.length === 0) {
+      setSnackbar({
+        open: true,
+        message: "Debe agregar al menos un producto.",
+        severity: "warning"
+      });
+      return;
+    }
+
+    if (tipoPedido === "SALON" && !mesaId) {
+      setSnackbar({
+        open: true,
+        message: "Seleccione una mesa.",
+        severity: "warning"
+      });
+      return;
+    }
+
+    setDialogConfirmar(true);
+  };
+  
+
+  const limpiarFormulario = () => {
+
+    setProductosPedido([]);
+
+    setMesaId("");
+
+    setNombreCliente("");
+
+    setTelefono("");
+
+    setDireccion("");
+
+    setComentario("");
+
+    setMetodoPago("EFECTIVO");
+
+    setTipoPedido("SALON");
+
+  };
+
+
   const handleCrearPedido = async () => {
+    setGuardandoPedido(true);
     try {
       //validacion pedido vacio
       if (productosPedido.length === 0) {
@@ -259,7 +324,9 @@ const NuevoPedido = () => {
           return;
         }
       }  
-
+      
+      // Construcción del payload
+      // ======================================
       const payload = {
         tipoPedido,
         nombreCliente,
@@ -274,20 +341,17 @@ const NuevoPedido = () => {
             ? mesaId
             : undefined
       };
-      
+      setDialogConfirmar(false);
+      // Envío del pedido
+      // ======================================
       const response =await axios.post(
         `${API_URL}/api/pedidos`,
         payload,
         axiosConfig
       );
       setPedidoCreado(response.data);
-      setPedidoExitoso(true);
       
-      setSnackbar({
-      open: true,
-      message: "Pedido creado correctamente",
-      severity: "success"
-    });
+      
       if (
         tipoPedido === "SALON" &&
         mesaId
@@ -302,16 +366,10 @@ const NuevoPedido = () => {
         );
         await fetchMesas();
       }
-
-        setProductosPedido([]);
-        setMesaId("");
-        setNombreCliente("");
-        setTelefono("");
-        setDireccion("");
-        setComentario("");
-        setMetodoPago("EFECTIVO");
-        setTipoPedido("SALON");
-      
+        setGuardandoPedido(false);
+        setPedidoExitoso(true);
+        limpiarFormulario();
+              
   } catch (error: any) {
     setSnackbar({
       open: true,
@@ -336,17 +394,17 @@ const NuevoPedido = () => {
     );
 
   };
+//   Se lo removi ya que esto va a ir a un boton que te deja ir a pedidos
+//   useEffect(() => {
+//   if (pedidoExitoso) {
+//     const timer = setTimeout(() => {
+//       navigate("/panel");
+//     }, 5000);
 
-  useEffect(() => {
-  if (pedidoExitoso) {
-    const timer = setTimeout(() => {
-      navigate("/panel");
-    }, 5000);
-
-    return () =>
-      clearTimeout(timer);
-  }
-}, [pedidoExitoso]);
+//     return () =>
+//       clearTimeout(timer);
+//   }
+// }, [pedidoExitoso]);
 
   return (
     <Box className="nuevoPedido-container">
@@ -368,7 +426,7 @@ const NuevoPedido = () => {
         container
         spacing={3}
       >
-        <Grid
+        <Grid //grid izquierdo
           size={{
             xs: 12,
             md: 7
@@ -424,9 +482,9 @@ const NuevoPedido = () => {
                                   cursor: "pointer"
                                 }}
                                 className="producto-card"
-                                // onClick={() =>
-                                // agregarProducto(producto)
-                                // }
+                                onClick={() =>
+                                agregarProducto(producto)
+                                }
                               >
 
                                 <CardContent>
@@ -440,17 +498,6 @@ const NuevoPedido = () => {
                                   <Typography className="precio">
                                     {formatCurrency(producto.precio)}
                                   </Typography>
-
-                                  <Button
-                                    fullWidth
-                                    variant="contained"
-                                    startIcon={<AddIcon />}
-                                    onClick={() =>
-                                      agregarProducto(producto)
-                                    }
-                                  >
-                                    Agregar
-                                  </Button>
                                 </CardContent>
                               </Card>
 
@@ -470,7 +517,7 @@ const NuevoPedido = () => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid
+        <Grid //grid derecho
           size={{
             xs: 12,
             md: 5
@@ -652,7 +699,9 @@ const NuevoPedido = () => {
                     <br />
                     ${item.precio} x {item.cantidad}
                     {" = "}
-                    ${item.precio * item.cantidad}
+                    <Typography fontWeight={700}>
+                        {formatCurrency(item.precio * item.cantidad)}
+                    </Typography>
                     <IconButton
                       color="success"
                       onClick={() =>
@@ -702,13 +751,13 @@ const NuevoPedido = () => {
                 {formatCurrency(total)}
               </Typography>
 
+              
               <Button
-                fullWidth
-                variant="contained"
-                sx={{ mt: 2 }}
-                onClick={handleCrearPedido}
+                  variant="contained"
+                  color="success"
+                  onClick={abrirConfirmacion}
               >
-                Guardar Pedido
+                  Confirmar pedido
               </Button>
 
             </CardContent>
@@ -717,73 +766,479 @@ const NuevoPedido = () => {
         </Grid>
       </Grid>
            
-      <Dialog
-          open={pedidoExitoso}
-          maxWidth="sm"
+
+
+      
+      <Dialog //DIALOGO DE CONFIRMACION
+          open={dialogConfirmar}
+          onClose={() => setDialogConfirmar(false)}
+          maxWidth="md"
           fullWidth
+          PaperProps={{
+            sx: {
+              borderRadius: 3,
+            },
+          }}
         >
-          <DialogTitle>
-            Pedido creado correctamente
+          <DialogTitle
+            sx={{
+              bgcolor: "success.main",
+              color: "success.contrastText",
+              py: 2,
+            }}
+          >
+            <Stack
+                direction="row"
+                spacing={2}
+                alignItems="center"
+            >
+                <Avatar
+                    sx={{
+                        bgcolor: "success.main",
+                        width: 48,
+                        height: 48,
+                    }}
+                >
+                </Avatar>
+                <Box>
+                    <Typography
+                        variant="h6"
+                        fontWeight={700}
+                    >
+                        Confirmar pedido
+                    </Typography>
+                    <Typography
+                        variant="body2"
+                        color="text.secondary"
+                    >
+                        Revisá la información antes de enviarla a cocina.
+                    </Typography>
+                </Box>
+            </Stack>
           </DialogTitle>
 
-          <DialogContent>
+          <DialogContent dividers>
 
-            <Stack
-              direction="row"
-              spacing={1}
-              sx={{ mb: 2 }}
+            {/* Información general */}
+
+            <Card
+              elevation={0}
+              sx={{
+                mb: 2,
+                border: 1,
+                borderColor: "divider",
+                borderRadius: 2,
+              }}
             >
-              <Chip
-                label={tipoPedido}
-                color="primary"
-              />
+              <CardContent>
 
-              <Chip
-                label={metodoPago}
-                color="success"
-              />
-            </Stack>
-              {productosPedido.map(item => (
                 <Typography
-                  key={item.producto}
-                  sx={{ mb: 1 }}
+                  variant="subtitle1"
+                  fontWeight={700}
+                  sx={{ mb: 2 }}
                 >
-                  • {item.producto}
-                  {" x "}
-                  {item.cantidad}
+                  📋 Información del pedido
                 </Typography>
-              ))}
 
-              <Divider sx={{ my: 2 }} />
+                <Grid container spacing={2}>
 
-              <Typography
-                  variant="h6"
-                  fontWeight="bold"
+                  {tipoPedido === "SALON" && (
+                    <>
+                      <Grid size={{xs:6}}>
+                        <Typography color="text.secondary">
+                          Mesa
+                        </Typography>
+
+                        <Typography fontWeight={600}>
+                          {mesaSeleccionada?.nombre}
+                        </Typography>
+                      </Grid>
+                    </>
+                  )}
+
+                  {nombreCliente && (
+                    <Grid size={{xs:6}}>
+                      <Typography color="text.secondary">
+                        Cliente
+                      </Typography>
+
+                      <Typography fontWeight={600}>
+                        {nombreCliente}
+                      </Typography>
+                    </Grid>
+                  )}
+
+                  <Grid size={{xs:6}}>
+                    <Typography color="text.secondary">
+                      Tipo
+                    </Typography>
+
+                    <Chip
+                      label={tipoPedido}
+                      color="primary"
+                      size="small"
+                    />
+                  </Grid>
+
+                  <Grid size={{xs:6}}>
+                    <Typography color="text.secondary">
+                      Pago
+                    </Typography>
+
+                    <Chip
+                      label={metodoPago}
+                      color="success"
+                      size="small"
+                    />
+                  </Grid>
+
+                </Grid>
+
+              </CardContent>
+            </Card>
+
+            {/* Productos */}
+
+            <Card
+              elevation={0}
+              sx={{
+                mb: 2,
+                border: 1,
+                borderColor: "divider",
+                borderRadius: 2,
+              }}
+            >
+              <CardContent>
+
+                <Typography
+                  variant="subtitle1"
+                  fontWeight={700}
+                  sx={{ mb: 2 }}
                 >
-                  Total:
-                  {" "}
+                  🛒 Productos
+                </Typography>
+
+                <Stack spacing={1.5}>
+
+                  {productosPedido.map((item) => (
+
+                    <Box key={item.producto}>
+
+                      <Stack
+                        direction="row"
+                        justifyContent="space-between"
+                        alignItems="center"
+                      >
+
+                        <Box>
+
+                          <Typography fontWeight={600}>
+                            {item.producto}
+                          </Typography>
+
+                          <Typography
+                            variant="body2"
+                            color="text.secondary"
+                          >
+                            {item.cantidad} × {formatCurrency(item.precio)}
+                          </Typography>
+
+                        </Box>
+
+                        <Typography
+                          fontWeight={700}
+                        >
+                          {formatCurrency(item.precio * item.cantidad)}
+                        </Typography>
+
+                      </Stack>
+
+                      <Divider />
+
+                    </Box>
+
+                  ))}
+
+                </Stack>
+
+              </CardContent>
+            </Card>
+
+            {/* Total */}
+
+            <Card
+              sx={{
+                bgcolor: "success.light",
+                color: "success.contrastText",
+                borderRadius: 2,
+                mb: comentario ? 2 : 0,
+              }}
+            >
+              <CardContent>
+
+                <Typography
+                  align="center"
+                  variant="overline"
+                >
+                  TOTAL
+                </Typography>
+
+                <Typography
+                  align="center"
+                  variant="h4"
+                  fontWeight={700}
+                >
                   {formatCurrency(total)}
                 </Typography>
+
+              </CardContent>
+            </Card>
+
+            {/* Observaciones */}
+
+            {comentario && (
+
+              <Card
+                elevation={0}
+                sx={{
+                  border: 1,
+                  borderColor: "divider",
+                  borderRadius: 2,
+                }}
+              >
+
+                <CardContent>
+
+                  <Typography
+                    variant="subtitle1"
+                    fontWeight={700}
+                    sx={{ mb: 1 }}
+                  >
+                    📝 Observaciones
+                  </Typography>
+
+                  <Typography>
+                    {comentario}
+                  </Typography>
+
+                </CardContent>
+
+              </Card>
+
+            )}
+
           </DialogContent>
-          <DialogActions>
+
+          <DialogActions
+            sx={{
+              position: "sticky",
+              bottom: 0,
+              bgcolor: "background.paper",
+              borderTop: 1,
+              borderColor: "divider",
+              px: 3,
+              py: 2,
+            }}
+          >
             <Button
-              onClick={() =>
-                setPedidoExitoso(false)
-              }
+              onClick={() => setDialogConfirmar(false)}
             >
-              Seguir editando
+              ← Seguir editando
             </Button>
 
             <Button
               variant="contained"
-              onClick={() =>
-                navigate("/panel")
-              }
-              >
-                Ir al Dashboard
-              </Button>
+              color="success"
+              onClick={handleCrearPedido}
+              disabled={guardandoPedido}
+              size="large"
+            >
+              {guardandoPedido
+                ? "Guardando..."
+                : "✔ Confirmar pedido"}
+            </Button>
+
           </DialogActions>
-      </Dialog>
+      </Dialog>        
+
+      <Dialog
+        open={pedidoExitoso}
+        onClose={() => setPedidoExitoso(false)}
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 3,
+          },
+        }}
+      >
+        <DialogContent sx={{ py: 4 }}>
+
+          <Stack
+            spacing={3}
+            alignItems="center"
+          >
+
+            {/* Icono */}
+
+            <Avatar
+              sx={{
+                bgcolor: "success.main",
+                width: 80,
+                height: 80,
+              }}
+            >
+              {/* <CheckCircleOutlineIcon
+                sx={{ fontSize: 45 }}
+              /> */}
+            </Avatar>
+
+            {/* Título */}
+
+            <Box textAlign="center">
+
+              <Typography
+                variant="h5"
+                fontWeight={700}
+              >
+                ¡Pedido creado!
+              </Typography>
+
+              <Typography
+                color="text.secondary"
+                sx={{ mt: 1 }}
+              >
+                El pedido fue registrado correctamente.
+              </Typography>
+
+            </Box>
+
+            {/* Número de pedido */}
+
+            <Typography
+              variant="h3"
+              color="primary"
+              fontWeight={800}
+            >
+              #{pedidoCreado?.numeroPedido}
+            </Typography>
+
+            {/* Resumen */}
+
+            <Card
+              elevation={0}
+              sx={{
+                width: "100%",
+                border: 1,
+                borderColor: "divider",
+                borderRadius: 2,
+              }}
+            >
+              <CardContent>
+
+                <Stack spacing={2}>
+
+                  {tipoPedido === "SALON" && (
+                    <Stack
+                      direction="row"
+                      justifyContent="space-between"
+                    >
+                      <Typography color="text.secondary">
+                        Mesa
+                      </Typography>
+
+                      <Typography fontWeight={600}>
+                        {pedidoCreado?.mesa}
+                      </Typography>
+                    </Stack>
+                  )}
+
+                  <Stack
+                    direction="row"
+                    justifyContent="space-between"
+                  >
+                    <Typography color="text.secondary">
+                      Tipo
+                    </Typography>
+
+                    <Chip
+                      size="small"
+                      label={pedidoCreado?.tipoPedido}
+                      color="primary"
+                    />
+                  </Stack>
+
+                  <Stack
+                    direction="row"
+                    justifyContent="space-between"
+                  >
+                    <Typography color="text.secondary">
+                      Total
+                    </Typography>
+
+                    <Typography
+                      fontWeight={700}
+                      color="success.main"
+                    >
+                      {formatCurrency(
+                       pedidoCreado?.total ?? 0
+                      )}
+                    </Typography>
+
+                  </Stack>
+
+                </Stack>
+
+              </CardContent>
+            </Card>
+
+            {/* Acciones */}
+
+            <Stack
+              spacing={2}
+              width="100%"
+            >
+
+              <Button
+                variant="contained"
+                size="large"
+                //startIcon={<PrintIcon />}
+                fullWidth
+                onClick={() => {
+                  // imprimirTicket();
+                }}
+              >
+                Imprimir comanda
+              </Button>
+
+              <Button
+                variant="outlined"
+                size="large"
+                //startIcon={<AddCircleOutlineIcon />}
+                fullWidth
+                onClick={() => {
+                  setPedidoExitoso(false);
+                }}
+              >
+                Nuevo pedido
+              </Button>
+              <Button
+                variant="contained"
+                size="large"
+                //startIcon={<PrintIcon />}
+                fullWidth
+                onClick={() => {
+                   navigate("/panel/dashboard");
+                }}
+              >
+                Ver pedidos
+              </Button>
+            </Stack>
+
+          </Stack>
+
+        </DialogContent>
+      </Dialog>          
 
       <Snackbar open={snackbar.open} autoHideDuration={3000} onClose={() => setSnackbar(prev => ({ ...prev, open: false }))} anchorOrigin={{ vertical: "bottom", horizontal: "center" }}>
           <Alert severity={snackbar.severity} variant="filled" onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}>{snackbar.message}</Alert>

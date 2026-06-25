@@ -18,7 +18,7 @@
 }
 
 .precio {
-  color: #2e7d32;
+  color:var(--color-primary);
   font-weight: bold;
   margin: 15px 0;
 }
@@ -99,4 +99,7 @@
   .guardar-btn {
     height: 50px;
   }
+}
+.succes{
+  color:var(--color-primary);
 }
