@@ -1,14 +1,13 @@
-const express = require('express');
+import express from 'express';
+import jwt from 'jsonwebtoken';
+import { config } from '../config.js';
+import Usuario from '../models/Usuario.js';
+
 const router = express.Router();
-const Usuario = require('../models/Usuario');
-const jwt = require('jsonwebtoken');
-const bcrypt = require('bcryptjs');
-require('dotenv').config();
 
 // Registro
 router.post('/register', async (req, res) => {
   const { nombreUsuario, password, nombre, rol, email } = req.body;
-    console.log(req.body) 
   try {
     const existingUser = await Usuario.findOne({ nombreUsuario });
     if (existingUser) {
@@ -29,7 +28,7 @@ router.post('/register', async (req, res) => {
 router.post('/login', async (req, res) => {
   const { nombreUsuario, password } = req.body;
   try {
-    const usuario = await Usuario.findOne({ nombreUsuario });
+    const usuario = await Usuario.findOne({ nombreUsuario }).select('+password');
     if (!usuario) {
       return res.status(400).json({
       message: 'Usuario o contraseña incorrectos'
@@ -43,8 +42,8 @@ router.post('/login', async (req, res) => {
 
     const token = jwt.sign(
       { id: usuario._id, rol: usuario.rol },
-      process.env.JWT_SECRET,
-      { expiresIn: '1d' }
+      config.jwtSecret,
+      { expiresIn: config.jwtExpiresIn }
     );
 
     // ✅ Asegurate de devolver también el rol
@@ -61,7 +60,7 @@ router.post('/login', async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;
 
 /**
  * @swagger
@@ -85,7 +84,7 @@ module.exports = router;
  *             required:
  *               - nombre
  *               - nombreUsuario
- *               - email
+ *               - nombreUsuario
  *               - password
  *             properties:
  *               nombre:
@@ -132,9 +131,8 @@ module.exports = router;
  *               - email
  *               - password
  *             properties:
- *               email:
+ *               nombreUsuario:
  *                 type: string
- *                 format: email
  *               password:
  *                 type: string
  *     responses:

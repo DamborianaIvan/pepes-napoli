@@ -1,7 +1,7 @@
-const jwt = require('jsonwebtoken');
-require('dotenv').config();
+import jwt from 'jsonwebtoken';
+import { config } from '../config.js';
 
-exports.protect = (req, res, next) => {
+export const protect = (req, res, next) => {
   let token;
   if (req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
     token = req.headers.authorization.split(' ')[1];
@@ -9,7 +9,7 @@ exports.protect = (req, res, next) => {
   if (!token) return res.status(401).json({ message: 'No token, autorización denegada' });
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, config.jwtSecret);
     req.usuario = decoded;
     next();
   } catch (error) {
@@ -17,7 +17,7 @@ exports.protect = (req, res, next) => {
   }
 };
 
-exports.restrictTo = (...roles) => {
+export const restrictTo = (...roles) => {
   return (req, res, next) => {
     if (!roles.includes(req.usuario.rol)) {
       return res.status(403).json({ message: 'Acceso no autorizado' });

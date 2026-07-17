@@ -1,9 +1,9 @@
-const express = require('express');
-const router = express.Router();
+import express from 'express';
+import { protect } from '../middleware/auth.js';
+import Mesa from '../models/Mesa.js';
+import Pedido from '../models/Pedido.js';
 
-const Pedido = require('../models/Pedido');
-const Mesa = require('../models/Mesa');
-const { protect } = require('../middleware/auth');
+const router = express.Router();
 
 /**
  * Crear pedido
@@ -193,4 +193,4 @@ router.delete('/:id', protect, async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;

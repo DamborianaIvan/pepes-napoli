@@ -33,11 +33,12 @@
  *           type: boolean
  *           example: true
  */
-const express = require('express');
+import express from 'express';
+import { protect, restrictTo } from '../middleware/auth.js';
+import Producto from '../models/Producto.js';
+import StockGeneral from '../models/StockGeneral.js';
+
 const router = express.Router();
-const Producto = require('../models/Producto');
-const { protect, restrictTo } = require('../middleware/auth');
-const StockGeneral = require("../models/StockGeneral");
 
 // ✅ Crear producto (solo "admin")
 /**
@@ -334,4 +335,4 @@ router.patch('/configuracion/stock-general', protect, restrictTo('admin'), async
 });
 
 
-module.exports = router;
+export default router;

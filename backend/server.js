@@ -1,65 +1,45 @@
-const dotenv = require('dotenv');
-const express = require('express');
-const mongoose = require('mongoose');
-const cors = require('cors');
-const swaggerJsDoc = require('swagger-jsdoc');
-const swaggerUi = require('swagger-ui-express');
-const authRoutes = require('./routes/auth');
-const productosRoutes = require('./routes/productos');
-const pedidosRoutes = require('./routes/pedidos');
-const mesasRoutes = require('./routes/mesas');
-dotenv.config();
+import cors from 'cors';
+import express from 'express';
+import mongoose from 'mongoose';
+import swaggerUi from 'swagger-ui-express';
+import { pathToFileURL } from 'node:url';
+import { config, validateConfig } from './config.js';
+import { openapiDefinition } from './docs/openapi.js';
+import { paths } from './docs/paths.js';
+import { errorHandler, notFound } from './middleware/errorHandler.js';
+import authRoutes from './routes/auth.js';
+import productosRoutes from './routes/productos.js';
+import pedidosRoutes from './routes/pedidos.js';
+import mesasRoutes from './routes/mesas.js';
 
-const swaggerOptions = {
-  swaggerDefinition: {
-    openapi: '3.0.0',
-    info: {
-      title: 'API Pepes Pizza',
-      version: '1.0.0',
-      description: 'Documentación de la API para pedidos y productos'
-    },
-    components: {
-    securitySchemes: {
-        bearerAuth: {
-          type: 'http',
-          scheme: 'bearer',
-          bearerFormat: 'JWT'
-        }
-      }
-    },
-    servers: [
-      {
-        url: process.env.BASE_URL,
-        description: 'Servidor local'
-      }
-    ]
-  },
-  apis: ['./routes/*.js']
-};
-const swaggerDocs = swaggerJsDoc(swaggerOptions);
-
+const swaggerDocs = { ...openapiDefinition, paths };
 const app = express();
+
 app.use(cors());
 app.use(express.json());
-app.use(
-  '/api-docs',
-  swaggerUi.serve,
-  swaggerUi.setup(swaggerDocs)
-);
-mongoose.connect(process.env.MONGODB_URI)
-  .then(() => {
-    console.log('MongoDB conectado');
-  })
-  .catch((err) => {
-    console.error('Error MongoDB:', err.message);
-    console.log(err);
-});
-
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 app.use('/api/auth', authRoutes);
 app.use('/api/productos', productosRoutes);
 app.use('/api/pedidos', pedidosRoutes);
 app.use('/api/mesas', mesasRoutes);
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
+app.use(notFound);
+app.use(errorHandler);
 
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Servidor corriendo en puerto ${PORT}`));
+export const startServer = async () => {
+  validateConfig();
+  await mongoose.connect(config.mongoUri);
+  console.log('MongoDB conectado');
+
+  return app.listen(config.port, () => {
+    console.log(`Servidor corriendo en puerto ${config.port}`);
+  });
+};
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  startServer().catch((error) => {
+    console.error('No se pudo iniciar el servidor:', error.message);
+    process.exitCode = 1;
+  });
+}
+
+export default app;

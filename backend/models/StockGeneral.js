@@ -1,5 +1,5 @@
 // models/ConfiguracionGlobal.js
-const mongoose = require("mongoose");
+import mongoose from 'mongoose';
 
 const StockGeneralSchema = new mongoose.Schema({
   stockGeneralActivo: {
@@ -8,4 +8,4 @@ const StockGeneralSchema = new mongoose.Schema({
   },
 });
 
-module.exports = mongoose.model("StockGeneral", StockGeneralSchema);
+export default mongoose.model('StockGeneral', StockGeneralSchema);

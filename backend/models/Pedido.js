@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const PedidoSchema = new mongoose.Schema({
 
@@ -103,4 +103,4 @@ const PedidoSchema = new mongoose.Schema({
   timestamps: true
 });
 
-module.exports = mongoose.model('Pedido', PedidoSchema);
+export default mongoose.model('Pedido', PedidoSchema);

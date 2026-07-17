@@ -1,8 +1,8 @@
-const express = require('express');
-const router = express.Router();
+import express from 'express';
+import { protect } from '../middleware/auth.js';
+import Mesa from '../models/Mesa.js';
 
-const Mesa = require('../models/Mesa');
-const { protect } = require('../middleware/auth');
+const router = express.Router();
 
 /**
  * Obtener todas las mesas
@@ -196,7 +196,7 @@ router.delete('/:id', protect, async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;
 
 /**
  * @swagger
