@@ -1,9 +1,11 @@
-import 'dotenv/config'; 
 import cors from 'cors';
 import express from 'express';
 import mongoose from 'mongoose';
 import swaggerJsDoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
+import { pathToFileURL } from 'node:url';
+import { config, validateConfig } from './config.js';
+import { errorHandler, notFound } from './middleware/errorHandler.js';
 import authRoutes from './routes/auth.js';
 import productosRoutes from './routes/productos.js';
 import pedidosRoutes from './routes/pedidos.js';
@@ -28,7 +30,7 @@ const swaggerOptions = {
     },
     servers: [
       {
-        url: process.env.BASE_URL,
+        url: config.baseUrl,
         description: 'Servidor local'
       }
     ]
@@ -45,20 +47,28 @@ app.use(
   swaggerUi.serve,
   swaggerUi.setup(swaggerDocs)
 );
-mongoose.connect(process.env.MONGODB_URI)
-  .then(() => {
-    console.log('MongoDB conectado');
-  })
-  .catch((err) => {
-    console.error('Error MongoDB:', err.message);
-    console.log(err);
-});
-
 app.use('/api/auth', authRoutes);
 app.use('/api/productos', productosRoutes);
 app.use('/api/pedidos', pedidosRoutes);
 app.use('/api/mesas', mesasRoutes);
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
+app.use(notFound);
+app.use(errorHandler);
 
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Servidor corriendo en puerto ${PORT}`));
+export const startServer = async () => {
+  validateConfig();
+  await mongoose.connect(config.mongoUri);
+  console.log('MongoDB conectado');
+
+  return app.listen(config.port, () => {
+    console.log(`Servidor corriendo en puerto ${config.port}`);
+  });
+};
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  startServer().catch((error) => {
+    console.error('No se pudo iniciar el servidor:', error.message);
+    process.exitCode = 1;
+  });
+}
+
+export default app;

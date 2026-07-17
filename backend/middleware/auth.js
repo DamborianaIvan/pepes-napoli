@@ -1,5 +1,5 @@
-import 'dotenv/config';
 import jwt from 'jsonwebtoken';
+import { config } from '../config.js';
 
 export const protect = (req, res, next) => {
   let token;
@@ -9,7 +9,7 @@ export const protect = (req, res, next) => {
   if (!token) return res.status(401).json({ message: 'No token, autorización denegada' });
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, config.jwtSecret);
     req.usuario = decoded;
     next();
   } catch (error) {
