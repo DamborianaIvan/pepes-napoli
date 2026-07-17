@@ -1,4 +1,4 @@
-# 🍣 Fresco Sushi - Sistema Fullstack de Gestión y Pedidos
+# Pepes Napoletana- Sistema Fullstack de Gestión y Pedidos
 
 Proyecto desarrollado con **React + Vite + MUI** en el frontend, y **Express.js + MongoDB** en el backend. Cuenta con dos interfaces principales:
 
