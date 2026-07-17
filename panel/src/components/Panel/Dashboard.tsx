@@ -123,16 +123,6 @@ export const Dashboard = () => {
           })
           .sort((a, b) => new Date(b.fechaPedido).getTime() - new Date(a.fechaPedido).getTime());
         
-        const nuevos = visibles.filter((p) =>
-            p.estado === "ABIERTO"
-        ).length;
-
-        const enReparto = visibles.filter(
-          (p) =>
-            p.estado === "in-distribution" &&
-            p.tipoEntrega.toLowerCase() === "delivery"
-        ).length;
-
         const pedidosAbiertos = visibles.filter(
           p =>
             [
@@ -384,7 +374,7 @@ export const Dashboard = () => {
             <ul>
               {pedido.productos.map((p, i) => (
                 <li key={i}>
-                  {p.cantidad} × {typeof p.producto === "string" ? p.producto : p.producto.nombre}
+                  {p.cantidad} × {p.producto}
                 </li>
               ))}
             </ul>

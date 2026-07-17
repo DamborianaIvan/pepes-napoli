@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import Snackbar from "@mui/material/Snackbar";
 import {
@@ -20,7 +20,6 @@ import {
   MenuItem,
   Avatar
 } from "@mui/material";
-import AddCircleIcon from "@mui/icons-material/AddCircle";
 import AddIcon from '@mui/icons-material/Add';
 import RemoveIcon from '@mui/icons-material/Remove';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -41,6 +40,7 @@ interface Producto {
 interface Mesa {
   _id: string;
   numero: number;
+  nombre?: string;
   estado: string;
 }
 
@@ -48,7 +48,7 @@ interface ProductoPedido {
   producto: string;
   cantidad: number;
   precio: number;
-  subtotal: number;
+  subtotal?: number;
 }
 
 interface PedidoCreado {
@@ -59,8 +59,8 @@ interface PedidoCreado {
   telefono?: string;
   direccion?: string;
   comentario?: string;
-  tipoPedido: "SALON" | "DELIVERY" | "RETIRO";
-  metodoPago: "EFECTIVO" | "TRANSFERENCIA" | "MERCADOPAGO" | "TARJETA";
+  tipoPedido: "SALON" | "DELIVERY" | "TAKEAWAY";
+  metodoPago: "EFECTIVO" | "TRANSFERENCIA" | "DEBITO" | "CREDITO";
   productos: ProductoPedido[];
   total: number;
   estado: string;
@@ -69,17 +69,10 @@ interface PedidoCreado {
 
 const API_URL = import.meta.env.VITE_API_URL;
 const NuevoPedido = () => {
-  useEffect(() => {
-  setLoading(true);
-  Promise.all([fetchProductos(),fetchMesas()]).finally(() => {
-    setLoading(false);
-  });
-}, []);
   const [productos, setProductos] = useState<Producto[]>([]);
   const [mesas, setMesas] = useState<Mesa[]>([]);
   const [dialogConfirmar, setDialogConfirmar] = useState(false);
   const [guardandoPedido, setGuardandoPedido] = useState(false);
-  const [loading, setLoading] = useState(false); 
   const [tipoPedido, setTipoPedido] =
   useState<
     "SALON" |
@@ -101,7 +94,7 @@ const NuevoPedido = () => {
       mesa.estado === "LIBRE"
   );
   const [productosPedido, setProductosPedido] =useState<ProductoPedido[]>([]);
-  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: "success" | "error" | "info" }>({
+  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: "success" | "error" | "info" | "warning" }>({
     open: false,
     message: "",
     severity: "info",
@@ -109,15 +102,15 @@ const NuevoPedido = () => {
   const navigate = useNavigate();
   const [pedidoExitoso, setPedidoExitoso] = useState(false);
   const token = localStorage.getItem("token") || "";
-  const axiosConfig = {
+  const axiosConfig = useMemo(() => ({
     headers: {
       Authorization: `Bearer ${token}`,
     },
-  };
+  }), [token]);
 
 
   //fetch PRODUCTOS
-  const fetchProductos = async () => {
+  const fetchProductos = useCallback(async () => {
   try {
     const res = await axios.get(
       `${API_URL}/api/productos`,
@@ -130,10 +123,10 @@ const NuevoPedido = () => {
       error
     );
   }
-};
+  }, [axiosConfig]);
 
   //fetch MESAS (todasss)
-  const fetchMesas = async () => {
+  const fetchMesas = useCallback(async () => {
   try {
     const res = await axios.get(`${API_URL}/api/mesas`,axiosConfig);
     setMesas(res.data);
@@ -141,7 +134,11 @@ const NuevoPedido = () => {
     console.error("Error obteniendo mesas", error);
 
   }
-};
+  }, [axiosConfig]);
+
+  useEffect(() => {
+    void Promise.all([fetchProductos(), fetchMesas()]);
+  }, [fetchMesas, fetchProductos]);
 
   //reduce sobre jsons reformandolos y obtenciones de valores
   const productosPorCategoria = productos.reduce(
@@ -370,12 +367,13 @@ const NuevoPedido = () => {
         setPedidoExitoso(true);
         limpiarFormulario();
               
-  } catch (error: any) {
+  } catch (error) {
+    const message = axios.isAxiosError(error)
+      ? error.response?.data?.message
+      : undefined;
     setSnackbar({
       open: true,
-      message:
-        error?.response?.data?.message ||
-        "Error al crear el pedido",
+      message: message || "Error al crear el pedido",
       severity: "error"
     });
   }
