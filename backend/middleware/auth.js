@@ -1,7 +1,7 @@
-const jwt = require('jsonwebtoken');
-require('dotenv').config();
+import 'dotenv/config';
+import jwt from 'jsonwebtoken';
 
-exports.protect = (req, res, next) => {
+export const protect = (req, res, next) => {
   let token;
   if (req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
     token = req.headers.authorization.split(' ')[1];
@@ -17,7 +17,7 @@ exports.protect = (req, res, next) => {
   }
 };
 
-exports.restrictTo = (...roles) => {
+export const restrictTo = (...roles) => {
   return (req, res, next) => {
     if (!roles.includes(req.usuario.rol)) {
       return res.status(403).json({ message: 'Acceso no autorizado' });

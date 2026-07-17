@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const MesaSchema = new mongoose.Schema({
   numero: {
@@ -40,4 +40,4 @@ const MesaSchema = new mongoose.Schema({
   timestamps: true
 });
 
-module.exports = mongoose.model('Mesa', MesaSchema);
+export default mongoose.model('Mesa', MesaSchema);

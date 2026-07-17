@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const ProductoSchema = new mongoose.Schema({
   categoria: {
@@ -46,4 +46,4 @@ const ProductoSchema = new mongoose.Schema({
   }
 });
 
-module.exports = mongoose.model('Producto', ProductoSchema);
+export default mongoose.model('Producto', ProductoSchema);

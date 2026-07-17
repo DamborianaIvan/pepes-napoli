@@ -1,14 +1,13 @@
-const dotenv = require('dotenv');
-const express = require('express');
-const mongoose = require('mongoose');
-const cors = require('cors');
-const swaggerJsDoc = require('swagger-jsdoc');
-const swaggerUi = require('swagger-ui-express');
-const authRoutes = require('./routes/auth');
-const productosRoutes = require('./routes/productos');
-const pedidosRoutes = require('./routes/pedidos');
-const mesasRoutes = require('./routes/mesas');
-dotenv.config();
+import 'dotenv/config'; 
+import cors from 'cors';
+import express from 'express';
+import mongoose from 'mongoose';
+import swaggerJsDoc from 'swagger-jsdoc';
+import swaggerUi from 'swagger-ui-express';
+import authRoutes from './routes/auth.js';
+import productosRoutes from './routes/productos.js';
+import pedidosRoutes from './routes/pedidos.js';
+import mesasRoutes from './routes/mesas.js';
 
 const swaggerOptions = {
   swaggerDefinition: {
