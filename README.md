@@ -201,8 +201,7 @@ Usamos **prefijos** y convención `[TIPO]-[MÓDULO]-[DESCRIPCIÓN]`:
 
 ## 🧑‍💻 Desarrollado por
 
-* Agustina Di Natale (Frontend, UX, Panel)
-* \[Nombre equipo backend]
+* Agustina Di Natale e Ivan Damboriana 
 
 ---
 
