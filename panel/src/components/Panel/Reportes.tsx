@@ -107,6 +107,7 @@ const Reportes: React.FC = () => {
   };
 
   const pedidosFiltrados = filtrarPedidos();
+  const pedidosCobrados = pedidosFiltrados.filter((pedido) => pedido.estado === "PAGADO");
 
   // Inicializo los contadores
   const totalPorMetodoPago: Record<MetodoPago, number> = {
@@ -117,7 +118,7 @@ const Reportes: React.FC = () => {
   };
   const totalPorTipoEntrega = { delivery: 0, takeaway: 0 };
 
-  pedidosFiltrados.forEach((pedido) => {
+  pedidosCobrados.forEach((pedido) => {
     // Sumar método de pago
     totalPorMetodoPago[pedido.metodoPago]++;
 
@@ -129,7 +130,7 @@ const Reportes: React.FC = () => {
   // Contar productos vendidos
   const productosContados: Record<string, { nombre: string; cantidad: number }> = {};
 
-  pedidosFiltrados.forEach((pedido) => {
+  pedidosCobrados.forEach((pedido) => {
     pedido.productos.forEach((prod) => {
       if (!productosContados[prod.producto]) {
         productosContados[prod.producto] = { nombre: prod.producto, cantidad: 0 };
@@ -147,7 +148,7 @@ const Reportes: React.FC = () => {
     0
   );
 
-  const totalIngresos = pedidosFiltrados.reduce((acc, pedido) => {
+  const totalIngresos = pedidosCobrados.reduce((acc, pedido) => {
     return acc + (pedido.total || 0);
   }, 0);
 
@@ -189,8 +190,8 @@ const Reportes: React.FC = () => {
       <Box display="flex" gap={2} flexWrap="wrap">
         <Card sx={{ minWidth: 200 }}>
           <CardContent>
-            <Typography variant="h6">Total pedidos</Typography>
-            <Typography variant="h5">{pedidosFiltrados.length}</Typography>
+            <Typography variant="h6">Pedidos cobrados</Typography>
+            <Typography variant="h5">{pedidosCobrados.length}</Typography>
           </CardContent>
         </Card>
 
