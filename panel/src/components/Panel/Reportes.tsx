@@ -24,7 +24,9 @@ import {
 import AssessmentIcon from "@mui/icons-material/Assessment";
 
 const API_URL = import.meta.env.VITE_API_URL;
-const token = localStorage.getItem("token");
+
+type MetodoPago = "EFECTIVO" | "TRANSFERENCIA" | "DEBITO" | "CREDITO";
+type TipoPedido = "SALON" | "DELIVERY" | "TAKEAWAY";
 
 interface Producto {
   producto: string;
@@ -41,19 +43,28 @@ interface Pedido {
   total: number;
   estado: string;
   fechaPedido: string;
-  metodoPago: "efectivo" | "transferencia";
-  tipoEntrega: "delivery" | "takeaway";
+  metodoPago: MetodoPago;
+  tipoPedido: TipoPedido;
 }
 
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042"];
+type Periodo = "dia" | "semana" | "mes";
+
+const etiquetasMetodoPago: Record<MetodoPago, string> = {
+  EFECTIVO: "Efectivo",
+  TRANSFERENCIA: "Transferencia",
+  DEBITO: "Débito",
+  CREDITO: "Crédito",
+};
 
 const Reportes: React.FC = () => {
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
-  const [periodo, setPeriodo] = useState<"dia" | "semana" | "mes">("mes");
+  const [periodo, setPeriodo] = useState<Periodo>("mes");
 
   useEffect(() => {
     async function obtenerPedidos() {
       try {
+        const token = localStorage.getItem("token");
         const res = await fetch(`${API_URL}/api/pedidos`, {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -96,25 +107,30 @@ const Reportes: React.FC = () => {
   };
 
   const pedidosFiltrados = filtrarPedidos();
+  const pedidosCobrados = pedidosFiltrados.filter((pedido) => pedido.estado === "PAGADO");
 
   // Inicializo los contadores
-  const totalPorMetodoPago = { efectivo: 0, transferencia: 0 };
+  const totalPorMetodoPago: Record<MetodoPago, number> = {
+    EFECTIVO: 0,
+    TRANSFERENCIA: 0,
+    DEBITO: 0,
+    CREDITO: 0,
+  };
   const totalPorTipoEntrega = { delivery: 0, takeaway: 0 };
 
-  pedidosFiltrados.forEach((pedido) => {
+  pedidosCobrados.forEach((pedido) => {
     // Sumar método de pago
-    if (pedido.metodoPago === "efectivo") totalPorMetodoPago.efectivo++;
-    else if (pedido.metodoPago === "transferencia") totalPorMetodoPago.transferencia++;
+    totalPorMetodoPago[pedido.metodoPago]++;
 
     // Sumar tipo de entrega
-    if (pedido.tipoEntrega === "delivery") totalPorTipoEntrega.delivery++;
-    else if (pedido.tipoEntrega === "takeaway") totalPorTipoEntrega.takeaway++;
+    if (pedido.tipoPedido === "DELIVERY") totalPorTipoEntrega.delivery++;
+    else if (pedido.tipoPedido === "TAKEAWAY") totalPorTipoEntrega.takeaway++;
   });
 
   // Contar productos vendidos
   const productosContados: Record<string, { nombre: string; cantidad: number }> = {};
 
-  pedidosFiltrados.forEach((pedido) => {
+  pedidosCobrados.forEach((pedido) => {
     pedido.productos.forEach((prod) => {
       if (!productosContados[prod.producto]) {
         productosContados[prod.producto] = { nombre: prod.producto, cantidad: 0 };
@@ -132,15 +148,15 @@ const Reportes: React.FC = () => {
     0
   );
 
-  const totalIngresos = pedidosFiltrados.reduce((acc, pedido) => {
+  const totalIngresos = pedidosCobrados.reduce((acc, pedido) => {
     return acc + (pedido.total || 0);
   }, 0);
 
   // Datos para los gráficos Pie
-  const dataPiePago = [
-    { name: "Efectivo", value: totalPorMetodoPago.efectivo },
-    { name: "Transferencia", value: totalPorMetodoPago.transferencia },
-  ];
+  const dataPiePago = (Object.keys(etiquetasMetodoPago) as MetodoPago[]).map((metodo) => ({
+    name: etiquetasMetodoPago[metodo],
+    value: totalPorMetodoPago[metodo],
+  }));
 
   const dataPieEntrega = [
     { name: "Delivery", value: totalPorTipoEntrega.delivery },
@@ -162,7 +178,7 @@ const Reportes: React.FC = () => {
         <InputLabel>Filtrar por</InputLabel>
         <Select
           value={periodo}
-          onChange={(e) => setPeriodo(e.target.value as any)}
+          onChange={(e) => setPeriodo(e.target.value as Periodo)}
           label="Filtrar por"
         >
           <MenuItem value="dia">Hoy</MenuItem>
@@ -174,8 +190,8 @@ const Reportes: React.FC = () => {
       <Box display="flex" gap={2} flexWrap="wrap">
         <Card sx={{ minWidth: 200 }}>
           <CardContent>
-            <Typography variant="h6">Total pedidos</Typography>
-            <Typography variant="h5">{pedidosFiltrados.length}</Typography>
+            <Typography variant="h6">Pedidos cobrados</Typography>
+            <Typography variant="h5">{pedidosCobrados.length}</Typography>
           </CardContent>
         </Card>
 
@@ -212,14 +228,14 @@ const Reportes: React.FC = () => {
         <Card sx={{ minWidth: 200 }}>
           <CardContent>
             <Typography variant="h6">Pagos en efectivo</Typography>
-            <Typography variant="h5">{totalPorMetodoPago.efectivo}</Typography>
+            <Typography variant="h5">{totalPorMetodoPago.EFECTIVO}</Typography>
           </CardContent>
         </Card>
 
         <Card sx={{ minWidth: 200 }}>
           <CardContent>
             <Typography variant="h6">Transferencias</Typography>
-            <Typography variant="h5">{totalPorMetodoPago.transferencia}</Typography>
+            <Typography variant="h5">{totalPorMetodoPago.TRANSFERENCIA}</Typography>
           </CardContent>
         </Card>
 
@@ -249,7 +265,7 @@ const Reportes: React.FC = () => {
                   outerRadius={80}
                   label
                 >
-                  {dataPiePago.map((entry, index) => (
+                  {dataPiePago.map((_, index) => (
                     <Cell
                       key={`cell-${index}`}
                       fill={COLORS[index % COLORS.length]}
@@ -277,7 +293,7 @@ const Reportes: React.FC = () => {
                   outerRadius={80}
                   label
                 >
-                  {dataPieEntrega.map((entry, index) => (
+                  {dataPieEntrega.map((_, index) => (
                     <Cell
                       key={`cell-${index}`}
                       fill={COLORS[(index + 2) % COLORS.length]}

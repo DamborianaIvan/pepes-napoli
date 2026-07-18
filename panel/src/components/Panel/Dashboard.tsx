@@ -16,6 +16,7 @@ interface Pedido {
   telefono?: string;
   direccion?: string;
   comentario?: string;
+  mesaId?: string | { _id: string } | null;
   productos: {
     producto: string;
     cantidad: number;
@@ -33,6 +34,12 @@ interface Pedido {
     | "EN_CAMINO"
     | "CANCELADO";
   fechaPedido: string;
+}
+
+interface Mesa {
+  _id: string;
+  numero: number;
+  nombre?: string | null;
 }
 
 const estadosTraducidos: Record<string, string> = {
@@ -56,6 +63,7 @@ export const Dashboard = () => {
     takeawayActivos: 0
   });
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
+  const [mesas, setMesas] = useState<Mesa[]>([]);
   const [rol, setRol] = useState<string | null>(null);
   const [snackbar, setSnackbar] = useState<{ mensaje: string; tipo: "ok" | "error" } | null>(null);
   const [mostrarDashboardCards, setMostrarDashboardCards] = useState(true);
@@ -123,16 +131,6 @@ export const Dashboard = () => {
           })
           .sort((a, b) => new Date(b.fechaPedido).getTime() - new Date(a.fechaPedido).getTime());
         
-        const nuevos = visibles.filter((p) =>
-            p.estado === "ABIERTO"
-        ).length;
-
-        const enReparto = visibles.filter(
-          (p) =>
-            p.estado === "in-distribution" &&
-            p.tipoEntrega.toLowerCase() === "delivery"
-        ).length;
-
         const pedidosAbiertos = visibles.filter(
           p =>
             [
@@ -187,6 +185,13 @@ export const Dashboard = () => {
         });
         
         setPedidos(visibles);
+
+        fetch(`${import.meta.env.VITE_API_URL}/api/mesas`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+          .then((res) => res.json())
+          .then((data) => setMesas(Array.isArray(data) ? data : []))
+          .catch(() => setMesas([]));
 
       })
       .catch(() => {
@@ -273,6 +278,12 @@ export const Dashboard = () => {
       currency: "ARS",
       minimumFractionDigits: 2,
     });
+
+  const obtenerEtiquetaMesa = (pedido: Pedido) => {
+    const mesaId = typeof pedido.mesaId === "string" ? pedido.mesaId : pedido.mesaId?._id;
+    const mesa = mesas.find((item) => item._id === mesaId);
+    return mesa?.nombre || (mesa ? `Mesa ${mesa.numero}` : "Mesa sin asignar");
+  };
 
   return (
     <div className="panel-content">
@@ -378,23 +389,41 @@ export const Dashboard = () => {
       <div className="pedidos-cards">
         {pedidos.map((pedido) => (
           <div className="pedido-card" key={pedido._id} data-estado={pedido.estado}>
-            <p><strong>Cliente: </strong>{pedido.nombreCliente}</p>
-            <p><strong>Teléfono:</strong> {pedido.telefono}</p>
+            {pedido.tipoPedido === "SALON" ? (
+              <p><strong>Mesa:</strong> {obtenerEtiquetaMesa(pedido)}</p>
+            ) : (
+              <>
+                <p><strong>Cliente: </strong>{pedido.nombreCliente || "-"}</p>
+                <p><strong>Teléfono:</strong> {pedido.telefono || "-"}</p>
+              </>
+            )}
             <p><strong>Productos:</strong></p>
             <ul>
               {pedido.productos.map((p, i) => (
                 <li key={i}>
-                  {p.cantidad} × {typeof p.producto === "string" ? p.producto : p.producto.nombre}
+                  {p.cantidad} × {p.producto}
                 </li>
               ))}
             </ul>
             <p><strong>Total:</strong> {formatoPesos(pedido.total)}</p>
             <p><strong>Método Pago:</strong> {pedido.metodoPago}</p>
             <p><strong>Entrega:</strong> {pedido.tipoPedido}</p>
-            <p><strong>Dirección:</strong> {pedido.direccion || "-"}</p>
+            {pedido.tipoPedido !== "SALON" && (
+              <p><strong>Dirección:</strong> {pedido.direccion || "-"}</p>
+            )}
             <p><strong>Comentario:</strong> {pedido.comentario || "-"}</p>
             <p><strong>Estado:</strong> {estadosTraducidos[pedido.estado] || pedido.estado}</p>
             <p><strong>Fecha:</strong> {new Date(pedido.fechaPedido).toLocaleString()}</p>
+
+            {rol === "admin" && pedido.tipoPedido === "SALON" && !["PAGADO", "CANCELADO"].includes(pedido.estado) && (
+              <button
+                type="button"
+                className="login-button"
+                onClick={() => actualizarEstado(pedido._id, "PAGADO")}
+              >
+                Cobrar y liberar mesa
+              </button>
+            )}
 
             {/* Select para delivery */}
             {rol === "delivery" &&

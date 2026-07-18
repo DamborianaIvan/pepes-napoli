@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import Snackbar from "@mui/material/Snackbar";
 import Alert from "@mui/material/Alert";
@@ -30,6 +30,15 @@ interface Producto {
   imagen: string;
 }
 
+interface ProductoForm {
+  nombre: string;
+  categoria: string;
+  descripcion: string;
+  precio: number | undefined;
+  disponible: boolean;
+  imagen: string;
+}
+
 const API_URL = import.meta.env.VITE_API_URL;
 
 const CATEGORIAS = [
@@ -44,7 +53,7 @@ const ProductoManager = () => {
   const [productos, setProductos] = useState<Producto[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [formErrors, setFormErrors] = useState<{ name?: string; category?: string }>({});
+  const [formErrors, setFormErrors] = useState<{ nombre?: string; categoria?: string }>({});
   const [openDialog, setOpenDialog] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Producto | null>(null);
   const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; id: string | null }>({ open: false, id: null });
@@ -54,7 +63,7 @@ const ProductoManager = () => {
     severity: "info",
   });
   
- const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<ProductoForm>({
   nombre: "",
   categoria: "",
   descripcion: "",
@@ -68,13 +77,13 @@ const ProductoManager = () => {
 
   const token = localStorage.getItem("token") || "";
 
-  const axiosConfig = {
+  const axiosConfig = useMemo(() => ({
     headers: {
       Authorization: `Bearer ${token}`,
     },
-  };
+  }), [token]);
 
-  const fetchProductos = async () => {
+  const fetchProductos = useCallback(async () => {
     setLoading(true);
     setError(null); 
     try {
@@ -87,16 +96,16 @@ const ProductoManager = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [axiosConfig]);
 
-  const fetchStockGeneral = async () => {
+  const fetchStockGeneral = useCallback(async () => {
     try {
       const res = await axios.get(`${API_URL}/api/productos/configuracion/stock-general`, axiosConfig);
       setStockGeneralActivo(res.data.stockGeneralActivo);
     } catch {
       setSnackbar({ open: true, message: "Error al obtener el stock general", severity: "error" });
     }
-  };
+  }, [axiosConfig]);
 
   const handleToggleStockGeneral = async () => {
     try {
@@ -112,7 +121,7 @@ const ProductoManager = () => {
   useEffect(() => {
     fetchProductos();
     fetchStockGeneral();
-  }, []);
+  }, [fetchProductos, fetchStockGeneral]);
 
   const handleOpenDialog = (producto?: Producto) => {
   setFormErrors({});
@@ -126,7 +135,7 @@ const ProductoManager = () => {
       nombre: "",
       categoria: "",
       descripcion: "",
-      precio: undefined as any,
+      precio: undefined,
       disponible: true,
       imagen: "",
     });
@@ -184,12 +193,13 @@ const ProductoManager = () => {
       }
       handleCloseDialog();
       fetchProductos();
-    } catch (error: any) {
+    } catch (error) {
+        const message = axios.isAxiosError(error)
+          ? error.response?.data?.message
+          : undefined;
         setSnackbar({
           open: true,
-          message:
-            error?.response?.data?.message ||
-            "Error al guardar el producto",
+          message: message || "Error al guardar el producto",
           severity: "error"
         });
       }
@@ -266,8 +276,8 @@ const ProductoManager = () => {
             value={formData.nombre}
             onChange={handleChange}
             placeholder="Ej: Sushi Salmón"
-            error={!!formErrors.name}
-            helperText={formErrors.name}
+            error={!!formErrors.nombre}
+            helperText={formErrors.nombre}
           />
           <TextField
             select
