@@ -13,6 +13,11 @@ import {
   isEnumValue
 } from '../constants/pedido.js';
 import { puedeTransicionarPedido } from '../constants/estadoPedido.js';
+import {
+  calcularTotalPedido,
+  normalizarProductosPedido,
+  validarDatosClientePedido
+} from '../utils/pedido.js';
 
 const router = express.Router();
 
@@ -33,6 +38,8 @@ router.post('/', protect, asyncHandler(async (req, res) => {
       allowedValues: Object.values(TIPOS_PEDIDO)
     });
   }
+
+  validarDatosClientePedido({ tipoPedido, nombreCliente, telefono, direccion });
 
   if (!Array.isArray(productos) || productos.length === 0) {
     throw new ApiError(400, 'El pedido debe contener al menos un producto', {
@@ -84,45 +91,8 @@ router.post('/', protect, asyncHandler(async (req, res) => {
   const productosDB = await Producto.find({
     _id: { $in: productoIds }
   });
-  const productosMap = new Map(productosDB.map((producto) => [producto._id.toString(), producto]));
-
-  const productosNormalizados = productos.map((item, index) => {
-    const producto = productosMap.get(item.productoId.toString());
-
-    if (!producto) {
-      throw new ApiError(404, 'Producto no encontrado', {
-        field: `productos[${index}].productoId`,
-        productoId: item.productoId
-      });
-    }
-
-    if (!producto.disponible) {
-      throw new ApiError(409, 'Producto no disponible', {
-        field: `productos[${index}].productoId`,
-        productoId: item.productoId
-      });
-    }
-
-    const cantidad = Number(item.cantidad);
-    if (!Number.isInteger(cantidad) || cantidad < 1) {
-      throw new ApiError(400, 'La cantidad debe ser un entero mayor a cero', {
-        field: `productos[${index}].cantidad`
-      });
-    }
-
-    const precioUnitario = producto.precio;
-    const subtotal = precioUnitario * cantidad;
-
-    return {
-      productoId: producto._id,
-      nombreSnapshot: producto.nombre,
-      cantidad,
-      precioUnitario,
-      subtotal
-    };
-  });
-
-  const total = productosNormalizados.reduce((sum, item) => sum + item.subtotal, 0);
+  const productosNormalizados = normalizarProductosPedido(productos, productosDB);
+  const total = calcularTotalPedido(productosNormalizados);
 
   const pedido = new Pedido({
     tipoPedido,
