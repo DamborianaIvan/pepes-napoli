@@ -3,7 +3,7 @@ import axios from "axios";
 import Snackbar from "@mui/material/Snackbar";
 import { Box, Grid, Card, CardContent, Typography, Button, Divider, TextField, Alert, Dialog, DialogTitle, DialogContent, DialogActions, MenuItem } from "@mui/material";
 import "./NuevoPedido.css";
-import { METODOS_PAGO, TIPOS_PEDIDO, type MetodoPago, type Pedido, type ProductoPedido, type TipoPedido } from "../../types/pedido";
+import { TIPOS_PEDIDO, type Pedido, type ProductoPedido, type TipoPedido } from "../../types/pedido";
 
 interface Producto { _id: string; nombre: string; categoria: string; descripcion: string; precio: number; disponible: boolean; imagen: string; }
 interface Mesa { _id: string; numero: number; nombre?: string; estado: string; }
@@ -19,7 +19,6 @@ const NuevoPedido = () => {
   const [telefono, setTelefono] = useState("");
   const [direccion, setDireccion] = useState("");
   const [comentario, setComentario] = useState("");
-  const [metodoPago, setMetodoPago] = useState<MetodoPago>(METODOS_PAGO[0]);
   const [mesaId, setMesaId] = useState<string>("");
   const [pedidoCreado, setPedidoCreado] = useState<Pedido | null>(null);
   const [productosPedido, setProductosPedido] = useState<ProductoPedido[]>([]);
@@ -69,7 +68,7 @@ const NuevoPedido = () => {
   };
 
   const limpiarFormulario = () => {
-    setProductosPedido([]); setMesaId(""); setNombreCliente(""); setTelefono(""); setDireccion(""); setComentario(""); setMetodoPago("EFECTIVO"); setTipoPedido("SALON");
+    setProductosPedido([]); setMesaId(""); setNombreCliente(""); setTelefono(""); setDireccion(""); setComentario(""); setTipoPedido("SALON");
   };
 
   const handleCrearPedido = async () => {
@@ -115,7 +114,6 @@ const NuevoPedido = () => {
           {tipoPedido === "SALON" && <TextField select label="Mesa" value={mesaId} onChange={(e) => setMesaId(e.target.value)}>{mesas.filter(mesa => mesa.estado === "LIBRE").map(mesa => <MenuItem key={mesa._id} value={mesa._id}>{mesa.numero}</MenuItem>)}</TextField>}
           {tipoPedido !== "SALON" && <><TextField fullWidth label="Nombre Cliente" value={nombreCliente} onChange={(e) => setNombreCliente(e.target.value)} /><TextField fullWidth label="Telefono" value={telefono} onChange={(e) => setTelefono(e.target.value)} /><TextField fullWidth multiline rows={3} label="Comentario" value={comentario} onChange={(e) => setComentario(e.target.value)} /></>}
           {tipoPedido === "DELIVERY" && <TextField fullWidth label="Direccion" value={direccion} onChange={(e) => setDireccion(e.target.value)} />}
-          <TextField select label="Método de pago" value={metodoPago} onChange={(e) => setMetodoPago(e.target.value as MetodoPago)}>{METODOS_PAGO.map(metodo => <MenuItem key={metodo} value={metodo}>{metodo}</MenuItem>)}</TextField>
           <Divider /><Typography variant="h5">Total: {formatCurrency(total)}</Typography><Button variant="contained" onClick={abrirConfirmacion} disabled={guardandoPedido}>Confirmar pedido</Button>
         </Box></CardContent></Card></Grid>
       </Grid>
