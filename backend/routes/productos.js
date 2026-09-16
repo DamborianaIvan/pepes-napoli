@@ -1,13 +1,13 @@
 import express from 'express';
-import { protect, restrictTo } from '../middleware/auth.js';
-import { ROLES } from '../constants/roles.js';
+import { protect, requirePermission } from '../middleware/auth.js';
+import { PERMISSIONS } from '../constants/permissions.js';
 import Producto from '../models/Producto.js';
 import StockGeneral from '../models/StockGeneral.js';
 
 const router = express.Router();
 
-// Crear producto: solo ADMIN.
-router.post('/', protect, restrictTo(ROLES.ADMIN), async (req, res) => {
+// Crear producto: requiere products:manage.
+router.post('/', protect, requirePermission(PERMISSIONS.PRODUCTS_MANAGE), async (req, res) => {
   try {
     const { categoria, nombre, descripcion, precio, imagen, disponible } = req.body;
 
@@ -82,8 +82,8 @@ router.get('/configuracion/stock-general', async (req, res) => {
   }
 });
 
-// Actualizar stock general: solo ADMIN.
-router.patch('/configuracion/stock-general', protect, restrictTo(ROLES.ADMIN), async (req, res) => {
+// Actualizar stock general: requiere stock:adjust.
+router.patch('/configuracion/stock-general', protect, requirePermission(PERMISSIONS.STOCK_ADJUST), async (req, res) => {
   try {
     const { stockGeneralActivo } = req.body;
     if (typeof stockGeneralActivo !== 'boolean') {
@@ -115,8 +115,8 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// Actualizar producto: solo ADMIN.
-router.put('/:id', protect, restrictTo(ROLES.ADMIN), async (req, res) => {
+// Actualizar producto: requiere products:manage.
+router.put('/:id', protect, requirePermission(PERMISSIONS.PRODUCTS_MANAGE), async (req, res) => {
   try {
     const { categoria, nombre, descripcion, precio, imagen, disponible } = req.body;
 
@@ -144,8 +144,8 @@ router.put('/:id', protect, restrictTo(ROLES.ADMIN), async (req, res) => {
   }
 });
 
-// Eliminar producto: solo ADMIN.
-router.delete('/:id', protect, restrictTo(ROLES.ADMIN), async (req, res) => {
+// Eliminar producto: requiere products:manage.
+router.delete('/:id', protect, requirePermission(PERMISSIONS.PRODUCTS_MANAGE), async (req, res) => {
   try {
     const productoEliminado = await Producto.findByIdAndDelete(req.params.id);
     if (!productoEliminado) return res.status(404).json({ message: 'Producto no encontrado' });
@@ -155,8 +155,8 @@ router.delete('/:id', protect, restrictTo(ROLES.ADMIN), async (req, res) => {
   }
 });
 
-// Cambiar disponibilidad: solo ADMIN.
-router.patch('/:id/disponible', protect, restrictTo(ROLES.ADMIN), async (req, res) => {
+// Cambiar disponibilidad: requiere products:manage.
+router.patch('/:id/disponible', protect, requirePermission(PERMISSIONS.PRODUCTS_MANAGE), async (req, res) => {
   try {
     const { disponible } = req.body;
     if (typeof disponible !== 'boolean') {
