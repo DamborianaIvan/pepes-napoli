@@ -2,7 +2,6 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import "./Sidebar.css";
 import logo from "../../assets/pepes.png";
-// Íconos MUI
 import HomeIcon from "@mui/icons-material/Home";
 import AddCircleIcon from "@mui/icons-material/AddCircle";
 import InventoryIcon from "@mui/icons-material/Inventory";
@@ -12,13 +11,35 @@ import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
 import LogoutIcon from "@mui/icons-material/Logout";
 import MenuIcon from "@mui/icons-material/Menu";
 import PersonIcon from "@mui/icons-material/Person";
+import { hasPermission, isValidRol, PERMISSIONS, type Rol } from "../../types/auth";
 
 const Sidebar = () => {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
-  const rol = localStorage.getItem("rol");
+  const rolValue = localStorage.getItem("rol");
+  const rol: Rol | null = isValidRol(rolValue) ? rolValue : null;
   const userString = localStorage.getItem("user");
-  const user = userString ? JSON.parse(userString) : null;
+
+  let user: { nombre?: string; id?: string } | null = null;
+  try {
+    user = userString ? JSON.parse(userString) : null;
+  } catch {
+    user = null;
+  }
+
+  const canCreateOrders = rol
+    ? hasPermission(rol, PERMISSIONS.ORDERS_CREATE)
+    : false;
+  const canViewOrders = rol
+    ? hasPermission(rol, PERMISSIONS.ORDERS_CREATE) ||
+      hasPermission(rol, PERMISSIONS.ORDERS_CHANGE_STATUS)
+    : false;
+  const canManageProducts = rol
+    ? hasPermission(rol, PERMISSIONS.PRODUCTS_MANAGE)
+    : false;
+  const canViewReports = rol
+    ? hasPermission(rol, PERMISSIONS.REPORTS_VIEW)
+    : false;
 
   const logout = () => {
     localStorage.removeItem("token");
@@ -34,7 +55,7 @@ const Sidebar = () => {
           <img src={logo} alt="FRESCO" className="sidebar-logo" />
         </Link>
         <button className="menu-toggle" onClick={() => setOpen(!open)}>
-          <MenuIcon/>
+          <MenuIcon />
         </button>
       </div>
 
@@ -50,41 +71,42 @@ const Sidebar = () => {
             HOME
           </Link>
 
-          {rol?.toLowerCase() === "admin" && (
-            <>
-              <Link to="/panel/mesas" onClick={() => setOpen(false)}>
-                <TableRestaurantIcon className="sidebar-icon" />
-                MESAS
-              </Link>
-              <Link to="/panel/nuevo-pedido" onClick={() => setOpen(false)}>
-                <AddCircleIcon className="sidebar-icon" />
-                NUEVO PEDIDO
-              </Link>
-              <Link to="/panel/pedidos" onClick={() => setOpen(false)}>
-                <InventoryIcon className="sidebar-icon" />
-                PEDIDOS
-              </Link>
-              <Link to="/panel/crear-producto" onClick={() => setOpen(false)}>
-                <ReceiptLongIcon className="sidebar-icon" />
-                MENÚ
-              </Link>
-              <Link to="/panel/reportes" onClick={() => setOpen(false)}>
-                <AssessmentIcon className="sidebar-icon" />
-                REPORTES
-              </Link>
-            </>
+          <Link to="/panel/mesas" onClick={() => setOpen(false)}>
+            <TableRestaurantIcon className="sidebar-icon" />
+            MESAS
+          </Link>
+
+          {canCreateOrders && (
+            <Link to="/panel/nuevo-pedido" onClick={() => setOpen(false)}>
+              <AddCircleIcon className="sidebar-icon" />
+              NUEVO PEDIDO
+            </Link>
           )}
 
-          {rol?.toLowerCase() === "mozo" && (
+          {canViewOrders && (
             <Link to="/panel/pedidos" onClick={() => setOpen(false)}>
               <InventoryIcon className="sidebar-icon" />
               PEDIDOS
             </Link>
           )}
+
+          {canManageProducts && (
+            <Link to="/panel/crear-producto" onClick={() => setOpen(false)}>
+              <ReceiptLongIcon className="sidebar-icon" />
+              MENÚ
+            </Link>
+          )}
+
+          {canViewReports && (
+            <Link to="/panel/reportes" onClick={() => setOpen(false)}>
+              <AssessmentIcon className="sidebar-icon" />
+              REPORTES
+            </Link>
+          )}
         </nav>
         <div className="sidebar-bottom">
           <button className="logout-btn" onClick={logout}>
-            <LogoutIcon style={{ verticalAlign: "middle", marginRight: "5px" }}/>
+            <LogoutIcon style={{ verticalAlign: "middle", marginRight: "5px" }} />
             Cerrar sesión
           </button>
           <footer className="sidebar-footer">Versión 1.0.0</footer>
