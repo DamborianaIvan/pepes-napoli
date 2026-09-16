@@ -1,6 +1,7 @@
 import express from 'express';
 import mongoose from 'mongoose';
-import { protect } from '../middleware/auth.js';
+import { protect, restrictTo } from '../middleware/auth.js';
+import { ROLES } from '../constants/roles.js';
 import Mesa from '../models/Mesa.js';
 import Pedido from '../models/Pedido.js';
 import Producto from '../models/Producto.js';
@@ -20,17 +21,10 @@ import {
 } from '../utils/pedido.js';
 
 const router = express.Router();
+const ROLES_GESTION_PEDIDOS = [ROLES.ADMIN, ROLES.CAJERO];
 
-router.post('/', protect, asyncHandler(async (req, res) => {
-  const {
-    tipoPedido,
-    nombreCliente,
-    telefono,
-    direccion,
-    comentario,
-    productos,
-    mesaId
-  } = req.body;
+router.post('/', protect, restrictTo(...ROLES_GESTION_PEDIDOS), asyncHandler(async (req, res) => {
+  const { tipoPedido, nombreCliente, telefono, direccion, comentario, productos, mesaId } = req.body;
 
   if (!isEnumValue(tipoPedido, TIPOS_PEDIDO)) {
     throw new ApiError(400, 'tipoPedido inválido', {
@@ -42,21 +36,15 @@ router.post('/', protect, asyncHandler(async (req, res) => {
   validarDatosClientePedido({ tipoPedido, nombreCliente, telefono, direccion });
 
   if (!Array.isArray(productos) || productos.length === 0) {
-    throw new ApiError(400, 'El pedido debe contener al menos un producto', {
-      field: 'productos'
-    });
+    throw new ApiError(400, 'El pedido debe contener al menos un producto', { field: 'productos' });
   }
 
   if (tipoPedido === TIPOS_PEDIDO.SALON && !mesaId) {
-    throw new ApiError(400, 'Los pedidos de salón requieren una mesa', {
-      field: 'mesaId'
-    });
+    throw new ApiError(400, 'Los pedidos de salón requieren una mesa', { field: 'mesaId' });
   }
 
   if (tipoPedido !== TIPOS_PEDIDO.SALON && mesaId) {
-    throw new ApiError(400, 'Solo los pedidos de salón pueden tener una mesa', {
-      field: 'mesaId'
-    });
+    throw new ApiError(400, 'Solo los pedidos de salón pueden tener una mesa', { field: 'mesaId' });
   }
 
   let mesa = null;
@@ -66,31 +54,19 @@ router.post('/', protect, asyncHandler(async (req, res) => {
     }
 
     mesa = await Mesa.findById(mesaId);
-
-    if (!mesa) {
-      throw new ApiError(404, 'Mesa no encontrada');
-    }
-
-    if (!mesa.activa) {
-      throw new ApiError(409, 'La mesa no está activa');
-    }
-
-    if (mesa.estado !== 'LIBRE') {
-      throw new ApiError(409, 'La mesa ya está ocupada');
-    }
+    if (!mesa) throw new ApiError(404, 'Mesa no encontrada');
+    if (!mesa.activa) throw new ApiError(409, 'La mesa no está activa');
+    if (mesa.estado !== 'LIBRE') throw new ApiError(409, 'La mesa ya está ocupada');
   }
 
   const productoIds = productos.map((item) => item?.productoId);
-
   if (productoIds.some((id) => !mongoose.isValidObjectId(id))) {
     throw new ApiError(400, 'Todos los productos deben tener un productoId válido', {
       field: 'productos.productoId'
     });
   }
 
-  const productosDB = await Producto.find({
-    _id: { $in: productoIds }
-  });
+  const productosDB = await Producto.find({ _id: { $in: productoIds } });
   const productosNormalizados = normalizarProductosPedido(productos, productosDB);
   const total = calcularTotalPedido(productosNormalizados);
 
@@ -125,14 +101,11 @@ router.get('/', protect, asyncHandler(async (req, res) => {
 
 router.get('/:id', protect, asyncHandler(async (req, res) => {
   const pedido = await Pedido.findById(req.params.id);
-
-  if (!pedido) {
-    throw new ApiError(404, 'Pedido no encontrado');
-  }
-
+  if (!pedido) throw new ApiError(404, 'Pedido no encontrado');
   return res.json(pedido);
 }));
 
+// Cambio de estado: se mantiene autenticado en F0; la matriz fina de permisos corresponde a F1.
 router.patch('/:id/estado', protect, asyncHandler(async (req, res) => {
   const { estadoPedido } = req.body;
 
@@ -144,14 +117,9 @@ router.patch('/:id/estado', protect, asyncHandler(async (req, res) => {
   }
 
   const pedido = await Pedido.findById(req.params.id);
+  if (!pedido) throw new ApiError(404, 'Pedido no encontrado');
 
-  if (!pedido) {
-    throw new ApiError(404, 'Pedido no encontrado');
-  }
-
-  if (pedido.estadoPedido === estadoPedido) {
-    return res.json(pedido);
-  }
+  if (pedido.estadoPedido === estadoPedido) return res.json(pedido);
 
   if (!puedeTransicionarPedido(pedido.estadoPedido, estadoPedido, pedido.tipoPedido)) {
     throw new ApiError(409, 'Transición de estado de pedido no permitida', {
@@ -171,15 +139,12 @@ router.patch('/:id/estado', protect, asyncHandler(async (req, res) => {
   return res.json(pedido);
 }));
 
-router.delete('/:id', protect, asyncHandler(async (req, res) => {
+// Eliminación destructiva: solo ADMIN. La eliminación lógica se evaluará en F2/F4.
+router.delete('/:id', protect, restrictTo(ROLES.ADMIN), asyncHandler(async (req, res) => {
   const pedido = await Pedido.findById(req.params.id);
-
-  if (!pedido) {
-    throw new ApiError(404, 'Pedido no encontrado');
-  }
+  if (!pedido) throw new ApiError(404, 'Pedido no encontrado');
 
   await Pedido.findByIdAndDelete(req.params.id);
-
   return res.json({ message: 'Pedido eliminado correctamente' });
 }));
 
