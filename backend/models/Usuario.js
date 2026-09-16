@@ -1,19 +1,24 @@
 import bcrypt from 'bcryptjs';
 import mongoose from 'mongoose';
+import { ROLES_VALUES, ROLES } from '../constants/roles.js';
 
 const UsuarioSchema = new mongoose.Schema({
   nombre: {
     type: String,
-    required: true
+    required: true,
+    trim: true
   },
   nombreUsuario: {
     type: String,
     required: true,
+    trim: true,
     unique: true
   },
   email: {
     type: String,
     required: true,
+    trim: true,
+    lowercase: true,
     unique: true
   },
   password: {
@@ -23,8 +28,8 @@ const UsuarioSchema = new mongoose.Schema({
   },
   rol: {
     type: String,
-    enum: ['admin'],
-    default: 'admin'
+    enum: ROLES_VALUES,
+    default: ROLES.ADMIN
   },
   fechaCreacion: {
     type: Date,
@@ -32,14 +37,12 @@ const UsuarioSchema = new mongoose.Schema({
   }
 });
 
-// Hash password antes de guardar
 UsuarioSchema.pre('save', async function (next) {
   if (!this.isModified('password')) return next();
   this.password = await bcrypt.hash(this.password, 10);
   next();
 });
 
-// Método para verificar password
 UsuarioSchema.methods.matchPassword = async function (password) {
   return await bcrypt.compare(password, this.password);
 };

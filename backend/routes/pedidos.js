@@ -1,196 +1,151 @@
 import express from 'express';
-import { protect } from '../middleware/auth.js';
+import mongoose from 'mongoose';
+import { protect, restrictTo } from '../middleware/auth.js';
+import { ROLES } from '../constants/roles.js';
 import Mesa from '../models/Mesa.js';
 import Pedido from '../models/Pedido.js';
+import Producto from '../models/Producto.js';
+import { asyncHandler } from '../middleware/asyncHandler.js';
+import { ApiError } from '../utils/apiError.js';
+import {
+  ESTADOS_PEDIDO,
+  ESTADOS_PAGO,
+  TIPOS_PEDIDO,
+  isEnumValue
+} from '../constants/pedido.js';
+import { puedeTransicionarPedido } from '../constants/estadoPedido.js';
+import {
+  calcularTotalPedido,
+  normalizarProductosPedido,
+  validarDatosClientePedido
+} from '../utils/pedido.js';
 
 const router = express.Router();
+const ROLES_GESTION_PEDIDOS = [ROLES.ADMIN, ROLES.CAJERO];
 
-/**
- * Crear pedido
- */
-router.post('/', protect, async (req, res) => {
-  try {
-    const pedidoData = {
-      ...req.body,
-      usuarioId: req.usuario.id
-    };
+router.post('/', protect, restrictTo(...ROLES_GESTION_PEDIDOS), asyncHandler(async (req, res) => {
+  const { tipoPedido, nombreCliente, telefono, direccion, comentario, productos, mesaId } = req.body;
 
-    if (
-      pedidoData.tipoPedido === 'SALON' &&
-      pedidoData.mesaId
-    ) {
-
-      const mesa = await Mesa.findById(
-        pedidoData.mesaId
-      );
-
-      if (!mesa) {
-        return res.status(404).json({
-          message: 'Mesa no encontrada'
-        });
-      }
-
-      if (mesa.estado !== 'LIBRE') {
-        return res.status(400).json({
-          message: 'La mesa ya está ocupada'
-        });
-      }
-    }
-    const pedido = new Pedido(pedidoData);
-
-    await pedido.save();
-    if (
-      pedido.tipoPedido === 'SALON' &&
-      pedido.mesaId
-    ) {
-      await Mesa.findByIdAndUpdate(
-        pedido.mesaId,
-        {
-          estado: 'OCUPADA'
-        }
-      );
-    }
-    res.status(201).json(pedido);
-  } catch (error) {
-    console.error('Error creando pedido:', error);
-
-    res.status(500).json({
-      message: 'Error creando pedido'
+  if (!isEnumValue(tipoPedido, TIPOS_PEDIDO)) {
+    throw new ApiError(400, 'tipoPedido inválido', {
+      field: 'tipoPedido',
+      allowedValues: Object.values(TIPOS_PEDIDO)
     });
   }
-});
 
-/**
- * Obtener todos los pedidos
- */
-router.get('/', protect, async (req, res) => {
-  try {
-    const pedidos = await Pedido.find()
-      .sort({ fechaPedido: -1 });
+  validarDatosClientePedido({ tipoPedido, nombreCliente, telefono, direccion });
 
-    res.json(pedidos);
-  } catch (error) {
-    console.error('Error obteniendo pedidos:', error);
+  if (!Array.isArray(productos) || productos.length === 0) {
+    throw new ApiError(400, 'El pedido debe contener al menos un producto', { field: 'productos' });
+  }
 
-    res.status(500).json({
-      message: 'Error al obtener pedidos'
+  if (tipoPedido === TIPOS_PEDIDO.SALON && !mesaId) {
+    throw new ApiError(400, 'Los pedidos de salón requieren una mesa', { field: 'mesaId' });
+  }
+
+  if (tipoPedido !== TIPOS_PEDIDO.SALON && mesaId) {
+    throw new ApiError(400, 'Solo los pedidos de salón pueden tener una mesa', { field: 'mesaId' });
+  }
+
+  let mesa = null;
+  if (tipoPedido === TIPOS_PEDIDO.SALON) {
+    if (!mongoose.isValidObjectId(mesaId)) {
+      throw new ApiError(400, 'mesaId inválido', { field: 'mesaId' });
+    }
+
+    mesa = await Mesa.findById(mesaId);
+    if (!mesa) throw new ApiError(404, 'Mesa no encontrada');
+    if (!mesa.activa) throw new ApiError(409, 'La mesa no está activa');
+    if (mesa.estado !== 'LIBRE') throw new ApiError(409, 'La mesa ya está ocupada');
+  }
+
+  const productoIds = productos.map((item) => item?.productoId);
+  if (productoIds.some((id) => !mongoose.isValidObjectId(id))) {
+    throw new ApiError(400, 'Todos los productos deben tener un productoId válido', {
+      field: 'productos.productoId'
     });
   }
-});
 
-/**
- * Obtener pedido por ID
- */
-router.get('/:id', protect, async (req, res) => {
-  try {
-    const pedido = await Pedido.findById(req.params.id);
+  const productosDB = await Producto.find({ _id: { $in: productoIds } });
+  const productosNormalizados = normalizarProductosPedido(productos, productosDB);
+  const total = calcularTotalPedido(productosNormalizados);
 
-    if (!pedido) {
-      return res.status(404).json({
-        message: 'Pedido no encontrado'
-      });
-    }
+  const pedido = new Pedido({
+    tipoPedido,
+    nombreCliente,
+    telefono,
+    direccion,
+    comentario,
+    productos: productosNormalizados,
+    total,
+    pagos: [],
+    mesaId: mesa?._id ?? null,
+    usuarioId: req.usuario.id,
+    estadoPedido: ESTADOS_PEDIDO.ABIERTO,
+    estadoPago: ESTADOS_PAGO.PENDIENTE
+  });
 
-    res.json(pedido);
+  await pedido.save();
 
-  } catch (error) {
-    console.error('Error obteniendo pedido:', error);
+  if (mesa) {
+    await Mesa.findByIdAndUpdate(mesa._id, { estado: 'OCUPADA' });
+  }
 
-    res.status(500).json({
-      message: 'Error al obtener pedido'
+  return res.status(201).json(pedido);
+}));
+
+router.get('/', protect, asyncHandler(async (req, res) => {
+  const pedidos = await Pedido.find().sort({ fechaPedido: -1 });
+  return res.json(pedidos);
+}));
+
+router.get('/:id', protect, asyncHandler(async (req, res) => {
+  const pedido = await Pedido.findById(req.params.id);
+  if (!pedido) throw new ApiError(404, 'Pedido no encontrado');
+  return res.json(pedido);
+}));
+
+// Cambio de estado: se mantiene autenticado en F0; la matriz fina de permisos corresponde a F1.
+router.patch('/:id/estado', protect, asyncHandler(async (req, res) => {
+  const { estadoPedido } = req.body;
+
+  if (!isEnumValue(estadoPedido, ESTADOS_PEDIDO)) {
+    throw new ApiError(400, 'estadoPedido inválido', {
+      field: 'estadoPedido',
+      allowedValues: Object.values(ESTADOS_PEDIDO)
     });
   }
-});
 
-/**
- * Actualizar estado
- */
-router.patch('/:id/estado', protect, async (req, res) => {
-  try {
+  const pedido = await Pedido.findById(req.params.id);
+  if (!pedido) throw new ApiError(404, 'Pedido no encontrado');
 
-    const { estado } = req.body;
+  if (pedido.estadoPedido === estadoPedido) return res.json(pedido);
 
-    const estadosPermitidos = [
-      'ABIERTO',
-      'CONFIRMADO',
-      'EN_COCINA',
-      'LISTO',
-      'ENTREGADO',
-      'PAGADO',
-      'EN_CAMINO',
-      'CANCELADO'
-    ];
-
-    if (!estadosPermitidos.includes(estado)) {
-      return res.status(400).json({
-        message: 'Estado inválido'
-      });
-    }
-
-    const pedido = await Pedido.findById(req.params.id);
-
-    if (!pedido) {
-      return res.status(404).json({
-        message: 'Pedido no encontrado'
-      });
-    }
-
-    const estadoAnterior = pedido.estado;
-    pedido.estado = estado;
-
-    await pedido.save();
-
-    if (
-      estadoAnterior !== 'PAGADO' &&
-      estado === 'PAGADO' &&
-      pedido.mesaId
-    ) {
-      await Mesa.findByIdAndUpdate(
-        pedido.mesaId,
-        {
-          estado: 'LIBRE'
-        }
-      );
-    }
-
-    res.json(pedido);
-
-  } catch (error) {
-    console.error('Error actualizando estado:', error);
-
-    res.status(500).json({
-      message: 'Error actualizando estado'
+  if (!puedeTransicionarPedido(pedido.estadoPedido, estadoPedido, pedido.tipoPedido)) {
+    throw new ApiError(409, 'Transición de estado de pedido no permitida', {
+      from: pedido.estadoPedido,
+      to: estadoPedido,
+      tipoPedido: pedido.tipoPedido
     });
   }
-});
 
-/**
- * Eliminar pedido
- */
-router.delete('/:id', protect, async (req, res) => {
-  try {
+  pedido.estadoPedido = estadoPedido;
+  await pedido.save();
 
-    const pedido = await Pedido.findById(req.params.id);
-
-    if (!pedido) {
-      return res.status(404).json({
-        message: 'Pedido no encontrado'
-      });
-    }
-
-    await Pedido.findByIdAndDelete(req.params.id);
-
-    res.json({
-      message: 'Pedido eliminado correctamente'
-    });
-
-  } catch (error) {
-    console.error('Error eliminando pedido:', error);
-
-    res.status(500).json({
-      message: 'Error eliminando pedido'
-    });
+  if (estadoPedido === ESTADOS_PEDIDO.ENTREGADO && pedido.tipoPedido === TIPOS_PEDIDO.SALON && pedido.mesaId) {
+    await Mesa.findByIdAndUpdate(pedido.mesaId, { estado: 'LIBRE' });
   }
-});
+
+  return res.json(pedido);
+}));
+
+// Eliminación destructiva: solo ADMIN. La eliminación lógica se evaluará en F2/F4.
+router.delete('/:id', protect, restrictTo(ROLES.ADMIN), asyncHandler(async (req, res) => {
+  const pedido = await Pedido.findById(req.params.id);
+  if (!pedido) throw new ApiError(404, 'Pedido no encontrado');
+
+  await Pedido.findByIdAndDelete(req.params.id);
+  return res.json({ message: 'Pedido eliminado correctamente' });
+}));
 
 export default router;

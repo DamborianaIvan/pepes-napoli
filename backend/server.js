@@ -8,6 +8,7 @@ import { openapiDefinition } from './docs/openapi.js';
 import { paths } from './docs/paths.js';
 import { errorHandler, notFound } from './middleware/errorHandler.js';
 import authRoutes from './routes/auth.js';
+import healthRoutes from './routes/health.js';
 import productosRoutes from './routes/productos.js';
 import pedidosRoutes from './routes/pedidos.js';
 import mesasRoutes from './routes/mesas.js';
@@ -15,9 +16,15 @@ import mesasRoutes from './routes/mesas.js';
 const swaggerDocs = { ...openapiDefinition, paths };
 const app = express();
 
-app.use(cors());
-app.use(express.json());
+app.disable('x-powered-by');
+
+app.use(cors({
+  origin: config.corsOrigins
+}));
+app.use(express.json({ limit: '1mb' }));
+
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
+app.use('/api/health', healthRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/productos', productosRoutes);
 app.use('/api/pedidos', pedidosRoutes);

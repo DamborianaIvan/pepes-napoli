@@ -2,42 +2,62 @@ import express from 'express';
 import jwt from 'jsonwebtoken';
 import { config } from '../config.js';
 import Usuario from '../models/Usuario.js';
+import { ROLES } from '../constants/roles.js';
+import { ApiError } from '../utils/apiError.js';
 
 const router = express.Router();
 
-// Registro
-router.post('/register', async (req, res) => {
-  const { nombreUsuario, password, nombre, rol, email } = req.body;
+// Bootstrap público: solo permite crear el primer administrador.
+router.post('/register', async (req, res, next) => {
   try {
-    const existingUser = await Usuario.findOne({ nombreUsuario });
-    if (existingUser) {
-      return res.status(400).json({ message: 'El nombre de usuario ya está en uso' });
+    const { nombreUsuario, password, nombre, email } = req.body;
+
+    if (!nombreUsuario || !password || !nombre || !email) {
+      throw new ApiError(400, 'nombreUsuario, password, nombre y email son obligatorios', {
+        fields: ['nombreUsuario', 'password', 'nombre', 'email']
+      });
     }
 
-    const nuevoUsuario = new Usuario({ nombreUsuario, password, nombre, rol, email });
+    const usuariosExistentes = await Usuario.exists({});
+    if (usuariosExistentes) {
+      throw new ApiError(403, 'El registro público está cerrado');
+    }
+
+    const nuevoUsuario = new Usuario({
+      nombreUsuario,
+      password,
+      nombre,
+      email,
+      rol: ROLES.ADMIN
+    });
+
     await nuevoUsuario.save();
 
-    res.status(201).json({ message: 'Usuario creado con éxito' });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Error al registrar el usuario' });
+    return res.status(201).json({ message: 'Usuario administrador creado con éxito' });
+  } catch (error) {
+    return next(error);
   }
 });
 
 // Login
-router.post('/login', async (req, res) => {
-  const { nombreUsuario, password } = req.body;
+router.post('/login', async (req, res, next) => {
   try {
+    const { nombreUsuario, password } = req.body;
+
+    if (!nombreUsuario || !password) {
+      throw new ApiError(400, 'nombreUsuario y password son obligatorios', {
+        fields: ['nombreUsuario', 'password']
+      });
+    }
+
     const usuario = await Usuario.findOne({ nombreUsuario }).select('+password');
     if (!usuario) {
-      return res.status(400).json({
-      message: 'Usuario o contraseña incorrectos'
-    });
+      throw new ApiError(401, 'Usuario o contraseña incorrectos');
     }
 
     const isMatch = await usuario.matchPassword(password);
     if (!isMatch) {
-      return res.status(400).json({ message: 'Usuario o contraseña incorrectos' });
+      throw new ApiError(401, 'Usuario o contraseña incorrectos');
     }
 
     const token = jwt.sign(
@@ -46,17 +66,14 @@ router.post('/login', async (req, res) => {
       { expiresIn: config.jwtExpiresIn }
     );
 
-    // ✅ Asegurate de devolver también el rol
-    res.json({
+    return res.json({
       token,
       rol: usuario.rol,
-      nombre: usuario.nombre, // opcional: podés usarlo en Sidebar
-      id: usuario._id, // si lo necesitás para frontend
+      nombre: usuario.nombre,
+      id: usuario._id
     });
-
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Error en login' });
+    return next(error);
   }
 });
 
@@ -72,7 +89,7 @@ export default router;
  * @swagger
  * /api/auth/register:
  *   post:
- *     summary: Crear nuevo usuario
+ *     summary: Crear el primer usuario administrador
  *     tags:
  *       - Auth
  *     requestBody:
@@ -84,36 +101,24 @@ export default router;
  *             required:
  *               - nombre
  *               - nombreUsuario
- *               - nombreUsuario
  *               - password
+ *               - email
  *             properties:
  *               nombre:
  *                 type: string
- *                 example: Juan Perez
  *               nombreUsuario:
  *                 type: string
- *                 example: juan
  *               email:
  *                 type: string
- *                 example: juan@gmail.com
  *               password:
  *                 type: string
- *                 example: 123456
- *               rol:
- *                 type: string
- *                 enum:
- *                   - admin
- *                   - caja
- *                   - cocina
- *                   - mozo
- *                 example: mozo
  *     responses:
  *       201:
- *         description: Usuario creado correctamente
+ *         description: Usuario administrador creado correctamente
  *       400:
- *         description: Usuario o email ya existe
- *       500:
- *         description: Error interno del servidor
+ *         description: Datos requeridos ausentes
+ *       403:
+ *         description: El registro público está cerrado
  */
 /**
  * @swagger
@@ -128,7 +133,7 @@ export default router;
  *           schema:
  *             type: object
  *             required:
- *               - email
+ *               - nombreUsuario
  *               - password
  *             properties:
  *               nombreUsuario:
@@ -138,15 +143,8 @@ export default router;
  *     responses:
  *       200:
  *         description: Login exitoso con token JWT
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 token:
- *                   type: string
  *       400:
- *         description: Email o contraseña incorrectos
- *       500:
- *         description: Error en el servidor
+ *         description: Datos requeridos ausentes
+ *       401:
+ *         description: Credenciales incorrectas
  */

@@ -1,27 +1,41 @@
 import jwt from 'jsonwebtoken';
 import { config } from '../config.js';
+import { ApiError } from '../utils/apiError.js';
 
 export const protect = (req, res, next) => {
-  let token;
-  if (req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
-    token = req.headers.authorization.split(' ')[1];
+  const authorization = req.headers.authorization;
+
+  if (!authorization || !authorization.startsWith('Bearer ')) {
+    return next(new ApiError(401, 'Autenticación requerida', {
+      reason: 'MISSING_TOKEN'
+    }));
   }
-  if (!token) return res.status(401).json({ message: 'No token, autorización denegada' });
+
+  const token = authorization.slice('Bearer '.length).trim();
+
+  if (!token) {
+    return next(new ApiError(401, 'Autenticación requerida', {
+      reason: 'MISSING_TOKEN'
+    }));
+  }
 
   try {
-    const decoded = jwt.verify(token, config.jwtSecret);
-    req.usuario = decoded;
-    next();
+    req.usuario = jwt.verify(token, config.jwtSecret);
+    return next();
   } catch (error) {
-    res.status(401).json({ message: 'Token inválido' });
+    return next(new ApiError(401, 'Token inválido o expirado', {
+      reason: 'INVALID_TOKEN'
+    }));
   }
 };
 
 export const restrictTo = (...roles) => {
   return (req, res, next) => {
-    if (!roles.includes(req.usuario.rol)) {
-      return res.status(403).json({ message: 'Acceso no autorizado' });
+    if (!req.usuario || !roles.includes(req.usuario.rol)) {
+      return next(new ApiError(403, 'No tiene permisos para realizar esta acción', {
+        reason: 'INSUFFICIENT_ROLE'
+      }));
     }
-    next();
+    return next();
   };
 };
