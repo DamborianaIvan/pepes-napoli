@@ -1,96 +1,123 @@
 import mongoose from 'mongoose';
+import {
+  ESTADOS_PAGO,
+  ESTADOS_PEDIDO,
+  METODOS_PAGO,
+  TIPOS_PEDIDO
+} from '../constants/pedido.js';
 
 const PedidoSchema = new mongoose.Schema({
-
-  // Tipo de pedido
   tipoPedido: {
     type: String,
-    enum: ['SALON', 'DELIVERY', 'TAKEAWAY'],
-    default: 'SALON',
-    required: true
+    enum: Object.values(TIPOS_PEDIDO),
+    default: TIPOS_PEDIDO.SALON,
+    required: true,
+    index: true
   },
 
-  // Datos cliente
   nombreCliente: {
     type: String,
+    trim: true,
     default: null
   },
 
   telefono: {
     type: String,
+    trim: true,
     default: null
   },
 
   direccion: {
     type: String,
+    trim: true,
     default: null
   },
 
-  // Mesa (solo para salón)
   mesaId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Mesa',
-    default: null
+    default: null,
+    index: true
   },
+
   usuarioId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Usuario',
-    default: null
+    default: null,
+    index: true
   },
+
   productos: [
     {
-      producto: {
-        type: String,
-        required: true
+      productoId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Producto',
+        default: null
       },
-
+      nombreSnapshot: {
+        type: String,
+        required: true,
+        trim: true
+      },
       cantidad: {
         type: Number,
-        required: true
+        required: true,
+        min: 1
       },
-
-      precio: {
+      precioUnitario: {
         type: Number,
-        required: true
+        required: true,
+        min: 0
+      },
+      subtotal: {
+        type: Number,
+        required: true,
+        min: 0
       }
     }
   ],
 
   total: {
     type: Number,
-    required: true
+    required: true,
+    min: 0
   },
 
-  metodoPago: {
+  pagos: [
+    {
+      metodo: {
+        type: String,
+        enum: Object.values(METODOS_PAGO),
+        required: true
+      },
+      monto: {
+        type: Number,
+        required: true,
+        min: 0
+      }
+    }
+  ],
+
+  estadoPedido: {
     type: String,
-    enum: [
-      'EFECTIVO',
-      'TRANSFERENCIA',
-      'DEBITO',
-      'CREDITO'
-    ],
-    default: 'EFECTIVO'
+    enum: Object.values(ESTADOS_PEDIDO),
+    default: ESTADOS_PEDIDO.ABIERTO,
+    required: true,
+    index: true
+  },
+
+  estadoPago: {
+    type: String,
+    enum: Object.values(ESTADOS_PAGO),
+    default: ESTADOS_PAGO.PENDIENTE,
+    required: true,
+    index: true
   },
 
   comentario: {
     type: String,
+    trim: true,
     default: ''
-  },
-
-  estado: {
-    type: String,
-    enum: [
-      'ABIERTO',
-      'CONFIRMADO',
-      'EN_COCINA',
-      'LISTO',
-      'ENTREGADO',
-      'PAGADO',
-      'EN_CAMINO',
-      'CANCELADO'
-    ],
-    default: 'ABIERTO',
-    index: true
   },
 
   fechaPedido: {
@@ -98,7 +125,6 @@ const PedidoSchema = new mongoose.Schema({
     default: Date.now,
     index: true
   }
-
 }, {
   timestamps: true
 });
