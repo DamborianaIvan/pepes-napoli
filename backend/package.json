@@ -5,8 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node server.js",
-    "migrate:pedidos": "node scripts/migrate-pedidos-v1.js"
+    "start": "node server.js"
   },
   "keywords": [],
   "author": "",
