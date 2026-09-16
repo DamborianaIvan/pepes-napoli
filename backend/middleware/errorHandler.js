@@ -1,24 +1,70 @@
 export const notFound = (req, res) => {
-  res.status(404).json({ message: `Ruta no encontrada: ${req.method} ${req.originalUrl}` });
+  res.status(404).json({
+    error: {
+      code: 'ROUTE_NOT_FOUND',
+      message: `Ruta no encontrada: ${req.method} ${req.originalUrl}`
+    }
+  });
 };
 
 export const errorHandler = (error, req, res, next) => {
   console.error(error);
 
+  if (res.headersSent) {
+    return next(error);
+  }
+
   if (error.name === 'CastError') {
-    return res.status(400).json({ message: 'Identificador inv\u00e1lido' });
+    return res.status(400).json({
+      error: {
+        code: 'INVALID_IDENTIFIER',
+        message: 'Identificador inválido'
+      }
+    });
   }
 
   if (error.name === 'ValidationError') {
-    return res.status(400).json({ message: error.message });
+    const details = Object.values(error.errors).map((validationError) => ({
+      field: validationError.path,
+      message: validationError.message
+    }));
+
+    return res.status(400).json({
+      error: {
+        code: 'VALIDATION_ERROR',
+        message: 'Los datos enviados no son válidos',
+        details
+      }
+    });
   }
 
   if (error.code === 11000) {
-    return res.status(409).json({ message: 'Ya existe un registro con esos datos' });
+    return res.status(409).json({
+      error: {
+        code: 'DUPLICATE_RESOURCE',
+        message: 'Ya existe un registro con esos datos'
+      }
+    });
   }
 
   const status = error.statusCode || error.status || 500;
   const message = status >= 500 ? 'Error interno del servidor' : error.message;
+  const code = error.code && typeof error.code === 'string'
+    ? error.code
+    : status >= 500
+      ? 'INTERNAL_SERVER_ERROR'
+      : 'REQUEST_ERROR';
 
-  return res.status(status).json({ message });
+  const response = {
+    error: {
+      code,
+      message
+    }
+  };
+
+  if (error.details !== undefined) {
+    response.error.details = error.details;
+  }
+
+  return res.status(status).json(response);
 };
