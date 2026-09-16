@@ -1,11 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import Snackbar from "@mui/material/Snackbar";
-import { Box, Grid, Card, CardContent, Typography, Button, Divider, TextField, Alert, Dialog, DialogTitle, DialogContent, DialogActions, Chip, Stack, MenuItem, Avatar } from "@mui/material";
-import AddIcon from '@mui/icons-material/Add';
-import RemoveIcon from '@mui/icons-material/Remove';
-import DeleteIcon from '@mui/icons-material/Delete';
-import IconButton from '@mui/material/IconButton';
+import { Box, Grid, Card, CardContent, Typography, Button, Divider, TextField, Alert, Dialog, DialogTitle, DialogContent, DialogActions, MenuItem } from "@mui/material";
 import "./NuevoPedido.css";
 import { METODOS_PAGO, TIPOS_PEDIDO, type MetodoPago, type Pedido, type ProductoPedido, type TipoPedido } from "../../types/pedido";
 
@@ -90,9 +86,7 @@ const NuevoPedido = () => {
         telefono,
         direccion,
         comentario,
-        pagos: [{ metodo: metodoPago, monto: total }],
-        productos: productosPedido,
-        total,
+        productos: productosPedido.map(({ productoId, cantidad }) => ({ productoId, cantidad })),
         mesaId: tipoPedido === "SALON" ? mesaId : null,
       };
 
@@ -102,7 +96,7 @@ const NuevoPedido = () => {
       setPedidoExitoso(true);
       limpiarFormulario();
     } catch (error) {
-      const message = error instanceof Error && !(axios.isAxiosError(error)) ? error.message : (axios.isAxiosError(error) ? error.response?.data?.error?.message || error.response?.data?.message : undefined);
+      const message = error instanceof Error && !axios.isAxiosError(error) ? error.message : (axios.isAxiosError(error) ? error.response?.data?.error?.message || error.response?.data?.message : undefined);
       setSnackbar({ open: true, message: message || "Error al crear el pedido", severity: "error" });
     } finally {
       setGuardandoPedido(false);
