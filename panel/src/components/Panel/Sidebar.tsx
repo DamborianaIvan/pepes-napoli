@@ -11,21 +11,15 @@ import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
 import LogoutIcon from "@mui/icons-material/Logout";
 import MenuIcon from "@mui/icons-material/Menu";
 import PersonIcon from "@mui/icons-material/Person";
-import { hasPermission, isValidRol, PERMISSIONS, type Rol } from "../../types/auth";
+import { clearSession, getSession } from "../../auth/session";
+import { hasPermission, PERMISSIONS } from "../../types/auth";
 
 const Sidebar = () => {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
-  const rolValue = localStorage.getItem("rol");
-  const rol: Rol | null = isValidRol(rolValue) ? rolValue : null;
-  const userString = localStorage.getItem("user");
-
-  let user: { nombre?: string; id?: string } | null = null;
-  try {
-    user = userString ? JSON.parse(userString) : null;
-  } catch {
-    user = null;
-  }
+  const session = getSession();
+  const rol = session?.rol ?? null;
+  const user = session?.user ?? null;
 
   const canCreateOrders = rol
     ? hasPermission(rol, PERMISSIONS.ORDERS_CREATE)
@@ -42,9 +36,7 @@ const Sidebar = () => {
     : false;
 
   const logout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    localStorage.removeItem("rol");
+    clearSession();
     navigate("/login");
   };
 
