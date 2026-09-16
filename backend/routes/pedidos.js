@@ -95,10 +95,11 @@ router.patch('/:id/estado', protect, asyncHandler(async (req, res) => {
     return res.json(pedido);
   }
 
-  if (!puedeTransicionarPedido(pedido.estadoPedido, estadoPedido)) {
+  if (!puedeTransicionarPedido(pedido.estadoPedido, estadoPedido, pedido.tipoPedido)) {
     throw new ApiError(409, 'Transición de estado de pedido no permitida', {
       from: pedido.estadoPedido,
-      to: estadoPedido
+      to: estadoPedido,
+      tipoPedido: pedido.tipoPedido
     });
   }
 
