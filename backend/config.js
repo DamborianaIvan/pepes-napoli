@@ -1,13 +1,31 @@
 import 'dotenv/config';
 
-const port = Number.parseInt(process.env.PORT, 10);
+const DEFAULT_PORT = 5000;
+const DEFAULT_BASE_URL = 'http://localhost:5000';
+const DEFAULT_JWT_EXPIRES_IN = '1d';
+
+const parsePort = (value) => {
+  const port = Number.parseInt(value, 10);
+  return Number.isInteger(port) && port > 0 && port <= 65535 ? port : DEFAULT_PORT;
+};
+
+const parseCorsOrigins = (value) => {
+  if (!value) return ['http://localhost:5173'];
+
+  return value
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+};
 
 export const config = Object.freeze({
-  baseUrl: process.env.BASE_URL || 'http://localhost:5000',
-  jwtExpiresIn: process.env.JWT_EXPIRES_IN || '1d',
+  nodeEnv: process.env.NODE_ENV || 'development',
+  baseUrl: process.env.BASE_URL || DEFAULT_BASE_URL,
+  corsOrigins: parseCorsOrigins(process.env.CORS_ORIGINS),
+  jwtExpiresIn: process.env.JWT_EXPIRES_IN || DEFAULT_JWT_EXPIRES_IN,
   jwtSecret: process.env.JWT_SECRET,
   mongoUri: process.env.MONGODB_URI || process.env.MONGO_URI,
-  port: Number.isInteger(port) && port > 0 ? port : 5000
+  port: parsePort(process.env.PORT)
 });
 
 export const validateConfig = () => {
@@ -20,5 +38,13 @@ export const validateConfig = () => {
 
   if (missing.length > 0) {
     throw new Error(`Faltan variables de entorno requeridas: ${missing.join(', ')}`);
+  }
+
+  if (config.jwtSecret.length < 32) {
+    throw new Error('JWT_SECRET debe tener al menos 32 caracteres');
+  }
+
+  if (config.corsOrigins.length === 0) {
+    throw new Error('CORS_ORIGINS debe contener al menos un origen válido');
   }
 };
