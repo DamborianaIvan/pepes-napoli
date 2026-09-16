@@ -10,8 +10,19 @@ import InputAdornment from "@mui/material/InputAdornment";
 import type { AlertColor } from "@mui/material/Alert";
 import PersonIcon from "@mui/icons-material/Person";
 import LockIcon from "@mui/icons-material/Lock";
+import { isValidRol } from "../../types/auth";
 
 const Alert = MuiAlert as typeof MuiAlert;
+
+interface LoginResponse {
+  token?: string;
+  rol?: unknown;
+  nombre?: string;
+  id?: string;
+  error?: {
+    message?: string;
+  };
+}
 
 export const AuthLogin = () => {
   const [nombreUsuario, setNombreUsuario] = useState("");
@@ -42,11 +53,20 @@ export const AuthLogin = () => {
         }
       );
 
-      const data = await response.json();
+      const data = (await response.json()) as LoginResponse;
 
       if (!response.ok) {
         setSnackbarType("error");
-        setSnackbarMsg(data.message || "Error al iniciar sesión.");
+        setSnackbarMsg(
+          data.error?.message || "Error al iniciar sesión."
+        );
+        setSnackbarOpen(true);
+        return;
+      }
+
+      if (!data.token || !isValidRol(data.rol) || !data.id) {
+        setSnackbarType("error");
+        setSnackbarMsg("Respuesta de autenticación inválida.");
         setSnackbarOpen(true);
         return;
       }
@@ -63,11 +83,7 @@ export const AuthLogin = () => {
       setSnackbarOpen(true);
 
       setTimeout(() => {
-        if (data.rol === "admin" || data.rol === "delivery") {
-          navigate("/panel/dashboard");
-        } else {
-          navigate("/");
-        }
+        navigate("/panel/dashboard");
       }, 1000);
     } catch (err) {
       console.error(err);
@@ -83,7 +99,6 @@ export const AuthLogin = () => {
       <h2 className="h2title">Panel de Administración</h2>
 
       <form className="auth-form" onSubmit={handleLogin}>
-
         <TextField
           label="Nombre de usuario"
           value={nombreUsuario}
@@ -117,7 +132,9 @@ export const AuthLogin = () => {
           }}
         />
 
-        <button type="submit" className="login-button">Iniciar sesión</button>
+        <button type="submit" className="login-button">
+          Iniciar sesión
+        </button>
       </form>
 
       <p className="auth-link">
