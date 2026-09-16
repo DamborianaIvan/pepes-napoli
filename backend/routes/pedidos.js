@@ -6,9 +6,11 @@ import { asyncHandler } from '../middleware/asyncHandler.js';
 import { ApiError } from '../utils/apiError.js';
 import {
   ESTADOS_PEDIDO,
+  ESTADOS_PAGO,
   TIPOS_PEDIDO,
   isEnumValue
 } from '../constants/pedido.js';
+import { puedeTransicionarPedido } from '../constants/estadoPedido.js';
 
 const router = express.Router();
 
@@ -46,7 +48,7 @@ router.post('/', protect, asyncHandler(async (req, res) => {
   const pedido = new Pedido({
     ...pedidoData,
     estadoPedido: ESTADOS_PEDIDO.ABIERTO,
-    estadoPago: 'PENDIENTE'
+    estadoPago: ESTADOS_PAGO.PENDIENTE
   });
 
   await pedido.save();
@@ -87,6 +89,17 @@ router.patch('/:id/estado', protect, asyncHandler(async (req, res) => {
 
   if (!pedido) {
     throw new ApiError(404, 'Pedido no encontrado');
+  }
+
+  if (pedido.estadoPedido === estadoPedido) {
+    return res.json(pedido);
+  }
+
+  if (!puedeTransicionarPedido(pedido.estadoPedido, estadoPedido)) {
+    throw new ApiError(409, 'Transición de estado de pedido no permitida', {
+      from: pedido.estadoPedido,
+      to: estadoPedido
+    });
   }
 
   pedido.estadoPedido = estadoPedido;
