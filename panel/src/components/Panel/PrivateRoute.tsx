@@ -1,5 +1,6 @@
 import React from "react";
 import { Navigate } from "react-router-dom";
+import { clearSession, getSession } from "../../auth/session";
 import { isValidRol } from "../../types/auth";
 
 interface Props {
@@ -25,18 +26,21 @@ const decodeJwtPayload = (token: string): JwtPayload | null => {
 };
 
 export const PrivateRoute = ({ children }: Props) => {
-  const token = localStorage.getItem("token");
+  const session = getSession();
 
-  if (!token) return <Navigate to="/login" replace />;
+  if (!session) {
+    clearSession();
+    return <Navigate to="/login" replace />;
+  }
 
-  const payload = decodeJwtPayload(token);
+  const payload = decodeJwtPayload(session.token);
   const exp = payload?.exp;
   const isExpired = typeof exp === "number" && exp * 1000 <= Date.now();
+  const tokenRoleIsValid = isValidRol(payload?.rol);
+  const sessionRoleMatchesToken = tokenRoleIsValid && payload?.rol === session.rol;
 
-  if (!payload || !isValidRol(payload.rol) || isExpired) {
-    localStorage.removeItem("token");
-    localStorage.removeItem("rol");
-    localStorage.removeItem("user");
+  if (!payload || isExpired || !sessionRoleMatchesToken) {
+    clearSession();
     return <Navigate to="/login" replace />;
   }
 
