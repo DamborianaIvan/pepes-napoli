@@ -1,8 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import jwt from 'jsonwebtoken';
-import { config } from '../config.js';
-import { protect, restrictTo } from './auth.js';
+
+// Los tests no deben depender de un .env local para firmar el JWT de prueba.
+process.env.JWT_SECRET = 'test-secret-for-auth-middleware-32-chars-min';
+
+const { config } = await import('../config.js');
+const { protect, restrictTo } = await import('./auth.js');
 
 const executeMiddleware = async (middleware, req) => {
   let nextError;
