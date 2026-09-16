@@ -21,6 +21,10 @@ const TRANSICION_DESDE_LISTO_POR_TIPO = Object.freeze({
 
 export const puedeTransicionarPedido = (estadoActual, estadoNuevo, tipoPedido) => {
   if (estadoActual === LISTO) {
+    if (estadoNuevo === CANCELADO) {
+      return true;
+    }
+
     return TRANSICION_DESDE_LISTO_POR_TIPO[tipoPedido]?.includes(estadoNuevo) ?? false;
   }
 
