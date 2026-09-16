@@ -1,7 +1,8 @@
 import express from 'express';
 import mongoose from 'mongoose';
-import { protect, restrictTo } from '../middleware/auth.js';
+import { protect, requirePermission, restrictTo } from '../middleware/auth.js';
 import { ROLES } from '../constants/roles.js';
+import { PERMISSIONS } from '../constants/permissions.js';
 import Mesa from '../models/Mesa.js';
 import Pedido from '../models/Pedido.js';
 import Producto from '../models/Producto.js';
@@ -21,9 +22,8 @@ import {
 } from '../utils/pedido.js';
 
 const router = express.Router();
-const ROLES_GESTION_PEDIDOS = [ROLES.ADMIN, ROLES.CAJERO];
 
-router.post('/', protect, restrictTo(...ROLES_GESTION_PEDIDOS), asyncHandler(async (req, res) => {
+router.post('/', protect, requirePermission(PERMISSIONS.ORDERS_CREATE), asyncHandler(async (req, res) => {
   const { tipoPedido, nombreCliente, telefono, direccion, comentario, productos, mesaId } = req.body;
 
   if (!isEnumValue(tipoPedido, TIPOS_PEDIDO)) {
@@ -105,8 +105,8 @@ router.get('/:id', protect, asyncHandler(async (req, res) => {
   return res.json(pedido);
 }));
 
-// Cambio de estado: se mantiene autenticado en F0; la matriz fina de permisos corresponde a F1.
-router.patch('/:id/estado', protect, asyncHandler(async (req, res) => {
+// Cambio de estado: requiere orders:change_status. Las restricciones finas por rol/estado/tipo corresponden a F2/KDS.
+router.patch('/:id/estado', protect, requirePermission(PERMISSIONS.ORDERS_CHANGE_STATUS), asyncHandler(async (req, res) => {
   const { estadoPedido } = req.body;
 
   if (!isEnumValue(estadoPedido, ESTADOS_PEDIDO)) {
