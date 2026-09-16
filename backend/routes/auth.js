@@ -2,32 +2,38 @@ import express from 'express';
 import jwt from 'jsonwebtoken';
 import { config } from '../config.js';
 import Usuario from '../models/Usuario.js';
+import { ROLES } from '../constants/roles.js';
 import { ApiError } from '../utils/apiError.js';
 
 const router = express.Router();
 
-// Registro
+// Bootstrap público: solo permite crear el primer administrador.
 router.post('/register', async (req, res, next) => {
   try {
-    const { nombreUsuario, password, nombre, rol, email } = req.body;
+    const { nombreUsuario, password, nombre, email } = req.body;
 
-    if (!nombreUsuario || !password || !nombre) {
-      throw new ApiError(400, 'nombreUsuario, password y nombre son obligatorios', {
-        fields: ['nombreUsuario', 'password', 'nombre']
+    if (!nombreUsuario || !password || !nombre || !email) {
+      throw new ApiError(400, 'nombreUsuario, password, nombre y email son obligatorios', {
+        fields: ['nombreUsuario', 'password', 'nombre', 'email']
       });
     }
 
-    const existingUser = await Usuario.findOne({ nombreUsuario });
-    if (existingUser) {
-      throw new ApiError(409, 'El nombre de usuario ya está en uso', {
-        field: 'nombreUsuario'
-      });
+    const usuariosExistentes = await Usuario.exists({});
+    if (usuariosExistentes) {
+      throw new ApiError(403, 'El registro público está cerrado');
     }
 
-    const nuevoUsuario = new Usuario({ nombreUsuario, password, nombre, rol, email });
+    const nuevoUsuario = new Usuario({
+      nombreUsuario,
+      password,
+      nombre,
+      email,
+      rol: ROLES.ADMIN
+    });
+
     await nuevoUsuario.save();
 
-    return res.status(201).json({ message: 'Usuario creado con éxito' });
+    return res.status(201).json({ message: 'Usuario administrador creado con éxito' });
   } catch (error) {
     return next(error);
   }
@@ -83,7 +89,7 @@ export default router;
  * @swagger
  * /api/auth/register:
  *   post:
- *     summary: Crear nuevo usuario
+ *     summary: Crear el primer usuario administrador
  *     tags:
  *       - Auth
  *     requestBody:
@@ -96,36 +102,23 @@ export default router;
  *               - nombre
  *               - nombreUsuario
  *               - password
+ *               - email
  *             properties:
  *               nombre:
  *                 type: string
- *                 example: Juan Perez
  *               nombreUsuario:
  *                 type: string
- *                 example: juan
  *               email:
  *                 type: string
- *                 example: juan@gmail.com
  *               password:
  *                 type: string
- *                 example: 123456
- *               rol:
- *                 type: string
- *                 enum:
- *                   - admin
- *                   - caja
- *                   - cocina
- *                   - mozo
- *                 example: mozo
  *     responses:
  *       201:
- *         description: Usuario creado correctamente
+ *         description: Usuario administrador creado correctamente
  *       400:
  *         description: Datos requeridos ausentes
- *       409:
- *         description: Usuario ya existe
- *       500:
- *         description: Error interno del servidor
+ *       403:
+ *         description: El registro público está cerrado
  */
 /**
  * @swagger
@@ -154,6 +147,4 @@ export default router;
  *         description: Datos requeridos ausentes
  *       401:
  *         description: Credenciales incorrectas
- *       500:
- *         description: Error en el servidor
  */
