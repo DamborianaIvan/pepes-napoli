@@ -1,7 +1,9 @@
 import express from 'express';
+import mongoose from 'mongoose';
 import { protect } from '../middleware/auth.js';
 import Mesa from '../models/Mesa.js';
 import Pedido from '../models/Pedido.js';
+import Producto from '../models/Producto.js';
 import { asyncHandler } from '../middleware/asyncHandler.js';
 import { ApiError } from '../utils/apiError.js';
 import {
@@ -15,29 +17,55 @@ import { puedeTransicionarPedido } from '../constants/estadoPedido.js';
 const router = express.Router();
 
 router.post('/', protect, asyncHandler(async (req, res) => {
-  const pedidoData = {
-    ...req.body,
-    usuarioId: req.usuario.id
-  };
+  const {
+    tipoPedido,
+    nombreCliente,
+    telefono,
+    direccion,
+    comentario,
+    productos,
+    mesaId
+  } = req.body;
 
-  if (!isEnumValue(pedidoData.tipoPedido, TIPOS_PEDIDO)) {
+  if (!isEnumValue(tipoPedido, TIPOS_PEDIDO)) {
     throw new ApiError(400, 'tipoPedido inválido', {
       field: 'tipoPedido',
       allowedValues: Object.values(TIPOS_PEDIDO)
     });
   }
 
-  if (!Array.isArray(pedidoData.productos) || pedidoData.productos.length === 0) {
+  if (!Array.isArray(productos) || productos.length === 0) {
     throw new ApiError(400, 'El pedido debe contener al menos un producto', {
       field: 'productos'
     });
   }
 
-  if (pedidoData.tipoPedido === TIPOS_PEDIDO.SALON && pedidoData.mesaId) {
-    const mesa = await Mesa.findById(pedidoData.mesaId);
+  if (tipoPedido === TIPOS_PEDIDO.SALON && !mesaId) {
+    throw new ApiError(400, 'Los pedidos de salón requieren una mesa', {
+      field: 'mesaId'
+    });
+  }
+
+  if (tipoPedido !== TIPOS_PEDIDO.SALON && mesaId) {
+    throw new ApiError(400, 'Solo los pedidos de salón pueden tener una mesa', {
+      field: 'mesaId'
+    });
+  }
+
+  let mesa = null;
+  if (tipoPedido === TIPOS_PEDIDO.SALON) {
+    if (!mongoose.isValidObjectId(mesaId)) {
+      throw new ApiError(400, 'mesaId inválido', { field: 'mesaId' });
+    }
+
+    mesa = await Mesa.findById(mesaId);
 
     if (!mesa) {
       throw new ApiError(404, 'Mesa no encontrada');
+    }
+
+    if (!mesa.activa) {
+      throw new ApiError(409, 'La mesa no está activa');
     }
 
     if (mesa.estado !== 'LIBRE') {
@@ -45,16 +73,76 @@ router.post('/', protect, asyncHandler(async (req, res) => {
     }
   }
 
+  const productoIds = productos.map((item) => item?.productoId);
+
+  if (productoIds.some((id) => !mongoose.isValidObjectId(id))) {
+    throw new ApiError(400, 'Todos los productos deben tener un productoId válido', {
+      field: 'productos.productoId'
+    });
+  }
+
+  const productosDB = await Producto.find({
+    _id: { $in: productoIds }
+  });
+  const productosMap = new Map(productosDB.map((producto) => [producto._id.toString(), producto]));
+
+  const productosNormalizados = productos.map((item, index) => {
+    const producto = productosMap.get(item.productoId.toString());
+
+    if (!producto) {
+      throw new ApiError(404, 'Producto no encontrado', {
+        field: `productos[${index}].productoId`,
+        productoId: item.productoId
+      });
+    }
+
+    if (!producto.disponible) {
+      throw new ApiError(409, 'Producto no disponible', {
+        field: `productos[${index}].productoId`,
+        productoId: item.productoId
+      });
+    }
+
+    const cantidad = Number(item.cantidad);
+    if (!Number.isInteger(cantidad) || cantidad < 1) {
+      throw new ApiError(400, 'La cantidad debe ser un entero mayor a cero', {
+        field: `productos[${index}].cantidad`
+      });
+    }
+
+    const precioUnitario = producto.precio;
+    const subtotal = precioUnitario * cantidad;
+
+    return {
+      productoId: producto._id,
+      nombreSnapshot: producto.nombre,
+      cantidad,
+      precioUnitario,
+      subtotal
+    };
+  });
+
+  const total = productosNormalizados.reduce((sum, item) => sum + item.subtotal, 0);
+
   const pedido = new Pedido({
-    ...pedidoData,
+    tipoPedido,
+    nombreCliente,
+    telefono,
+    direccion,
+    comentario,
+    productos: productosNormalizados,
+    total,
+    pagos: [],
+    mesaId: mesa?._id ?? null,
+    usuarioId: req.usuario.id,
     estadoPedido: ESTADOS_PEDIDO.ABIERTO,
     estadoPago: ESTADOS_PAGO.PENDIENTE
   });
 
   await pedido.save();
 
-  if (pedido.tipoPedido === TIPOS_PEDIDO.SALON && pedido.mesaId) {
-    await Mesa.findByIdAndUpdate(pedido.mesaId, { estado: 'OCUPADA' });
+  if (mesa) {
+    await Mesa.findByIdAndUpdate(mesa._id, { estado: 'OCUPADA' });
   }
 
   return res.status(201).json(pedido);
