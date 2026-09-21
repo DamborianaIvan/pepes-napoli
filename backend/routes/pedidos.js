@@ -189,6 +189,7 @@ router.patch('/:id/descuento', protect, requirePermission(PERMISSIONS.CASH_CHARG
     fecha: new Date()
   };
   pedido.totalFinal = totalFinal;
+  pedido.estadoPago = totalFinal === 0 ? ESTADOS_PAGO.PAGADO : ESTADOS_PAGO.PENDIENTE;
   await pedido.save();
 
   return res.json(pedido);
@@ -494,7 +495,7 @@ router.patch('/:id/cancelar', protect, requirePermission(PERMISSIONS.ORDERS_CANC
     throw new ApiError(409, 'No se puede cancelar un pedido cerrado');
   }
 
-  if (pedido.estadoPago === ESTADOS_PAGO.PAGADO) {
+  if (pedido.estadoPago === ESTADOS_PAGO.PAGADO && pedido.pagos.length > 0) {
     throw new ApiError(409, 'Debe anular el cobro antes de cancelar el pedido');
   }
 
