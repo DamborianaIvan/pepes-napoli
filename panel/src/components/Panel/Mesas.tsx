@@ -113,10 +113,10 @@ const Mesas = () => {
   const finalizarPedidoYLiberarMesa = async (
     mesa: Mesa,
     pedido: Pedido,
-    estado: "ENTREGADO" | "CANCELADO",
+    estado: "SERVIDO" | "CANCELADO",
   ) => {
-    const accion = estado === "ENTREGADO" ? "cierre" : "cancelación";
-    if (!window.confirm(`¿Confirmás el ${accion} del pedido y la liberación de la mesa ${mesa.numero}?`)) return;
+    const accion = estado === "SERVIDO" ? "marcado como servido" : "cancelación";
+    if (!window.confirm(`¿Confirmás que el pedido quede ${accion} en la mesa ${mesa.numero}?`)) return;
 
     const token = session?.token;
     const headers = { "Content-Type": "application/json", Authorization: `Bearer ${token}` };
@@ -138,10 +138,10 @@ const Mesas = () => {
         headers,
         body: JSON.stringify({ estado: "LIBRE" }),
       });
-      if (!mesaResponse.ok) throw new Error("El pedido se cerró, pero no se pudo liberar la mesa.");
+      if (!mesaResponse.ok) throw new Error("No se pudo actualizar la mesa.");
 
       setMesaSeleccionada(null);
-      setMensaje(`Mesa ${mesa.numero} liberada y pedido ${estado === "ENTREGADO" ? "cerrado" : "cancelado"} correctamente.`);
+      setMensaje(estado === "SERVIDO" ? `Pedido de mesa ${mesa.numero} marcado como servido.` : `Mesa ${mesa.numero} liberada y pedido cancelado correctamente.`);
       await cargarDatos();
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "No se pudo cerrar el pedido.");
@@ -231,10 +231,10 @@ const Mesas = () => {
                     disabled={cerrandoPedidoId === pedido._id}
                     onClick={(event) => {
                       event.stopPropagation();
-                      void finalizarPedidoYLiberarMesa(mesa, pedido, "ENTREGADO");
+                      void finalizarPedidoYLiberarMesa(mesa, pedido, "SERVIDO");
                     }}
                   >
-                    {cerrandoPedidoId === pedido._id ? "Cerrando..." : "Cerrar y liberar"}
+                    {cerrandoPedidoId === pedido._id ? "Cerrando..." : "Marcar como servido"}
                   </button>
                   <button
                     className="mesa-cancel-action"
@@ -296,9 +296,9 @@ const Mesas = () => {
                   className="mesa-modal-action"
                   type="button"
                   disabled={cerrandoPedidoId === pedidoSeleccionado._id}
-                  onClick={() => void finalizarPedidoYLiberarMesa(mesaSeleccionada, pedidoSeleccionado, "ENTREGADO")}
+                  onClick={() => void finalizarPedidoYLiberarMesa(mesaSeleccionada, pedidoSeleccionado, "SERVIDO")}
                 >
-                  {cerrandoPedidoId === pedidoSeleccionado._id ? "Cerrando pedido..." : "Cerrar y liberar mesa"}
+                  {cerrandoPedidoId === pedidoSeleccionado._id ? "Cerrando pedido..." : "Marcar como servido"}
                 </button>
                 <button
                   className="mesa-modal-cancel-action"
