@@ -1,4 +1,20 @@
-imexport const Dashboard = () => {
+import { useEffect, useState } from "react";
+import { TextField, MenuItem, Box, Typography } from "@mui/material";
+import DashboardIcon from "@mui/icons-material/Dashboard";
+import InventoryIcon from "@mui/icons-material/Inventory";
+import { Link } from "react-router-dom";
+import { getSession } from "../../auth/session";
+import { hasPermission, PERMISSIONS } from "../../types/auth";
+import "./Dashboard.css";
+
+import { ETIQUETAS_ESTADO_PEDIDO, type EstadoPedido, type Pedido } from "../../types/pedido";
+
+interface Mesa {
+  _id: string;
+  numero: number;
+  nombre?: string | null;
+}
+export const Dashboard = () => {
  const [resumen, setResumen] = useState({
     totalMes: 0,
     pedidosAbiertos: 0,
@@ -50,11 +66,11 @@ imexport const Dashboard = () => {
         const entregadosHoy = pedidosDelDia.filter((p) => {
           if (rolGuardado === "DELIVERY") {
             return (
-              p.estado.toLowerCase() === "entregado" &&
-              p.tipoEntrega.toLowerCase() === "delivery"
+              p.estadoPedido.toLowerCase() === "entregado" &&
+              p.tipoPedido.toLowerCase() === "delivery"
             );
           }
-          return p.estado.toLowerCase() === "entregado";
+          return p.estadoPedido.toLowerCase() === "entregado";
         });
 
         const entregadosMes = data.filter((p: Pedido) => {
@@ -62,7 +78,7 @@ imexport const Dashboard = () => {
           return (
             fecha.getMonth() === mesActual &&
             fecha.getFullYear() === añoActual &&
-            p.estado.toLowerCase() === "entregado"
+            p.estadoPedido.toLowerCase() === "entregado"
           );
         });
 
@@ -70,8 +86,8 @@ imexport const Dashboard = () => {
           .filter((p) => {
             if (rolGuardado === "DELIVERY") {
               return (
-                p.tipoEntrega === "DELIVERY" &&
-                ["LISTO", "EN_CAMINO", 'ENTREGADO'].includes(p.estado)
+                p.tipoPedido === "DELIVERY" &&
+                ["LISTO", "EN_CAMINO", 'ENTREGADO'].includes(p.estadoPedido)
               );
             }
             return true;
@@ -86,7 +102,7 @@ imexport const Dashboard = () => {
               "EN_COCINA",
               "LISTO",
               "EN_CAMINO"
-            ].includes(p.estado)
+            ].includes(p.estadoPedido)
         ).length;
 
         const salonActivos = visibles.filter(
@@ -97,7 +113,7 @@ imexport const Dashboard = () => {
               "CONFIRMADO",
               "EN_COCINA",
               "LISTO"
-            ].includes(p.estado)
+            ].includes(p.estadoPedido)
         ).length;
         const deliveryActivos = visibles.filter(
           p =>
@@ -108,7 +124,7 @@ imexport const Dashboard = () => {
               "EN_COCINA",
               "LISTO",
               "EN_CAMINO"
-            ].includes(p.estado)
+            ].includes(p.estadoPedido)
         ).length;
 
         const takeawayActivos = visibles.filter(
@@ -119,7 +135,7 @@ imexport const Dashboard = () => {
               "CONFIRMADO",
               "EN_COCINA",
               "LISTO"
-            ].includes(p.estado)
+            ].includes(p.estadoPedido)
         ).length;
 
         setResumen({
@@ -176,13 +192,9 @@ imexport const Dashboard = () => {
 
   const obtenerEstadosPermitidos = (pedido: Pedido): EstadoPedido[] => {
     const transiciones: Record<EstadoPedido, EstadoPedido[]> = {
-      ABIERTO: ["CONFIRMADO", "CANCELADO"],
-      CONFIRMADO: ["EN_COCINA", "CANCELADO"],
-      EN_COCINA: ["LISTO", "CANCELADO"],
-      LISTO: pedido.tipoPedido === "DELIVERY" ? ["EN_CAMINO", "CANCELADO"] : ["ENTREGADO", "CANCELADO"],
-      EN_CAMINO: ["ENTREGADO", "CANCELADO"],
-      ENTREGADO: [],
-      CANCELADO: [],
+      ABIERTO: ["CONFIRMADO", "CANCELADO"], CONFIRMADO: ["EN_COCINA", "CANCELADO"],
+      EN_COCINA: ["LISTO", "CANCELADO"], LISTO: pedido.tipoPedido === "DELIVERY" ? ["EN_CAMINO", "CANCELADO"] : ["ENTREGADO", "CANCELADO"],
+      EN_CAMINO: ["ENTREGADO", "CANCELADO"], ENTREGADO: [], CANCELADO: [],
     };
     return transiciones[pedido.estadoPedido];
   };
@@ -303,7 +315,7 @@ imexport const Dashboard = () => {
    
       <div className="pedidos-cards">
         {pedidos.map((pedido) => (
-          <div className="pedido-card" key={pedido._id} data-estado={pedido.estado}>
+          <div className="pedido-card" key={pedido._id} data-estado={pedido.estadoPedido}>
             {pedido.tipoPedido === "SALON" ? (
               <p><strong>Mesa:</strong> {obtenerEtiquetaMesa(pedido)}</p>
             ) : (
@@ -327,39 +339,31 @@ imexport const Dashboard = () => {
               <p><strong>Dirección:</strong> {pedido.direccion || "-"}</p>
             )}
             <p><strong>Comentario:</strong> {pedido.comentario || "-"}</p>
-            <p><strong>Estado:</strong> {estadosTraducidos[pedido.estado] || pedido.estado}</p>
+            <p><strong>Estado:</strong> {ETIQUETAS_ESTADO_PEDIDO[pedido.estadoPedido]}</p>
             <p><strong>Fecha:</strong> {new Date(pedido.fechaPedido).toLocaleString()}</p>
 
-            {canChangeStatus && rol === "ADMIN" && pedido.tipoPedido === "SALON" && !["PAGADO", "CANCELADO"].includes(pedido.estado) && (
-              <button
-                type="button"
-                className="login-button"
-                onClick={() => actualizarEstado(pedido._id, "PAGADO")}
-              >
-                Cobrar y liberar mesa
-              </button>
-            )}
+            
 
             {/* Select para delivery */}
             {canChangeStatus && rol === "DELIVERY" &&
-              (pedido.estado === "LISTO" || pedido.estado === "EN_CAMINO") && (
+              (pedido.estadoPedido === "LISTO" || pedido.estadoPedido === "EN_CAMINO") && (
                 <TextField
                   select
                   label="Estado"
-                  value={pedido.estado}
+                  value={pedido.estadoPedido}
                   onChange={(e) => actualizarEstado(pedido._id, e.target.value)}
                   size="small"
                   fullWidth
                   variant="outlined"
                   style={{ marginTop: "0.5rem" }}
                 >
-                  {pedido.estado === "LISTO" &&
+                  {pedido.estadoPedido === "LISTO" &&
                     [
                       <MenuItem key="ready" value="ready">Listo para reparto</MenuItem>,
                       <MenuItem key="in-distribution" value="in-distribution">En reparto</MenuItem>,
                     ]
                   }
-                  {pedido.estado === "EN_CAMINO" &&
+                  {pedido.estadoPedido === "EN_CAMINO" &&
                     [
                       <MenuItem key="in-distribution" value="in-distribution">En reparto</MenuItem>,
                       <MenuItem key="entregado" value="entregado">Entregado</MenuItem>,
@@ -373,7 +377,7 @@ imexport const Dashboard = () => {
               <TextField
                 select
                 label="Estado"
-                value={pedido.estado}
+                value={pedido.estadoPedido}
                 onChange={(e) => actualizarEstado(pedido._id, e.target.value)}
                 size="small"
                 fullWidth
