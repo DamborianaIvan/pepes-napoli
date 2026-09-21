@@ -1,5 +1,5 @@
 import { ETIQUETAS_METODO_PAGO, ETIQUETAS_TIPO_PEDIDO } from "../types/pedido";
-import type { TicketCocina, TicketVenta } from "../types/ticket";
+import type { TicketVenta } from "../types/ticket";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -21,7 +21,7 @@ const moneda = (monto: number) =>
 const fechaHora = (fecha: string | null) =>
   fecha ? new Date(fecha).toLocaleString("es-AR") : "-";
 
-const contexto = (ticket: TicketCocina | TicketVenta) => {
+const contexto = (ticket: TicketVenta) => {
   if (ticket.tipoPedido === "SALON" && ticket.contexto.mesa) {
     const { numero, nombre } = ticket.contexto.mesa;
     const nombreLimpio = nombre?.trim();
@@ -58,17 +58,8 @@ const estilos = `
   .row { display: flex; justify-content: space-between; gap: 8px; }
   .item { margin: 5px 0; }
   .item-main { display: flex; justify-content: space-between; gap: 8px; }
-  .comment {
-    border: 1px solid #111;
-    padding: 6px;
-    margin-top: 8px;
-    white-space: pre-wrap;
-  }
   .total { font-size: 15px; font-weight: 800; }
   .strong { font-weight: 800; }
-  @media print {
-    .no-print { display: none !important; }
-  }
 `;
 
 const documento = (titulo: string, contenido: string) => `<!doctype html>
@@ -89,35 +80,6 @@ const documento = (titulo: string, contenido: string) => `<!doctype html>
   </script>
 </body>
 </html>`;
-
-const htmlCocina = (ticket: TicketCocina) => documento(
-  `Comanda ${ticket.numeroPedido}`,
-  `
-    <div class="center">
-      <h1>PEPE'S NAPOLETANA</h1>
-      <h2>COMANDA DE COCINA</h2>
-    </div>
-    <div class="separator"></div>
-    <p><span class="strong">Pedido:</span> #${escaparHtml(ticket.numeroPedido)}</p>
-    <p><span class="strong">Hora:</span> ${escaparHtml(fechaHora(ticket.fechaPedido))}</p>
-    <p><span class="strong">Tipo:</span> ${escaparHtml(ETIQUETAS_TIPO_PEDIDO[ticket.tipoPedido])}</p>
-    <p><span class="strong">Destino:</span> ${escaparHtml(contexto(ticket))}</p>
-    <div class="separator"></div>
-    ${ticket.productos.map((producto) => `
-      <div class="item">
-        <div class="item-main">
-          <span class="strong">${escaparHtml(producto.cantidad)} ×</span>
-          <span>${escaparHtml(producto.nombre)}</span>
-        </div>
-      </div>
-    `).join("")}
-    ${ticket.comentario ? `
-      <div class="separator"></div>
-      <p class="strong">OBSERVACIONES</p>
-      <div class="comment">${escaparHtml(ticket.comentario)}</div>
-    ` : ""}
-  `
-);
 
 const htmlVenta = (ticket: TicketVenta) => documento(
   `Ticket ${ticket.numeroPedido}`,
@@ -175,12 +137,8 @@ const htmlVenta = (ticket: TicketVenta) => documento(
   `
 );
 
-const cargarTicket = async <T>(
-  pedidoId: string,
-  tipo: "cocina" | "venta",
-  token: string,
-): Promise<T> => {
-  const response = await fetch(`${API_URL}/api/pedidos/${pedidoId}/ticket/${tipo}`, {
+const cargarTicket = async (pedidoId: string, token: string): Promise<TicketVenta> => {
+  const response = await fetch(`${API_URL}/api/pedidos/${pedidoId}/ticket/venta`, {
     headers: {
       Authorization: `Bearer ${token}`,
     },
@@ -191,14 +149,10 @@ const cargarTicket = async <T>(
     throw new Error(body?.error?.message ?? body?.message ?? "No se pudo generar el ticket");
   }
 
-  return body as T;
+  return body as TicketVenta;
 };
 
-const imprimir = async (
-  pedidoId: string,
-  token: string,
-  tipo: "cocina" | "venta",
-) => {
+export const imprimirTicketVenta = async (pedidoId: string, token: string) => {
   const ventana = window.open("", "_blank", "width=440,height=760");
   if (!ventana) {
     throw new Error("El navegador bloqueó la ventana de impresión");
@@ -207,15 +161,7 @@ const imprimir = async (
   ventana.document.write("<p style='font-family:sans-serif'>Generando ticket...</p>");
 
   try {
-    if (tipo === "cocina") {
-      const ticket = await cargarTicket<TicketCocina>(pedidoId, tipo, token);
-      ventana.document.open();
-      ventana.document.write(htmlCocina(ticket));
-      ventana.document.close();
-      return;
-    }
-
-    const ticket = await cargarTicket<TicketVenta>(pedidoId, tipo, token);
+    const ticket = await cargarTicket(pedidoId, token);
     ventana.document.open();
     ventana.document.write(htmlVenta(ticket));
     ventana.document.close();
@@ -224,9 +170,3 @@ const imprimir = async (
     throw error;
   }
 };
-
-export const imprimirTicketCocina = (pedidoId: string, token: string) =>
-  imprimir(pedidoId, token, "cocina");
-
-export const imprimirTicketVenta = (pedidoId: string, token: string) =>
-  imprimir(pedidoId, token, "venta");
