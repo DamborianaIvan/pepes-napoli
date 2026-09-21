@@ -92,7 +92,7 @@ const NuevoPedido = () => {
       };
 
       const response = await axios.post<Pedido>(`${API_URL}/api/pedidos`, payload, axiosConfig);
-      setSnackbar({ open: true, message: `Pedido #${response.data._id.slice(-6)} creado y confirmado correctamente.`, severity: "success" });
+      setSnackbar({ open: true, message: `Pedido #${response.data._id.slice(-6)} creado y enviado a cocina.`, severity: "success" });
       limpiarFormulario();
     } catch (error) {
       const message = error instanceof Error && !axios.isAxiosError(error) ? error.message : (axios.isAxiosError(error) ? error.response?.data?.error?.message || error.response?.data?.message : undefined);
