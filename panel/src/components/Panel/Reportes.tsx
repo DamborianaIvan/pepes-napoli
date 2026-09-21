@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Box, Card, CardContent, Typography, MenuItem, Select, FormControl, InputLabel } from "@mui/material";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 import AssessmentIcon from "@mui/icons-material/Assessment";
-import { ETIQUETAS_METODO_PAGO, ESTADOS_PAGO, type MetodoPago, type Pedido, type TipoPedido } from "../../types/pedido";
+import { ETIQUETAS_METODO_PAGO, type MetodoPago, type Pedido, type TipoPedido } from "../../types/pedido";
 import { getSession } from "../../auth/session";
 
 const API_URL = import.meta.env.VITE_API_URL;
