@@ -1,61 +1,4 @@
-import { useEffect, useState } from "react";
-import { TextField, MenuItem, Box, Typography } from "@mui/material";
-import DashboardIcon from "@mui/icons-material/Dashboard";
-import InventoryIcon from "@mui/icons-material/Inventory";
-import { Link } from "react-router-dom";
-import { getSession } from "../../auth/session";
-import { hasPermission, PERMISSIONS } from "../../types/auth";
-import "./Dashboard.css";
-
-interface Pedido {
-  _id: string;
-  tipoPedido:
-    | "SALON"
-    | "DELIVERY"
-    | "TAKEAWAY";
-
-  nombreCliente?: string;
-  telefono?: string;
-  direccion?: string;
-  comentario?: string;
-  mesaId?: string | { _id: string } | null;
-  productos: {
-    producto: string;
-    cantidad: number;
-    precio: number;
-  }[];
-  total: number;
-  metodoPago: string;
-  estado:
-    | "ABIERTO"
-    | "CONFIRMADO"
-    | "EN_COCINA"
-    | "LISTO"
-    | "ENTREGADO"
-    | "PAGADO"
-    | "EN_CAMINO"
-    | "CANCELADO";
-  fechaPedido: string;
-}
-
-interface Mesa {
-  _id: string;
-  numero: number;
-  nombre?: string | null;
-}
-
-const estadosTraducidos: Record<string, string> = {
-  ABIERTO: "Abierto",
-  CONFIRMADO: "Confirmado",
-  EN_COCINA: "En Cocina",
-  LISTO: "Listo",
-  EN_CAMINO: "En Camino",
-  ENTREGADO: "Entregado",
-  PAGADO: "Pagado",
-  CANCELADO: "Cancelado"
-};
-
-export const Dashboard = () => {
+imexport const Dashboard = () => {
  const [resumen, setResumen] = useState({
     totalMes: 0,
     pedidosAbiertos: 0,
@@ -202,7 +145,7 @@ export const Dashboard = () => {
         setSnackbar({ mensaje: "❌ Error cargando pedidos", tipo: "error" });
       });
   };
-  const actualizarEstado = async (id: string, nuevoEstado: string) => {
+  const actualizarEstado = async (id: string, nuevoEstado: EstadoPedido) => {
     const token = session?.token;
     try {
       const res = await fetch(`${import.meta.env.VITE_API_URL}/api/pedidos/${id}/estado`, {
@@ -211,7 +154,7 @@ export const Dashboard = () => {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ estado: nuevoEstado }),
+        body: JSON.stringify({ estadoPedido: nuevoEstado }),
       });
 
       if (res.ok) {
@@ -231,49 +174,17 @@ export const Dashboard = () => {
     setTimeout(() => setSnackbar(null), 3000);
   };
 
-  const obtenerEstadosPermitidos = (
-    tipoPedido: string
-  ) => {
-
-    switch (tipoPedido) {
-
-      case "SALON":
-        return [
-          "ABIERTO",
-          "CONFIRMADO",
-          "EN_COCINA",
-          "LISTO",
-          "PAGADO",
-          "CANCELADO"
-        ];
-
-      case "DELIVERY":
-        return [
-          "ABIERTO",
-          "CONFIRMADO",
-          "EN_COCINA",
-          "LISTO",
-          "EN_CAMINO",
-          "ENTREGADO",
-          "PAGADO",
-          "CANCELADO"
-        ];
-
-      case "TAKEAWAY":
-        return [
-          "ABIERTO",
-          "CONFIRMADO",
-          "EN_COCINA",
-          "LISTO",
-          "ENTREGADO",
-          "PAGADO",
-          "CANCELADO"
-        ];
-
-      default:
-        return [];
-    }
-
+  const obtenerEstadosPermitidos = (pedido: Pedido): EstadoPedido[] => {
+    const transiciones: Record<EstadoPedido, EstadoPedido[]> = {
+      ABIERTO: ["CONFIRMADO", "CANCELADO"],
+      CONFIRMADO: ["EN_COCINA", "CANCELADO"],
+      EN_COCINA: ["LISTO", "CANCELADO"],
+      LISTO: pedido.tipoPedido === "DELIVERY" ? ["EN_CAMINO", "CANCELADO"] : ["ENTREGADO", "CANCELADO"],
+      EN_CAMINO: ["ENTREGADO", "CANCELADO"],
+      ENTREGADO: [],
+      CANCELADO: [],
+    };
+    return transiciones[pedido.estadoPedido];
   };
 
   const formatoPesos = (monto: number) =>
@@ -405,12 +316,12 @@ export const Dashboard = () => {
             <ul>
               {pedido.productos.map((p, i) => (
                 <li key={i}>
-                  {p.cantidad} × {p.producto}
+                  {p.cantidad} × {p.nombreSnapshot}
                 </li>
               ))}
             </ul>
             <p><strong>Total:</strong> {formatoPesos(pedido.total)}</p>
-            <p><strong>Método Pago:</strong> {pedido.metodoPago}</p>
+            <p><strong>Método Pago:</strong> {pedido.estadoPago}</p>
             <p><strong>Entrega:</strong> {pedido.tipoPedido}</p>
             {pedido.tipoPedido !== "SALON" && (
               <p><strong>Dirección:</strong> {pedido.direccion || "-"}</p>
