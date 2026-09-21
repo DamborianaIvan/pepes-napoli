@@ -14,8 +14,9 @@ test('permite el flujo operativo principal de delivery', () => {
   assert.equal(puedeTransicionarPedido(EN_CAMINO, ENTREGADO, DELIVERY), true);
 });
 
-test('salón y takeaway pasan de listo a entregado', () => {
-  assert.equal(puedeTransicionarPedido(LISTO, ENTREGADO, SALON), true);
+test('salón pasa de listo a servido y takeaway pasa de listo a entregado', () => {
+  assert.equal(puedeTransicionarPedido(LISTO, ESTADOS_PEDIDO.SERVIDO, SALON), true);
+  assert.equal(puedeTransicionarPedido(LISTO, ENTREGADO, SALON), false);
   assert.equal(puedeTransicionarPedido(LISTO, ENTREGADO, TAKEAWAY), true);
 });
 

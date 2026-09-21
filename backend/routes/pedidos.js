@@ -100,6 +100,42 @@ router.get('/', protect, asyncHandler(async (req, res) => {
   return res.json(pedidos);
 }));
 
+router.get('/cocina', protect, restrictTo(ROLES.ADMIN, ROLES.CAJERO, ROLES.CHEF), asyncHandler(async (req, res) => {
+  const pedidos = await Pedido.find({
+    estadoPedido: ESTADOS_PEDIDO.EN_COCINA
+  }).populate('mesaId', 'numero nombre').sort({ fechaPedido: 1 });
+
+  return res.json(pedidos);
+}));
+
+router.patch('/:id/listo', protect, restrictTo(ROLES.ADMIN, ROLES.CAJERO, ROLES.CHEF), asyncHandler(async (req, res) => {
+  const pedido = await Pedido.findById(req.params.id);
+  if (!pedido) throw new ApiError(404, 'Pedido no encontrado');
+
+  if (pedido.estadoPedido !== ESTADOS_PEDIDO.EN_COCINA) {
+    throw new ApiError(409, 'Solo se pueden marcar como listos los pedidos en cocina', {
+      estadoPedido: pedido.estadoPedido
+    });
+  }
+
+  if (!puedeTransicionarPedido(
+    pedido.estadoPedido,
+    ESTADOS_PEDIDO.LISTO,
+    pedido.tipoPedido
+  )) {
+    throw new ApiError(409, 'Transición de estado de pedido no permitida', {
+      from: pedido.estadoPedido,
+      to: ESTADOS_PEDIDO.LISTO,
+      tipoPedido: pedido.tipoPedido
+    });
+  }
+
+  pedido.estadoPedido = ESTADOS_PEDIDO.LISTO;
+  await pedido.save();
+
+  return res.json(pedido);
+}));
+
 router.get('/:id', protect, asyncHandler(async (req, res) => {
   const pedido = await Pedido.findById(req.params.id);
   if (!pedido) throw new ApiError(404, 'Pedido no encontrado');

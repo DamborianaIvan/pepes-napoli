@@ -10,6 +10,7 @@ import { PrivateRoute } from "./components/Panel/PrivateRoute";
 import  Reportes  from "./components/Panel/Reportes";
 import  ProductoManager  from "./components/Panel/ProductoManager";
 import UsuarioManager from "./components/Panel/UsuarioManager";
+import Cocina from "./components/Panel/Cocina";
 
 export default function App() {
   return (
@@ -30,6 +31,7 @@ export default function App() {
           <Route path="nuevo-pedido" element={<NuevoPedido />} />
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="pedidos" element={<ListaPedidos />} />
+          <Route path="cocina" element={<Cocina />} />
           <Route path="reportes" element={<Reportes />} />
           <Route path="crear-producto" element={<ProductoManager />} />
           <Route path="usuarios" element={<UsuarioManager />} />
