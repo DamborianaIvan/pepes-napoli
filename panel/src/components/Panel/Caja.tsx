@@ -11,10 +11,12 @@ import {
   Typography,
 } from "@mui/material";
 import PointOfSaleIcon from "@mui/icons-material/PointOfSale";
+import { Link } from "react-router-dom";
 import PrintIcon from "@mui/icons-material/Print";
 import { getSession } from "../../auth/session";
 import { imprimirTicketVenta } from "../../utils/printTicket";
 import {
+  ETIQUETAS_ESTADO_PEDIDO,
   ETIQUETAS_METODO_PAGO,
   ETIQUETAS_TIPO_PEDIDO,
   METODOS_PAGO,
@@ -63,7 +65,9 @@ const Caja = () => {
 
     const body = await response.json();
     if (!response.ok) {
-      throw new Error(body?.message ?? "No se pudo completar la operación");
+      throw new Error(
+        body?.error?.message ?? body?.message ?? "No se pudo completar la operación",
+      );
     }
     return body;
   }, [token]);
@@ -107,6 +111,43 @@ const Caja = () => {
     }
 
     return pedido.nombreCliente || "Sin nombre";
+  };
+
+  const obtenerMotivoBloqueoCierre = (pedido: Pedido) => {
+    if (pedido.estadoPago !== "PAGADO") {
+      return "Falta registrar el cobro completo.";
+    }
+
+    if (pedido.tipoPedido === "SALON") {
+      if (pedido.estadoPedido === "SERVIDO") return null;
+      if (pedido.estadoPedido === "ENTREGADO") {
+        return "Este pedido de salón tiene un estado histórico inconsistente (ENTREGADO). No puede cerrarse automáticamente.";
+      }
+      if (pedido.estadoPedido === "LISTO") {
+        return "Debe marcarse como SERVIDO antes de cerrar.";
+      }
+      if (pedido.estadoPedido === "EN_COCINA") {
+        return "Todavía está EN COCINA. Debe pasar a LISTO y luego SERVIDO.";
+      }
+      return `Debe completar el flujo de salón hasta SERVIDO. Estado actual: ${ETIQUETAS_ESTADO_PEDIDO[pedido.estadoPedido]}.`;
+    }
+
+    if (pedido.estadoPedido === "ENTREGADO") return null;
+
+    if (pedido.tipoPedido === "TAKEAWAY" && pedido.estadoPedido === "LISTO") {
+      return "Debe marcarse como ENTREGADO antes de cerrar.";
+    }
+
+    if (pedido.tipoPedido === "DELIVERY") {
+      if (pedido.estadoPedido === "LISTO") {
+        return "Debe pasar a EN CAMINO y luego ENTREGADO antes de cerrar.";
+      }
+      if (pedido.estadoPedido === "EN_CAMINO") {
+        return "Debe marcarse como ENTREGADO antes de cerrar.";
+      }
+    }
+
+    return `Debe completar el flujo operativo hasta ENTREGADO. Estado actual: ${ETIQUETAS_ESTADO_PEDIDO[pedido.estadoPedido]}.`;
   };
 
   const ejecutar = async (accion: () => Promise<unknown>, exito: string) => {
@@ -278,10 +319,8 @@ const Caja = () => {
           const totalFinal = pedido.totalFinal ?? pedido.total;
           const sumaIngresada = pagosDelPedido(pedido).reduce((sum, pago) => sum + pago.monto, 0);
           const restante = Math.round((totalFinal - sumaIngresada) * 100) / 100;
-          const puedeCerrar =
-            pedido.estadoPago === "PAGADO" &&
-            ((pedido.tipoPedido === "SALON" && pedido.estadoPedido === "SERVIDO") ||
-              (pedido.tipoPedido !== "SALON" && pedido.estadoPedido === "ENTREGADO"));
+          const motivoBloqueoCierre = obtenerMotivoBloqueoCierre(pedido);
+          const puedeCerrar = motivoBloqueoCierre === null;
 
           return (
             <Card key={pedido._id}>
@@ -395,10 +434,20 @@ const Caja = () => {
                         Cerrar pedido
                       </Button>
                     </Stack>
-                    {!puedeCerrar && (
-                      <Typography variant="caption" color="text.secondary">
-                        Para cerrar: Salón debe estar SERVIDO; Takeaway/Delivery deben estar ENTREGADO.
-                      </Typography>
+                    {!puedeCerrar && motivoBloqueoCierre && (
+                      <Alert severity="info" sx={{ mt: 1 }}>
+                        {motivoBloqueoCierre}
+                        {pedido.estadoPago === "PAGADO" && (
+                          <Button
+                            component={Link}
+                            to="/panel/pedidos"
+                            size="small"
+                            sx={{ ml: 1 }}
+                          >
+                            Ir a Pedidos
+                          </Button>
+                        )}
+                      </Alert>
                     )}
                   </>
                 )}
