@@ -2,6 +2,9 @@ import { once } from 'node:events';
 import mongoose from 'mongoose';
 import app from '../../server.js';
 import Usuario from '../../models/Usuario.js';
+import Pedido from '../../models/Pedido.js';
+import Producto from '../../models/Producto.js';
+import Mesa from '../../models/Mesa.js';
 
 export const TEST_MONGODB_URI = process.env.MONGODB_TEST_URI;
 export const INTEGRATION_ENABLED = Boolean(TEST_MONGODB_URI);
@@ -77,3 +80,34 @@ export const loginComo = async (nombreUsuario, password) => {
 export const authorization = (token) => ({
   authorization: `Bearer ${token}`
 });
+
+
+export const limpiarPedidos = async () => {
+  await Promise.all([
+    Pedido.deleteMany({}),
+    Producto.deleteMany({}),
+    Mesa.deleteMany({})
+  ]);
+};
+
+export const crearProducto = async (datos = {}) => {
+  return Producto.create({
+    categoria: 'PIZZAS',
+    nombre: 'Pizza Test',
+    descripcion: 'Producto de prueba',
+    precio: 1000,
+    disponible: true,
+    ...datos
+  });
+};
+
+export const crearMesa = async (datos = {}) => {
+  return Mesa.create({
+    numero: 1,
+    nombre: 'Mesa Test',
+    capacidad: 4,
+    estado: 'LIBRE',
+    activa: true,
+    ...datos
+  });
+};
