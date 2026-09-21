@@ -177,7 +177,7 @@ export const Dashboard = () => {
         const actualizado = await res.json();
         await obtenerPedidos();
         setPedidos((prev) =>
-          prev.map((p) => (p._id === id ? { ...p, estado: actualizado.estado } : p))
+          prev.map((p) => (p._id === id ? actualizado : p))
         );
         setSnackbar({ mensaje: "✅ Estado actualizado correctamente.", tipo: "ok" });
       } else {
@@ -350,8 +350,8 @@ export const Dashboard = () => {
                 <TextField
                   select
                   label="Estado"
-                  value={pedido.estadoPedido}
-                  onChange={(e) => actualizarEstado(pedido._id, e.target.value)}
+                  value=""
+                  onChange={(e) => actualizarEstado(pedido._id, e.target.value as EstadoPedido)}
                   size="small"
                   fullWidth
                   variant="outlined"
@@ -359,14 +359,14 @@ export const Dashboard = () => {
                 >
                   {pedido.estadoPedido === "LISTO" &&
                     [
-                      <MenuItem key="ready" value="ready">Listo para reparto</MenuItem>,
-                      <MenuItem key="in-distribution" value="in-distribution">En reparto</MenuItem>,
+                      <MenuItem key="en-camino" value="EN_CAMINO">En camino</MenuItem>,
+                      <MenuItem key="entregado" value="ENTREGADO">Entregado</MenuItem>,
                     ]
                   }
                   {pedido.estadoPedido === "EN_CAMINO" &&
                     [
                       <MenuItem key="in-distribution" value="in-distribution">En reparto</MenuItem>,
-                      <MenuItem key="entregado" value="entregado">Entregado</MenuItem>,
+                      ,
                     ]
                   }
                 </TextField>
@@ -377,8 +377,8 @@ export const Dashboard = () => {
               <TextField
                 select
                 label="Estado"
-                value={pedido.estadoPedido}
-                onChange={(e) => actualizarEstado(pedido._id, e.target.value)}
+                value=""
+                onChange={(e) => actualizarEstado(pedido._id, e.target.value as EstadoPedido)}
                 size="small"
                 fullWidth
                 variant="outlined"
@@ -394,9 +394,7 @@ export const Dashboard = () => {
                       value={estado}
                     >
                       {
-                        estadosTraducidos[
-                          estado
-                        ]
+                        ETIQUETAS_ESTADO_PEDIDO[estado]
                       }
                     </MenuItem>
                   )
