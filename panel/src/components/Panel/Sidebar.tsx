@@ -88,13 +88,11 @@ const Sidebar = () => {
             </Link>
           )}
 
-          {
-            canViewKitchen && (
-              <Link to="/panel/cocina" onClick={() => setOpen(false)}>
-                <RestaurantMenuIcon className="sidebar-icon" />
-                COCINA
-              </Link>
-            )
+          {canViewKitchen && (
+            <Link to="/panel/cocina" onClick={() => setOpen(false)}>
+              <RestaurantMenuIcon className="sidebar-icon" />
+              COCINA
+            </Link>
           )}
 
           {canManageProducts && (
