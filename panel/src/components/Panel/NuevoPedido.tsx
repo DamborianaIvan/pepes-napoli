@@ -4,6 +4,7 @@ import Snackbar from "@mui/material/Snackbar";
 import { Box, Grid, Card, CardContent, Typography, Button, Divider, TextField, Alert, Dialog, DialogTitle, DialogContent, DialogActions, MenuItem } from "@mui/material";
 import "./NuevoPedido.css";
 import { TIPOS_PEDIDO, type Pedido, type ProductoPedido, type TipoPedido } from "../../types/pedido";
+import { getSession } from "../../auth/session";
 
 interface Producto { _id: string; nombre: string; categoria: string; descripcion: string; precio: number; disponible: boolean; imagen: string; }
 interface Mesa { _id: string; numero: number; nombre?: string; estado: string; }
@@ -24,7 +25,7 @@ const NuevoPedido = () => {
   const [productosPedido, setProductosPedido] = useState<ProductoPedido[]>([]);
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: "success" | "error" | "info" | "warning" }>({ open: false, message: "", severity: "info" });
   const [pedidoExitoso, setPedidoExitoso] = useState(false);
-  const token = localStorage.getItem("token") || "";
+  const token = getSession()?.token || "";
   const axiosConfig = useMemo(() => ({ headers: { Authorization: `Bearer ${token}` } }), [token]);
 
   const fetchProductos = useCallback(async () => {
