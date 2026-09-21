@@ -49,20 +49,6 @@ export const paths = {
       })
     }
   },
-  '/api/pedidos/{id}/ticket/cocina': {
-    get: {
-      tags: ['Tickets'],
-      summary: 'Generar comanda de cocina',
-      security: auth,
-      parameters: [id],
-      responses: secured({
-        200: { description: 'Comanda de cocina', content: json(ref('TicketCocina')) },
-        403: { $ref: '#/components/responses/Forbidden' },
-        404: { $ref: '#/components/responses/NotFound' },
-        409: error('Pedido cancelado')
-      })
-    }
-  },
   '/api/pedidos/{id}/ticket/venta': {
     get: {
       tags: ['Tickets'],
