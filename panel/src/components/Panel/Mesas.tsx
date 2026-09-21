@@ -19,7 +19,7 @@ interface Mesa {
 import type { Pedido } from "../../types/pedido";
 
 const API_URL = import.meta.env.VITE_API_URL;
-const ESTADOS_FINALIZADOS = new Set(["PAGADO", "CANCELADO"]);
+const ESTADOS_FINALIZADOS = new Set(["ENTREGADO", "CANCELADO"]);
 
 const obtenerIdMesa = (mesaId: Pedido["mesaId"]) =>
   typeof mesaId === "string" ? mesaId : mesaId?._id;
@@ -280,8 +280,8 @@ const Mesas = () => {
             {pedidoSeleccionado ? (
               <div className="mesa-pedido-detalle">
                 <h3>Pedido actual</h3>
-                <p><strong>Estado:</strong> {pedidoSeleccionado.estado}</p>
-                <p><strong>Pago:</strong> {pedidoSeleccionado.metodoPago}</p>
+                <p><strong>Estado:</strong> {pedidoSeleccionado.estadoPedido}</p>
+                <p><strong>Pago:</strong> {pedidoSeleccionado.estadoPago}</p>
                 <p><strong>Hora:</strong> {new Date(pedidoSeleccionado.fechaPedido).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })}</p>
                 <ul>
                   {pedidoSeleccionado.productos.map((producto, index) => (
@@ -298,7 +298,7 @@ const Mesas = () => {
                   disabled={cerrandoPedidoId === pedidoSeleccionado._id}
                   onClick={() => void finalizarPedidoYLiberarMesa(mesaSeleccionada, pedidoSeleccionado, "ENTREGADO")}
                 >
-                  {cerrandoPedidoId === pedidoSeleccionado._id ? "Cerrando pedido..." : "Cobrar y liberar mesa"}
+                  {cerrandoPedidoId === pedidoSeleccionado._id ? "Cerrando pedido..." : "Cerrar y liberar mesa"}
                 </button>
                 <button
                   className="mesa-modal-cancel-action"
