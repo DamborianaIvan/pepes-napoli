@@ -12,6 +12,7 @@ import LogoutIcon from "@mui/icons-material/Logout";
 import MenuIcon from "@mui/icons-material/Menu";
 import PersonIcon from "@mui/icons-material/Person";
 import ManageAccountsIcon from "@mui/icons-material/ManageAccounts";
+import RestaurantMenuIcon from "@mui/icons-material/RestaurantMenu";
 import { clearSession, getSession } from "../../auth/session";
 import { hasPermission, PERMISSIONS } from "../../types/auth";
 
@@ -86,7 +87,7 @@ const Sidebar = () => {
             </Link>
           )}
 
-          {canManageProducts && (
+          {canViewKitchen && (\n            <Link to="/panel/cocina" onClick={() => setOpen(false)}>\n              <RestaurantMenuIcon className="sidebar-icon" />\n              COCINA\n            </Link>\n          )}\n\n          {canManageProducts && (
             <Link to="/panel/crear-producto" onClick={() => setOpen(false)}>
               <ReceiptLongIcon className="sidebar-icon" />
               MENÚ
