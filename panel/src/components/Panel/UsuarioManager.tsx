@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import { Alert, Box, Button, MenuItem, Paper, Snackbar, TextField, Typography } from "@mui/material";
 import { getSession } from "../../auth/session";
@@ -44,7 +44,7 @@ export default function UsuarioManager() {
   const [error, setError] = useState("");
   const [mensaje, setMensaje] = useState("");
 
-  const request = async (path: string, options: RequestInit = {}) => {
+  const request = useCallback(async (path: string, options: RequestInit = {}) => {
     const response = await fetch(`${apiUrl}${path}`, {
       ...options,
       headers: {
@@ -57,9 +57,9 @@ export default function UsuarioManager() {
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data?.error?.message || "No se pudo completar la operación");
     return data;
-  };
+  }, [session?.token]);
 
-  const cargarUsuarios = async () => {
+  const cargarUsuarios = useCallback(async () => {
     try {
       setCargando(true);
       const data = await request("/api/usuarios");
@@ -69,11 +69,11 @@ export default function UsuarioManager() {
     } finally {
       setCargando(false);
     }
-  };
+  }, [request]);
 
   useEffect(() => {
     if (canManageUsers) void cargarUsuarios();
-  }, [canManageUsers]);
+  }, [canManageUsers, cargarUsuarios]);
 
   const guardar = async (event: FormEvent) => {
     event.preventDefault();
