@@ -19,6 +19,7 @@ import MenuItem from "@mui/material/MenuItem";
 
 import "./ProductoManager.css";
 import { Typography } from "@mui/material";
+import { getSession } from "../../auth/session";
 
 interface Producto {
   _id: string;
@@ -75,7 +76,7 @@ const ProductoManager = () => {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [stockGeneralActivo, setStockGeneralActivo] = useState<boolean>(false);
 
-  const token = localStorage.getItem("token") || "";
+  const token = getSession()?.token || "";
 
   const axiosConfig = useMemo(() => ({
     headers: {
