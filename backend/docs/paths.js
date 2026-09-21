@@ -37,6 +37,32 @@ export const paths = {
     get: { tags: ['Pedidos'], summary: 'Listar pedidos', security: auth, responses: secured({ 200: { description: 'Lista de pedidos', content: json({ type: 'array', items: ref('Pedido') }) }, 500: error('Error interno') }) },
     post: { tags: ['Pedidos'], summary: 'Crear pedido', security: auth, requestBody: { required: true, content: json(ref('PedidoCreate')) }, responses: secured({ 201: { description: 'Pedido creado', content: json(ref('Pedido')) }, 400: error('Datos inválidos'), 404: { $ref: '#/components/responses/NotFound' }, 409: error('Mesa ocupada o producto no disponible'), 500: error('Error interno') }) }
   },
+  '/api/pedidos/cocina': {
+    get: {
+      tags: ['Pedidos'],
+      summary: 'Listar pedidos en cocina',
+      security: auth,
+      responses: secured({
+        200: { description: 'Pedidos en cocina', content: json({ type: 'array', items: ref('Pedido') }) },
+        403: { $ref: '#/components/responses/Forbidden' },
+        500: error('Error interno')
+      })
+    }
+  },
+  '/api/pedidos/{id}/listo': {
+    patch: {
+      tags: ['Pedidos'],
+      summary: 'Marcar pedido como listo desde cocina',
+      security: auth,
+      parameters: [id],
+      responses: secured({
+        200: { description: 'Pedido marcado como listo', content: json(ref('Pedido')) },
+        403: { $ref: '#/components/responses/Forbidden' },
+        404: { $ref: '#/components/responses/NotFound' },
+        409: error('Pedido no está en cocina')
+      })
+    }
+  },
   '/api/pedidos/{id}': { get: { tags: ['Pedidos'], summary: 'Obtener pedido', security: auth, parameters: [id], responses: secured({ 200: { description: 'Pedido', content: json(ref('Pedido')) }, 404: { $ref: '#/components/responses/NotFound' }, 500: error('Error interno') }) }, delete: { tags: ['Pedidos'], summary: 'Eliminar pedido', security: auth, parameters: [id], responses: secured({ 200: { description: 'Pedido eliminado', content: json({ type: 'object', properties: { message: { type: 'string' } } }) }, 404: { $ref: '#/components/responses/NotFound' }, 500: error('Error interno') }) } },
   '/api/pedidos/{id}/estado': { patch: { tags: ['Pedidos'], summary: 'Actualizar estado de pedido', security: auth, parameters: [id], requestBody: { required: true, content: json(ref('EstadoPedido')) }, responses: secured({ 200: { description: 'Pedido actualizado', content: json(ref('Pedido')) }, 400: error('Estado inválido'), 404: { $ref: '#/components/responses/NotFound' }, 409: error('Transición de estado no permitida'), 500: error('Error interno') }) } },
   '/api/mesas': { get: { tags: ['Mesas'], summary: 'Listar mesas', security: auth, responses: secured({ 200: { description: 'Lista de mesas', content: json({ type: 'array', items: ref('Mesa') }) }, 500: error('Error interno') }) }, post: { tags: ['Mesas'], summary: 'Crear mesa', security: auth, requestBody: { required: true, content: json(ref('Mesa')) }, responses: secured({ 201: { description: 'Mesa creada', content: json(ref('Mesa')) }, 400: error('Número de mesa duplicado'), 500: error('Error interno') }) } },
