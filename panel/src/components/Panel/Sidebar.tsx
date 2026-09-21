@@ -11,6 +11,7 @@ import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
 import LogoutIcon from "@mui/icons-material/Logout";
 import MenuIcon from "@mui/icons-material/Menu";
 import PersonIcon from "@mui/icons-material/Person";
+import ManageAccountsIcon from "@mui/icons-material/ManageAccounts";
 import { clearSession, getSession } from "../../auth/session";
 import { hasPermission, PERMISSIONS } from "../../types/auth";
 
@@ -30,6 +31,9 @@ const Sidebar = () => {
     : false;
   const canManageProducts = rol
     ? hasPermission(rol, PERMISSIONS.PRODUCTS_MANAGE)
+    : false;
+  const canManageUsers = rol
+    ? hasPermission(rol, PERMISSIONS.USERS_MANAGE)
     : false;
   const canViewReports = rol
     ? hasPermission(rol, PERMISSIONS.REPORTS_VIEW)
@@ -89,7 +93,7 @@ const Sidebar = () => {
             </Link>
           )}
 
-          {canViewReports && (
+          {canManageUsers && (\n            <Link to="/panel/usuarios" onClick={() => setOpen(false)}>\n              <ManageAccountsIcon className="sidebar-icon" />\n              USUARIOS\n            </Link>\n          )}\n\n          {canViewReports && (
             <Link to="/panel/reportes" onClick={() => setOpen(false)}>
               <AssessmentIcon className="sidebar-icon" />
               REPORTES
