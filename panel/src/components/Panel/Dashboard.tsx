@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { TextField, MenuItem, Box, Typography } from "@mui/material";
+import { TextField, MenuItem, Box, Typography, Button } from "@mui/material";
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import InventoryIcon from "@mui/icons-material/Inventory";
 import { Link } from "react-router-dom";
@@ -7,54 +7,13 @@ import { getSession } from "../../auth/session";
 import { hasPermission, PERMISSIONS } from "../../types/auth";
 import "./Dashboard.css";
 
-interface Pedido {
-  _id: string;
-  tipoPedido:
-    | "SALON"
-    | "DELIVERY"
-    | "TAKEAWAY";
-
-  nombreCliente?: string;
-  telefono?: string;
-  direccion?: string;
-  comentario?: string;
-  mesaId?: string | { _id: string } | null;
-  productos: {
-    producto: string;
-    cantidad: number;
-    precio: number;
-  }[];
-  total: number;
-  metodoPago: string;
-  estado:
-    | "ABIERTO"
-    | "CONFIRMADO"
-    | "EN_COCINA"
-    | "LISTO"
-    | "ENTREGADO"
-    | "PAGADO"
-    | "EN_CAMINO"
-    | "CANCELADO";
-  fechaPedido: string;
-}
+import { ETIQUETAS_ESTADO_PEDIDO, type EstadoPedido, type Pedido } from "../../types/pedido";
 
 interface Mesa {
   _id: string;
   numero: number;
   nombre?: string | null;
 }
-
-const estadosTraducidos: Record<string, string> = {
-  ABIERTO: "Abierto",
-  CONFIRMADO: "Confirmado",
-  EN_COCINA: "En Cocina",
-  LISTO: "Listo",
-  EN_CAMINO: "En Camino",
-  ENTREGADO: "Entregado",
-  PAGADO: "Pagado",
-  CANCELADO: "Cancelado"
-};
-
 export const Dashboard = () => {
  const [resumen, setResumen] = useState({
     totalMes: 0,
@@ -70,6 +29,7 @@ export const Dashboard = () => {
   const rol = session?.rol ?? null;
   const canCreateOrders = rol ? hasPermission(rol, PERMISSIONS.ORDERS_CREATE) : false;
   const canChangeStatus = rol ? hasPermission(rol, PERMISSIONS.ORDERS_CHANGE_STATUS) : false;
+  const canCancelOrders = rol ? hasPermission(rol, PERMISSIONS.ORDERS_CANCEL) : false;
   const [snackbar, setSnackbar] = useState<{ mensaje: string; tipo: "ok" | "error" } | null>(null);
   const [mostrarDashboardCards, setMostrarDashboardCards] = useState(true);
 
@@ -107,11 +67,11 @@ export const Dashboard = () => {
         const entregadosHoy = pedidosDelDia.filter((p) => {
           if (rolGuardado === "DELIVERY") {
             return (
-              p.estado.toLowerCase() === "entregado" &&
-              p.tipoEntrega.toLowerCase() === "delivery"
+              p.estadoPedido.toLowerCase() === "entregado" &&
+              p.tipoPedido.toLowerCase() === "delivery"
             );
           }
-          return p.estado.toLowerCase() === "entregado";
+          return p.estadoPedido.toLowerCase() === "entregado";
         });
 
         const entregadosMes = data.filter((p: Pedido) => {
@@ -119,7 +79,7 @@ export const Dashboard = () => {
           return (
             fecha.getMonth() === mesActual &&
             fecha.getFullYear() === añoActual &&
-            p.estado.toLowerCase() === "entregado"
+            p.estadoPedido.toLowerCase() === "entregado"
           );
         });
 
@@ -127,8 +87,8 @@ export const Dashboard = () => {
           .filter((p) => {
             if (rolGuardado === "DELIVERY") {
               return (
-                p.tipoEntrega === "DELIVERY" &&
-                ["LISTO", "EN_CAMINO", 'ENTREGADO'].includes(p.estado)
+                p.tipoPedido === "DELIVERY" &&
+                ["LISTO", "EN_CAMINO", 'ENTREGADO'].includes(p.estadoPedido)
               );
             }
             return true;
@@ -143,7 +103,7 @@ export const Dashboard = () => {
               "EN_COCINA",
               "LISTO",
               "EN_CAMINO"
-            ].includes(p.estado)
+            ].includes(p.estadoPedido)
         ).length;
 
         const salonActivos = visibles.filter(
@@ -153,8 +113,9 @@ export const Dashboard = () => {
               "ABIERTO",
               "CONFIRMADO",
               "EN_COCINA",
-              "LISTO"
-            ].includes(p.estado)
+              "LISTO",
+              "SERVIDO"
+            ].includes(p.estadoPedido)
         ).length;
         const deliveryActivos = visibles.filter(
           p =>
@@ -165,7 +126,7 @@ export const Dashboard = () => {
               "EN_COCINA",
               "LISTO",
               "EN_CAMINO"
-            ].includes(p.estado)
+            ].includes(p.estadoPedido)
         ).length;
 
         const takeawayActivos = visibles.filter(
@@ -175,8 +136,9 @@ export const Dashboard = () => {
               "ABIERTO",
               "CONFIRMADO",
               "EN_COCINA",
-              "LISTO"
-            ].includes(p.estado)
+              "LISTO",
+              "SERVIDO"
+            ].includes(p.estadoPedido)
         ).length;
 
         setResumen({
@@ -202,7 +164,7 @@ export const Dashboard = () => {
         setSnackbar({ mensaje: "❌ Error cargando pedidos", tipo: "error" });
       });
   };
-  const actualizarEstado = async (id: string, nuevoEstado: string) => {
+  const actualizarEstado = async (id: string, nuevoEstado: EstadoPedido) => {
     const token = session?.token;
     try {
       const res = await fetch(`${import.meta.env.VITE_API_URL}/api/pedidos/${id}/estado`, {
@@ -211,14 +173,14 @@ export const Dashboard = () => {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ estado: nuevoEstado }),
+        body: JSON.stringify({ estadoPedido: nuevoEstado }),
       });
 
       if (res.ok) {
         const actualizado = await res.json();
         await obtenerPedidos();
         setPedidos((prev) =>
-          prev.map((p) => (p._id === id ? { ...p, estado: actualizado.estado } : p))
+          prev.map((p) => (p._id === id ? actualizado : p))
         );
         setSnackbar({ mensaje: "✅ Estado actualizado correctamente.", tipo: "ok" });
       } else {
@@ -231,49 +193,38 @@ export const Dashboard = () => {
     setTimeout(() => setSnackbar(null), 3000);
   };
 
-  const obtenerEstadosPermitidos = (
-    tipoPedido: string
-  ) => {
+  const cancelarPedido = async (id: string) => {
+    const token = session?.token;
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/pedidos/${id}/cancelar`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
-    switch (tipoPedido) {
+      if (!res.ok) {
+        setSnackbar({ mensaje: "❌ No se pudo cancelar el pedido.", tipo: "error" });
+        return;
+      }
 
-      case "SALON":
-        return [
-          "ABIERTO",
-          "CONFIRMADO",
-          "EN_COCINA",
-          "LISTO",
-          "PAGADO",
-          "CANCELADO"
-        ];
-
-      case "DELIVERY":
-        return [
-          "ABIERTO",
-          "CONFIRMADO",
-          "EN_COCINA",
-          "LISTO",
-          "EN_CAMINO",
-          "ENTREGADO",
-          "PAGADO",
-          "CANCELADO"
-        ];
-
-      case "TAKEAWAY":
-        return [
-          "ABIERTO",
-          "CONFIRMADO",
-          "EN_COCINA",
-          "LISTO",
-          "ENTREGADO",
-          "PAGADO",
-          "CANCELADO"
-        ];
-
-      default:
-        return [];
+      await obtenerPedidos();
+      setSnackbar({ mensaje: "✅ Pedido cancelado correctamente.", tipo: "ok" });
+    } catch {
+      setSnackbar({ mensaje: "❌ Error al cancelar el pedido.", tipo: "error" });
     }
 
+    setTimeout(() => setSnackbar(null), 3000);
+  };
+
+  const obtenerEstadosPermitidos = (pedido: Pedido): EstadoPedido[] => {
+    const transiciones: Record<EstadoPedido, EstadoPedido[]> = {
+      ABIERTO: ["CONFIRMADO"], CONFIRMADO: ["EN_COCINA"],
+      EN_COCINA: ["LISTO"], LISTO: pedido.tipoPedido === "DELIVERY" ? ["EN_CAMINO"] : pedido.tipoPedido === "SALON" ? ["SERVIDO"] : ["ENTREGADO"],
+      SERVIDO: [], EN_CAMINO: ["ENTREGADO", "CANCELADO"], ENTREGADO: [], CANCELADO: [],
+    };
+    return transiciones[pedido.estadoPedido];
   };
 
   const formatoPesos = (monto: number) =>
@@ -284,8 +235,7 @@ export const Dashboard = () => {
     });
 
   const obtenerEtiquetaMesa = (pedido: Pedido) => {
-    const mesaId = typeof pedido.mesaId === "string" ? pedido.mesaId : pedido.mesaId?._id;
-    const mesa = mesas.find((item) => item._id === mesaId);
+    const mesa = mesas.find((item) => item._id === pedido.mesaId);
     return mesa?.nombre || (mesa ? `Mesa ${mesa.numero}` : "Mesa sin asignar");
   };
 
@@ -392,7 +342,7 @@ export const Dashboard = () => {
    
       <div className="pedidos-cards">
         {pedidos.map((pedido) => (
-          <div className="pedido-card" key={pedido._id} data-estado={pedido.estado}>
+          <div className="pedido-card" key={pedido._id} data-estado={pedido.estadoPedido}>
             {pedido.tipoPedido === "SALON" ? (
               <p><strong>Mesa:</strong> {obtenerEtiquetaMesa(pedido)}</p>
             ) : (
@@ -405,83 +355,80 @@ export const Dashboard = () => {
             <ul>
               {pedido.productos.map((p, i) => (
                 <li key={i}>
-                  {p.cantidad} × {p.producto}
+                  {p.cantidad} × {p.nombreSnapshot}
                 </li>
               ))}
             </ul>
             <p><strong>Total:</strong> {formatoPesos(pedido.total)}</p>
-            <p><strong>Método Pago:</strong> {pedido.metodoPago}</p>
+            <p><strong>Método Pago:</strong> {pedido.estadoPago}</p>
             <p><strong>Entrega:</strong> {pedido.tipoPedido}</p>
             {pedido.tipoPedido !== "SALON" && (
               <p><strong>Dirección:</strong> {pedido.direccion || "-"}</p>
             )}
             <p><strong>Comentario:</strong> {pedido.comentario || "-"}</p>
-            <p><strong>Estado:</strong> {estadosTraducidos[pedido.estado] || pedido.estado}</p>
+            <p><strong>Estado:</strong> {ETIQUETAS_ESTADO_PEDIDO[pedido.estadoPedido]}</p>
             <p><strong>Fecha:</strong> {new Date(pedido.fechaPedido).toLocaleString()}</p>
 
-            {canChangeStatus && rol === "ADMIN" && pedido.tipoPedido === "SALON" && !["PAGADO", "CANCELADO"].includes(pedido.estado) && (
-              <button
-                type="button"
-                className="login-button"
-                onClick={() => actualizarEstado(pedido._id, "PAGADO")}
-              >
-                Cobrar y liberar mesa
-              </button>
-            )}
+            
 
             {/* Select para delivery */}
-            {canChangeStatus && rol === "DELIVERY" &&
-              (pedido.estado === "LISTO" || pedido.estado === "EN_CAMINO") && (
+            {canChangeStatus && rol === "DELIVERY" && obtenerEstadosPermitidos(pedido).length > 0 &&
+              (pedido.estadoPedido === "LISTO" || pedido.estadoPedido === "EN_CAMINO") && (
                 <TextField
                   select
                   label="Estado"
-                  value={pedido.estado}
-                  onChange={(e) => actualizarEstado(pedido._id, e.target.value)}
+                  value=""
+                  onChange={(e) => actualizarEstado(pedido._id, e.target.value as EstadoPedido)}
                   size="small"
                   fullWidth
                   variant="outlined"
                   style={{ marginTop: "0.5rem" }}
                 >
-                  {pedido.estado === "LISTO" &&
+                  {pedido.estadoPedido === "LISTO" &&
                     [
-                      <MenuItem key="ready" value="ready">Listo para reparto</MenuItem>,
-                      <MenuItem key="in-distribution" value="in-distribution">En reparto</MenuItem>,
+                      <MenuItem key="en-camino" value="EN_CAMINO">En camino</MenuItem>,
+                      <MenuItem key="entregado" value="ENTREGADO">Entregado</MenuItem>,
                     ]
                   }
-                  {pedido.estado === "EN_CAMINO" &&
-                    [
-                      <MenuItem key="in-distribution" value="in-distribution">En reparto</MenuItem>,
-                      <MenuItem key="entregado" value="entregado">Entregado</MenuItem>,
-                    ]
-                  }
+                  {pedido.estadoPedido === "EN_CAMINO" && (
+                    <MenuItem key="entregado" value="ENTREGADO">Entregado</MenuItem>
+                  )}
                 </TextField>
               )}
 
+            {canCancelOrders && obtenerEstadosPermitidos(pedido).length > 0 && (
+              <Button
+                variant="outlined"
+                color="error"
+                size="small"
+                onClick={() => void cancelarPedido(pedido._id)}
+                sx={{ marginTop: "0.5rem" }}
+              >
+                Cancelar pedido
+              </Button>
+            )}
+
             {/* Select para admin */}
-            {rol === "ADMIN" && (
+            {rol === "ADMIN" && obtenerEstadosPermitidos(pedido).length > 0 && (
               <TextField
                 select
                 label="Estado"
-                value={pedido.estado}
-                onChange={(e) => actualizarEstado(pedido._id, e.target.value)}
+                value=""
+                onChange={(e) => actualizarEstado(pedido._id, e.target.value as EstadoPedido)}
                 size="small"
                 fullWidth
                 variant="outlined"
                 style={{ marginTop: "0.5rem" }}
               >
                {
-                obtenerEstadosPermitidos(
-                  pedido.tipoPedido
-                ).map(
+                obtenerEstadosPermitidos(pedido).map(
                   estado => (
                     <MenuItem
                       key={estado}
                       value={estado}
                     >
                       {
-                        estadosTraducidos[
-                          estado
-                        ]
+                        ETIQUETAS_ESTADO_PEDIDO[estado]
                       }
                     </MenuItem>
                   )

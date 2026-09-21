@@ -5,6 +5,7 @@ import { TIPOS_PEDIDO } from '../constants/pedido.js';
 import { ApiError } from './apiError.js';
 import {
   calcularTotalPedido,
+  normalizarProductosEdicionPedido,
   normalizarProductosPedido,
   validarDatosClientePedido
 } from './pedido.js';
@@ -108,6 +109,78 @@ test('rechaza cantidades no enteras o menores a uno', () => {
   assert.throws(
     () => normalizarProductosPedido(
       [{ productoId: productoId.toString(), cantidad: 0 }],
+      [productoDisponible]
+    ),
+    (error) => error instanceof ApiError && error.statusCode === 400
+  );
+});
+
+
+test('edición conserva snapshot y precio histórico de productos existentes', () => {
+  const pedido = {
+    productos: [{
+      productoId,
+      nombreSnapshot: 'Pizza Margherita',
+      cantidad: 1,
+      precioUnitario: 8000,
+      subtotal: 8000
+    }]
+  };
+
+  const resultado = normalizarProductosEdicionPedido(
+    [{ productoId: productoId.toString(), cantidad: 3 }],
+    pedido,
+    [{ ...productoDisponible, precio: 9500, nombre: 'Pizza Margherita XL' }]
+  );
+
+  assert.deepEqual(resultado[0], {
+    productoId,
+    nombreSnapshot: 'Pizza Margherita',
+    cantidad: 3,
+    precioUnitario: 8000,
+    subtotal: 24000
+  });
+});
+
+test('edición toma snapshot y precio actuales al agregar un producto nuevo', () => {
+  const nuevoProductoId = new mongoose.Types.ObjectId();
+  const nuevoProducto = {
+    _id: nuevoProductoId,
+    nombre: 'Empanada',
+    precio: 2200,
+    disponible: true
+  };
+
+  const resultado = normalizarProductosEdicionPedido(
+    [{ productoId: nuevoProductoId.toString(), cantidad: 2 }],
+    { productos: [] },
+    [nuevoProducto]
+  );
+
+  assert.deepEqual(resultado[0], {
+    productoId: nuevoProductoId,
+    nombreSnapshot: 'Empanada',
+    cantidad: 2,
+    precioUnitario: 2200,
+    subtotal: 4400
+  });
+});
+
+test('edición rechaza productos repetidos y cantidades inválidas', () => {
+  const items = [
+    { productoId: productoId.toString(), cantidad: 1 },
+    { productoId: productoId.toString(), cantidad: 2 }
+  ];
+
+  assert.throws(
+    () => normalizarProductosEdicionPedido(items, { productos: [] }, [productoDisponible]),
+    (error) => error instanceof ApiError && error.statusCode === 400
+  );
+
+  assert.throws(
+    () => normalizarProductosEdicionPedido(
+      [{ productoId: productoId.toString(), cantidad: 0 }],
+      { productos: [] },
       [productoDisponible]
     ),
     (error) => error instanceof ApiError && error.statusCode === 400

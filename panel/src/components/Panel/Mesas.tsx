@@ -16,26 +16,10 @@ interface Mesa {
   observaciones?: string;
 }
 
-interface ProductoPedido {
-  producto: string;
-  cantidad: number;
-  precio: number;
-}
-
-interface Pedido {
-  _id: string;
-  mesaId?: string | { _id: string } | null;
-  tipoPedido: "SALON" | "DELIVERY" | "TAKEAWAY";
-  productos: ProductoPedido[];
-  total: number;
-  metodoPago: string;
-  estado: string;
-  fechaPedido: string;
-  comentario?: string;
-}
+import type { Pedido } from "../../types/pedido";
 
 const API_URL = import.meta.env.VITE_API_URL;
-const ESTADOS_FINALIZADOS = new Set(["PAGADO", "CANCELADO"]);
+const ESTADOS_FINALIZADOS = new Set(["ENTREGADO", "CANCELADO"]);
 
 const obtenerIdMesa = (mesaId: Pedido["mesaId"]) =>
   typeof mesaId === "string" ? mesaId : mesaId?._id;
@@ -99,7 +83,7 @@ const Mesas = () => {
       .filter(
         (pedido) =>
           pedido.tipoPedido === "SALON" &&
-          !ESTADOS_FINALIZADOS.has(pedido.estado) &&
+          !ESTADOS_FINALIZADOS.has(pedido.estadoPedido) &&
           obtenerIdMesa(pedido.mesaId),
       )
       .sort(
@@ -126,13 +110,13 @@ const Mesas = () => {
     ? pedidosActivosPorMesa.get(mesaSeleccionada._id)
     : undefined;
 
-  const finalizarPedidoYLiberarMesa = async (
+  const actualizarEstadoPedido = async (
     mesa: Mesa,
     pedido: Pedido,
-    estado: "PAGADO" | "CANCELADO",
+    estado: "SERVIDO" | "CANCELADO",
   ) => {
-    const accion = estado === "PAGADO" ? "cobro" : "cancelación";
-    if (!window.confirm(`¿Confirmás el ${accion} del pedido y la liberación de la mesa ${mesa.numero}?`)) return;
+    const accion = estado === "SERVIDO" ? "marcado como servido" : "cancelación";
+    if (!window.confirm(`¿Confirmás que el pedido quede ${accion} en la mesa ${mesa.numero}?`)) return;
 
     const token = session?.token;
     const headers = { "Content-Type": "application/json", Authorization: `Bearer ${token}` };
@@ -142,22 +126,25 @@ const Mesas = () => {
       setError(null);
       setMensaje(null);
 
-      const pedidoResponse = await fetch(`${API_URL}/api/pedidos/${pedido._id}/estado`, {
+      const endpoint = estado === "CANCELADO" ? `${API_URL}/api/pedidos/${pedido._id}/cancelar` : `${API_URL}/api/pedidos/${pedido._id}/estado`;
+      const pedidoResponse = await fetch(endpoint, {
         method: "PATCH",
         headers,
-        body: JSON.stringify({ estado }),
+        body: JSON.stringify({ estadoPedido: estado }),
       });
       if (!pedidoResponse.ok) throw new Error("No se pudo cerrar el pedido.");
 
-      const mesaResponse = await fetch(`${API_URL}/api/mesas/${mesa._id}/estado`, {
-        method: "PATCH",
-        headers,
-        body: JSON.stringify({ estado: "LIBRE" }),
-      });
-      if (!mesaResponse.ok) throw new Error("El pedido se cerró, pero no se pudo liberar la mesa.");
+      if (estado === "CANCELADO") {
+        const mesaResponse = await fetch(`${API_URL}/api/mesas/${mesa._id}/estado`, {
+          method: "PATCH",
+          headers,
+          body: JSON.stringify({ estado: "LIBRE" }),
+        });
+        if (!mesaResponse.ok) throw new Error("No se pudo liberar la mesa.");
+      }
 
       setMesaSeleccionada(null);
-      setMensaje(`Mesa ${mesa.numero} liberada y pedido ${estado === "PAGADO" ? "cobrado" : "cancelado"} correctamente.`);
+      setMensaje(estado === "SERVIDO" ? `Pedido de mesa ${mesa.numero} marcado como servido.` : `Mesa ${mesa.numero} liberada y pedido cancelado correctamente.`);
       await cargarDatos();
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "No se pudo cerrar el pedido.");
@@ -233,7 +220,7 @@ const Mesas = () => {
                 </span>
                 {pedido ? (
                   <span className="mesa-pedido">
-                    <ReceiptLongOutlinedIcon fontSize="small" /> Pedido {pedido.estado}
+                    <ReceiptLongOutlinedIcon fontSize="small" /> Pedido {pedido.estadoPedido}
                     <strong>{formatoPesos(pedido.total)}</strong>
                   </span>
                 ) : (
@@ -247,10 +234,10 @@ const Mesas = () => {
                     disabled={cerrandoPedidoId === pedido._id}
                     onClick={(event) => {
                       event.stopPropagation();
-                      void finalizarPedidoYLiberarMesa(mesa, pedido, "PAGADO");
+                      void actualizarEstadoPedido(mesa, pedido, "SERVIDO");
                     }}
                   >
-                    {cerrandoPedidoId === pedido._id ? "Cerrando..." : "Cobrar y liberar"}
+                    {cerrandoPedidoId === pedido._id ? "Cerrando..." : "Marcar como servido"}
                   </button>
                   <button
                     className="mesa-cancel-action"
@@ -296,13 +283,13 @@ const Mesas = () => {
             {pedidoSeleccionado ? (
               <div className="mesa-pedido-detalle">
                 <h3>Pedido actual</h3>
-                <p><strong>Estado:</strong> {pedidoSeleccionado.estado}</p>
-                <p><strong>Pago:</strong> {pedidoSeleccionado.metodoPago}</p>
+                <p><strong>Estado:</strong> {pedidoSeleccionado.estadoPedido}</p>
+                <p><strong>Pago:</strong> {pedidoSeleccionado.estadoPago}</p>
                 <p><strong>Hora:</strong> {new Date(pedidoSeleccionado.fechaPedido).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })}</p>
                 <ul>
                   {pedidoSeleccionado.productos.map((producto, index) => (
-                    <li key={`${producto.producto}-${index}`}>
-                      {producto.cantidad} × {producto.producto}
+                    <li key={`${producto.nombreSnapshot}-${index}`}>
+                      {producto.cantidad} × {producto.nombreSnapshot}
                     </li>
                   ))}
                 </ul>
@@ -312,9 +299,9 @@ const Mesas = () => {
                   className="mesa-modal-action"
                   type="button"
                   disabled={cerrandoPedidoId === pedidoSeleccionado._id}
-                  onClick={() => void finalizarPedidoYLiberarMesa(mesaSeleccionada, pedidoSeleccionado, "PAGADO")}
+                  onClick={() => void finalizarPedidoYLiberarMesa(mesaSeleccionada, pedidoSeleccionado, "SERVIDO")}
                 >
-                  {cerrandoPedidoId === pedidoSeleccionado._id ? "Cerrando pedido..." : "Cobrar y liberar mesa"}
+                  {cerrandoPedidoId === pedidoSeleccionado._id ? "Cerrando pedido..." : "Marcar como servido"}
                 </button>
                 <button
                   className="mesa-modal-cancel-action"

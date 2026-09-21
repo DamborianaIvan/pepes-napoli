@@ -17,6 +17,7 @@ import {
 import { puedeTransicionarPedido } from '../constants/estadoPedido.js';
 import {
   calcularTotalPedido,
+  normalizarProductosEdicionPedido,
   normalizarProductosPedido,
   validarDatosClientePedido
 } from '../utils/pedido.js';
@@ -81,7 +82,7 @@ router.post('/', protect, requirePermission(PERMISSIONS.ORDERS_CREATE), asyncHan
     pagos: [],
     mesaId: mesa?._id ?? null,
     usuarioId: req.usuario.id,
-    estadoPedido: ESTADOS_PEDIDO.ABIERTO,
+    estadoPedido: ESTADOS_PEDIDO.EN_COCINA,
     estadoPago: ESTADOS_PAGO.PENDIENTE
   });
 
@@ -105,6 +106,52 @@ router.get('/:id', protect, asyncHandler(async (req, res) => {
   return res.json(pedido);
 }));
 
+router.patch('/:id', protect, requirePermission(PERMISSIONS.ORDERS_EDIT), asyncHandler(async (req, res) => {
+  const { productos, nombreCliente, telefono, direccion, comentario } = req.body;
+
+  const pedido = await Pedido.findById(req.params.id);
+  if (!pedido) throw new ApiError(404, 'Pedido no encontrado');
+
+  if (pedido.estadoPedido !== ESTADOS_PEDIDO.ABIERTO) {
+    throw new ApiError(409, 'Solo se pueden editar pedidos abiertos', {
+      estadoPedido: pedido.estadoPedido
+    });
+  }
+
+  if (!Array.isArray(productos) || productos.length === 0) {
+    throw new ApiError(400, 'El pedido debe contener al menos un producto', {
+      field: 'productos'
+    });
+  }
+
+  validarDatosClientePedido({
+    tipoPedido: pedido.tipoPedido,
+    nombreCliente,
+    telefono,
+    direccion
+  });
+
+  const productoIds = productos.map((item) => item?.productoId);
+  if (productoIds.some((id) => !mongoose.isValidObjectId(id))) {
+    throw new ApiError(400, 'Todos los productos deben tener un productoId válido', {
+      field: 'productos.productoId'
+    });
+  }
+
+  const productosDB = await Producto.find({ _id: { $in: productoIds } });
+  const productosNormalizados = normalizarProductosEdicionPedido(productos, pedido, productosDB);
+
+  pedido.nombreCliente = nombreCliente;
+  pedido.telefono = telefono;
+  pedido.direccion = direccion;
+  pedido.comentario = comentario ?? '';
+  pedido.productos = productosNormalizados;
+  pedido.total = calcularTotalPedido(productosNormalizados);
+
+  await pedido.save();
+  return res.json(pedido);
+}));
+
 // Cambio de estado: requiere orders:change_status. Las restricciones finas por rol/estado/tipo corresponden a F2/KDS.
 router.patch('/:id/estado', protect, requirePermission(PERMISSIONS.ORDERS_CHANGE_STATUS), asyncHandler(async (req, res) => {
   const { estadoPedido } = req.body;
@@ -114,6 +161,10 @@ router.patch('/:id/estado', protect, requirePermission(PERMISSIONS.ORDERS_CHANGE
       field: 'estadoPedido',
       allowedValues: Object.values(ESTADOS_PEDIDO)
     });
+  }
+
+  if (estadoPedido === ESTADOS_PEDIDO.CANCELADO) {
+    throw new ApiError(403, 'La cancelación requiere el permiso orders:cancel');
   }
 
   const pedido = await Pedido.findById(req.params.id);
@@ -132,17 +183,47 @@ router.patch('/:id/estado', protect, requirePermission(PERMISSIONS.ORDERS_CHANGE
   pedido.estadoPedido = estadoPedido;
   await pedido.save();
 
-  if (estadoPedido === ESTADOS_PEDIDO.ENTREGADO && pedido.tipoPedido === TIPOS_PEDIDO.SALON && pedido.mesaId) {
+  
+
+  return res.json(pedido);
+}));
+
+router.patch('/:id/cancelar', protect, requirePermission(PERMISSIONS.ORDERS_CANCEL), asyncHandler(async (req, res) => {
+  const pedido = await Pedido.findById(req.params.id);
+  if (!pedido) throw new ApiError(404, 'Pedido no encontrado');
+
+  if (pedido.estadoPedido === ESTADOS_PEDIDO.ENTREGADO || pedido.estadoPedido === ESTADOS_PEDIDO.CANCELADO) {
+    throw new ApiError(409, 'El pedido ya se encuentra en un estado final', {
+      estadoPedido: pedido.estadoPedido
+    });
+  }
+
+  if (!puedeTransicionarPedido(pedido.estadoPedido, ESTADOS_PEDIDO.CANCELADO, pedido.tipoPedido)) {
+    throw new ApiError(409, 'El pedido no puede ser cancelado desde su estado actual', {
+      estadoPedido: pedido.estadoPedido,
+      tipoPedido: pedido.tipoPedido
+    });
+  }
+
+  pedido.estadoPedido = ESTADOS_PEDIDO.CANCELADO;
+  await pedido.save();
+
+  if (pedido.tipoPedido === TIPOS_PEDIDO.SALON && pedido.mesaId) {
     await Mesa.findByIdAndUpdate(pedido.mesaId, { estado: 'LIBRE' });
   }
 
   return res.json(pedido);
 }));
 
-// Eliminación destructiva: solo ADMIN. La eliminación lógica se evaluará en F2/F4.
 router.delete('/:id', protect, restrictTo(ROLES.ADMIN), asyncHandler(async (req, res) => {
   const pedido = await Pedido.findById(req.params.id);
   if (!pedido) throw new ApiError(404, 'Pedido no encontrado');
+
+  if (pedido.estadoPedido !== ESTADOS_PEDIDO.ABIERTO) {
+    throw new ApiError(409, 'Solo se puede eliminar de forma destructiva un pedido abierto', {
+      estadoPedido: pedido.estadoPedido
+    });
+  }
 
   await Pedido.findByIdAndDelete(req.params.id);
   return res.json({ message: 'Pedido eliminado correctamente' });
