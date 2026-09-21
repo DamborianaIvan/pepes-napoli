@@ -39,6 +39,7 @@ const Sidebar = () => {
   const canViewReports = rol
     ? hasPermission(rol, PERMISSIONS.REPORTS_VIEW)
     : false;
+  const canViewKitchen = rol === "ADMIN" || rol === "CAJERO" || rol === "CHEF";
 
   const logout = () => {
     clearSession();
@@ -87,7 +88,16 @@ const Sidebar = () => {
             </Link>
           )}
 
-          {canViewKitchen && (\n            <Link to="/panel/cocina" onClick={() => setOpen(false)}>\n              <RestaurantMenuIcon className="sidebar-icon" />\n              COCINA\n            </Link>\n          )}\n\n          {canManageProducts && (
+          {
+            canViewKitchen && (
+              <Link to="/panel/cocina" onClick={() => setOpen(false)}>
+                <RestaurantMenuIcon className="sidebar-icon" />
+                COCINA
+              </Link>
+            )
+          )}
+
+          {canManageProducts && (
             <Link to="/panel/crear-producto" onClick={() => setOpen(false)}>
               <ReceiptLongIcon className="sidebar-icon" />
               MENÚ
