@@ -68,6 +68,21 @@ describe('integración: autenticación y gestión de usuarios', { skip: !INTEGRA
     assert.equal(body.error.message, 'El registro público está cerrado');
   });
 
+  test('protect rechaza un JWT válido cuando el usuario no existe', async () => {
+    const jwt = (await import('jsonwebtoken')).default;
+    const { config } = await import('../../config.js');
+    const token = jwt.sign({ id: '000000000000000000000000', rol: 'ADMIN' }, config.jwtSecret, {
+      expiresIn: '1h'
+    });
+
+    const { response, body } = await requestJson('/api/usuarios', {
+      headers: authorization(token)
+    });
+
+    assert.equal(response.status, 401);
+    assert.equal(body.error.details.reason, 'INACTIVE_USER');
+  });
+
   test('login devuelve JWT para un usuario activo', async () => {
     await crearUsuario();
 
