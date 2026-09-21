@@ -82,7 +82,7 @@ router.post('/', protect, requirePermission(PERMISSIONS.ORDERS_CREATE), asyncHan
     pagos: [],
     mesaId: mesa?._id ?? null,
     usuarioId: req.usuario.id,
-    estadoPedido: ESTADOS_PEDIDO.CONFIRMADO,
+    estadoPedido: ESTADOS_PEDIDO.EN_COCINA,
     estadoPago: ESTADOS_PAGO.PENDIENTE
   });
 
@@ -183,9 +183,7 @@ router.patch('/:id/estado', protect, requirePermission(PERMISSIONS.ORDERS_CHANGE
   pedido.estadoPedido = estadoPedido;
   await pedido.save();
 
-  if (estadoPedido === ESTADOS_PEDIDO.ENTREGADO && pedido.tipoPedido === TIPOS_PEDIDO.SALON && pedido.mesaId) {
-    await Mesa.findByIdAndUpdate(pedido.mesaId, { estado: 'LIBRE' });
-  }
+  
 
   return res.json(pedido);
 }));
