@@ -12,7 +12,7 @@ export const openapiDefinition = {
     { name: 'Pedidos', description: 'Gestión de pedidos' },
     { name: 'Mesas', description: 'Gestión de mesas del salón' },
     { name: 'Caja', description: 'Apertura, cobros, movimientos y cierre de caja' },
-    { name: 'Tickets', description: 'Comandas de cocina y comprobantes de venta imprimibles' }
+    { name: 'Tickets', description: 'Comprobantes de venta imprimibles' }
   ],
   components: {
     securitySchemes: { bearerAuth: { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' } },
@@ -119,20 +119,6 @@ export const openapiDefinition = {
               }
             }
           }
-        }
-      },
-      TicketCocina: {
-        type: 'object',
-        properties: {
-          tipo: { type: 'string', enum: ['COCINA'] },
-          version: { type: 'integer', example: 1 },
-          pedidoId: { type: 'string' },
-          numeroPedido: { type: 'string' },
-          fechaPedido: { type: 'string', format: 'date-time' },
-          tipoPedido: { type: 'string', enum: ['SALON', 'DELIVERY', 'TAKEAWAY'] },
-          contexto: { type: 'object' },
-          productos: { type: 'array', items: { type: 'object', properties: { nombre: { type: 'string' }, cantidad: { type: 'integer' } } } },
-          comentario: { type: 'string' }
         }
       },
       TicketVenta: {
