@@ -277,17 +277,13 @@ const ListaPedidos = () => {
         <DialogContent className="pedido-dialog-content">
           {mensajeAccion && <Alert severity={mensajeAccion.includes("correctamente") ? "success" : "error"} sx={{ mb: 2 }}>{mensajeAccion}</Alert>}
           {pedidoSeleccionado && <>
-            <Typography variant="body2">Estado: {ETIQUETAS_ESTADO_PEDIDO[pedidoSeleccionado.estadoPedido]}</Typography>
-            <Typography variant="body2">Tipo: {ETIQUETAS_TIPO_PEDIDO[pedidoSeleccionado.tipoPedido]}</Typography>
-            <Typography variant="body2" sx={{ mb: 2 }}>Total: ${pedidoSeleccionado.total.toLocaleString("es-AR")}</Typography>
+            <div className="pedido-meta"><div><span>Estado</span><strong>{ETIQUETAS_ESTADO_PEDIDO[pedidoSeleccionado.estadoPedido]}</strong></div><div><span>Tipo</span><strong>{ETIQUETAS_TIPO_PEDIDO[pedidoSeleccionado.tipoPedido]}</strong></div><div><span>Cliente</span><strong>{pedidoSeleccionado.nombreCliente || "Sin nombre"}</strong></div></div>
+            <div className="pedido-info-secundaria"><span>Teléfono: {pedidoSeleccionado.telefono || "-"}</span><span>Pago: {pedidoSeleccionado.estadoPago}</span>{pedidoSeleccionado.direccion && <span>Dirección: {pedidoSeleccionado.direccion}</span>}</div>
             {modoEdicion && pedidoSeleccionado.estadoPedido === "ABIERTO" ? <>
-              {productosEdicion.map((producto, index) => <div key={`${producto.productoId}-${index}`} style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 8 }}>
-                <Typography sx={{ flex: 1 }}>{producto.nombreSnapshot}</Typography>
-                <TextField type="number" size="small" label="Cantidad" value={producto.cantidad} inputProps={{ min: 1 }} onChange={(event) => actualizarCantidad(index, Math.max(1, Number(event.target.value)))} />
-                <Button color="error" onClick={() => quitarProducto(index)}>Quitar</Button>
-              </div>)}
-              <Typography>Total recalculado: ${productosEdicion.reduce((total, producto) => total + producto.precioUnitario * producto.cantidad, 0).toLocaleString("es-AR")}</Typography>
-            </> : <ul>{pedidoSeleccionado.productos.map((producto, index) => <li key={`${producto.productoId}-${index}`}>{producto.cantidad} × {producto.nombreSnapshot} — ${producto.subtotal.toLocaleString("es-AR")}</li>)}</ul>}
+              <div className="agregar-producto"><TextField select fullWidth size="small" label="Agregar producto" value={productoParaAgregar} onChange={(event) => setProductoParaAgregar(event.target.value)} onOpen={() => void cargarProductosDisponibles()}><MenuItem value="">Seleccionar producto</MenuItem>{productosDisponibles.filter((producto) => !productosEdicion.some((item) => item.productoId === producto._id)).map((producto) => <MenuItem key={producto._id} value={producto._id}>{producto.nombre} — ${producto.precio.toLocaleString("es-AR")}</MenuItem>)}</TextField><Button variant="outlined" onClick={agregarProductoEdicion} disabled={!productoParaAgregar}>Agregar</Button></div>
+              {productosEdicion.map((producto, index) => <div className="pedido-producto" key={`${producto.productoId}-${index}`}><div className="pedido-producto-info"><strong>{producto.nombreSnapshot}</strong><span>${producto.precioUnitario.toLocaleString("es-AR")} c/u</span></div><TextField type="number" size="small" label="Cantidad" value={producto.cantidad} inputProps={{ min: 1 }} onChange={(event) => actualizarCantidad(index, Math.max(1, Number(event.target.value)))} /><span className="pedido-producto-subtotal">${(producto.precioUnitario * producto.cantidad).toLocaleString("es-AR")}</span><Button color="error" size="small" onClick={() => quitarProducto(index)}>Quitar</Button></div>)}
+              <div className="pedido-total"><span>Total recalculado</span><strong>${productosEdicion.reduce((total, producto) => total + producto.precioUnitario * producto.cantidad, 0).toLocaleString("es-AR")}</strong></div>
+            </> : <div className="pedido-productos-lista">{pedidoSeleccionado.productos.map((producto, index) => <div className="pedido-producto" key={`${producto.productoId}-${index}`}><div className="pedido-producto-info"><strong>{producto.nombreSnapshot}</strong><span>{producto.cantidad} × ${producto.precioUnitario.toLocaleString("es-AR")}</span></div><span className="pedido-producto-subtotal">${producto.subtotal.toLocaleString("es-AR")}</span></div>)}</div>}
           </>}
         </DialogContent>
         <DialogActions className="pedido-dialog-actions">
