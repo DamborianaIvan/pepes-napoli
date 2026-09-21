@@ -117,6 +117,52 @@ describe('integración: gestión de pedidos', { skip: !INTEGRATION_ENABLED }, ()
     assert.deepEqual(body.map((pedido) => pedido._id), [primero._id.toString()]);
   });
 
+  test('CHEF puede consultar cocina y marcar pedidos como listos', async () => {
+    await crearUsuario();
+    await Usuario.create({
+      nombre: 'Chef Test',
+      nombreUsuario: 'chef-test',
+      email: 'chef-test@example.com',
+      password: 'password-chef-123',
+      rol: 'CHEF'
+    });
+
+    const chef = await loginComo('chef-test', 'password-chef-123');
+    const { pedido } = await crearPedidoConfirmado((await loginComo('admin-test', 'password-admin-123')).token);
+
+    const lista = await requestJson('/api/pedidos/cocina', {
+      headers: authorization(chef.token)
+    });
+    assert.equal(lista.response.status, 200);
+    assert.equal(lista.body[0]._id, pedido._id.toString());
+
+    const listo = await requestJson(`/api/pedidos/${pedido._id}/listo`, {
+      method: 'PATCH',
+      headers: authorization(chef.token)
+    });
+    assert.equal(listo.response.status, 200);
+    assert.equal(listo.body.estadoPedido, 'LISTO');
+  });
+
+  test('DELIVERY no puede acceder al contrato de cocina', async () => {
+    await crearUsuario();
+    await Usuario.create({
+      nombre: 'Delivery Test',
+      nombreUsuario: 'delivery-test',
+      email: 'delivery-test@example.com',
+      password: 'password-delivery-123',
+      rol: 'DELIVERY'
+    });
+
+    const delivery = await loginComo('delivery-test', 'password-delivery-123');
+
+    const lista = await requestJson('/api/pedidos/cocina', {
+      headers: authorization(delivery.token)
+    });
+
+    assert.equal(lista.response.status, 403);
+  });
+
   test('PATCH /api/pedidos/:id/listo permite pasar de EN_COCINA a LISTO', async () => {
     await crearUsuario();
     const admin = await loginComo('admin-test', 'password-admin-123');
