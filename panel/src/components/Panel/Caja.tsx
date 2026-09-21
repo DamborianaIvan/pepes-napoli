@@ -272,7 +272,7 @@ const Caja = () => {
 
                 <Divider sx={{ my: 2 }} />
 
-                {pedido.pagos.length === 0 && pedido.estadoPago !== "PAGADO" && (
+                {pedido.pagos.length === 0 && (
                   <Stack direction={{ xs: "column", sm: "row" }} spacing={2} mb={2}>
                     <TextField
                       label="Descuento %"
@@ -290,7 +290,7 @@ const Caja = () => {
                   </Stack>
                 )}
 
-                {pedido.estadoPago !== "PAGADO" && (
+                {pedido.estadoPago !== "PAGADO" && totalFinal > 0 && (
                   <>
                     <Typography fontWeight={700} mb={1}>Composición del cobro</Typography>
                     <Stack direction={{ xs: "column", md: "row" }} spacing={1}>
@@ -323,22 +323,28 @@ const Caja = () => {
 
                 {pedido.estadoPago === "PAGADO" && (
                   <>
-                    <Typography fontWeight={700}>Cobro registrado</Typography>
-                    <Typography variant="body2" mb={2}>
-                      {pedido.pagos
-                        .filter((pago) => pago.estado !== "ANULADO")
-                        .map((pago) => `${ETIQUETAS_METODO_PAGO[pago.metodo]} ${moneda(pago.monto)}`)
-                        .join(" · ")}
+                    <Typography fontWeight={700}>
+                      {pedido.pagos.length === 0 ? "Pedido sin saldo por descuento" : "Cobro registrado"}
                     </Typography>
+                    {pedido.pagos.length > 0 && (
+                      <Typography variant="body2" mb={2}>
+                        {pedido.pagos
+                          .filter((pago) => pago.estado !== "ANULADO")
+                          .map((pago) => `${ETIQUETAS_METODO_PAGO[pago.metodo]} ${moneda(pago.monto)}`)
+                          .join(" · ")}
+                      </Typography>
+                    )}
                     <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
-                      <Button
-                        color="error"
-                        variant="outlined"
-                        disabled={procesando}
-                        onClick={() => anularCobro(pedido)}
-                      >
-                        Anular cobro
-                      </Button>
+                      {pedido.pagos.some((pago) => pago.estado !== "ANULADO") && (
+                        <Button
+                          color="error"
+                          variant="outlined"
+                          disabled={procesando}
+                          onClick={() => anularCobro(pedido)}
+                        >
+                          Anular cobro
+                        </Button>
+                      )}
                       <Button
                         variant="contained"
                         disabled={procesando || !puedeCerrar}
