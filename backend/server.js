@@ -12,6 +12,7 @@ import healthRoutes from './routes/health.js';
 import productosRoutes from './routes/productos.js';
 import pedidosRoutes from './routes/pedidos.js';
 import mesasRoutes from './routes/mesas.js';
+import usuariosRoutes from './routes/usuarios.js';
 
 const swaggerDocs = { ...openapiDefinition, paths };
 const app = express();
@@ -29,6 +30,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/productos', productosRoutes);
 app.use('/api/pedidos', pedidosRoutes);
 app.use('/api/mesas', mesasRoutes);
+app.use('/api/usuarios', usuariosRoutes);
 app.use(notFound);
 app.use(errorHandler);
 
