@@ -110,7 +110,7 @@ const Mesas = () => {
     ? pedidosActivosPorMesa.get(mesaSeleccionada._id)
     : undefined;
 
-  const finalizarPedidoYLiberarMesa = async (
+  const actualizarEstadoPedido = async (
     mesa: Mesa,
     pedido: Pedido,
     estado: "SERVIDO" | "CANCELADO",
@@ -126,19 +126,22 @@ const Mesas = () => {
       setError(null);
       setMensaje(null);
 
-      const pedidoResponse = await fetch(`${API_URL}/api/pedidos/${pedido._id}/estado`, {
+      const endpoint = estado === "CANCELADO" ? `${API_URL}/api/pedidos/${pedido._id}/cancelar` : `${API_URL}/api/pedidos/${pedido._id}/estado`;
+      const pedidoResponse = await fetch(endpoint, {
         method: "PATCH",
         headers,
         body: JSON.stringify({ estadoPedido: estado }),
       });
       if (!pedidoResponse.ok) throw new Error("No se pudo cerrar el pedido.");
 
-      const mesaResponse = await fetch(`${API_URL}/api/mesas/${mesa._id}/estado`, {
-        method: "PATCH",
-        headers,
-        body: JSON.stringify({ estado: "LIBRE" }),
-      });
-      if (!mesaResponse.ok) throw new Error("No se pudo actualizar la mesa.");
+      if (estado === "CANCELADO") {
+        const mesaResponse = await fetch(`${API_URL}/api/mesas/${mesa._id}/estado`, {
+          method: "PATCH",
+          headers,
+          body: JSON.stringify({ estado: "LIBRE" }),
+        });
+        if (!mesaResponse.ok) throw new Error("No se pudo liberar la mesa.");
+      }
 
       setMesaSeleccionada(null);
       setMensaje(estado === "SERVIDO" ? `Pedido de mesa ${mesa.numero} marcado como servido.` : `Mesa ${mesa.numero} liberada y pedido cancelado correctamente.`);
@@ -231,7 +234,7 @@ const Mesas = () => {
                     disabled={cerrandoPedidoId === pedido._id}
                     onClick={(event) => {
                       event.stopPropagation();
-                      void finalizarPedidoYLiberarMesa(mesa, pedido, "SERVIDO");
+                      void actualizarEstadoPedido(mesa, pedido, "SERVIDO");
                     }}
                   >
                     {cerrandoPedidoId === pedido._id ? "Cerrando..." : "Marcar como servido"}
