@@ -93,13 +93,21 @@ const Sidebar = () => {
             </Link>
           )}
 
-          {canManageUsers && (\n            <Link to="/panel/usuarios" onClick={() => setOpen(false)}>\n              <ManageAccountsIcon className="sidebar-icon" />\n              USUARIOS\n            </Link>\n          )}\n\n          {canViewReports && (
+          {canManageUsers && (
+            <Link to="/panel/usuarios" onClick={() => setOpen(false)}>
+              <ManageAccountsIcon className="sidebar-icon" />
+              USUARIOS
+            </Link>
+          )}
+
+          {canViewReports && (
             <Link to="/panel/reportes" onClick={() => setOpen(false)}>
               <AssessmentIcon className="sidebar-icon" />
               REPORTES
             </Link>
           )}
         </nav>
+
         <div className="sidebar-bottom">
           <button className="logout-btn" onClick={logout}>
             <LogoutIcon style={{ verticalAlign: "middle", marginRight: "5px" }} />
