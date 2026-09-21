@@ -3,10 +3,8 @@ import axios from "axios";
 import { Alert, Box, Button, Card, CardContent, CircularProgress, Chip, Typography } from "@mui/material";
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import RefreshIcon from "@mui/icons-material/Refresh";
-import PrintIcon from "@mui/icons-material/Print";
 import { getSession } from "../../auth/session";
 import { ETIQUETAS_TIPO_PEDIDO, type Pedido, type TipoPedido } from "../../types/pedido";
-import { imprimirTicketCocina } from "../../utils/printTicket";
 import "./Cocina.css";
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -80,15 +78,6 @@ const Cocina = () => {
       setError("No se pudo marcar el pedido como listo. Actualizá la vista e intentá nuevamente.");
     } finally {
       setActualizando(false);
-    }
-  };
-
-  const imprimirComanda = async (pedidoId: string) => {
-    try {
-      await imprimirTicketCocina(pedidoId, token);
-      setError("");
-    } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : "No se pudo imprimir la comanda.");
     }
   };
 
@@ -185,27 +174,16 @@ const Cocina = () => {
                   </Box>
                 )}
 
-                <Box sx={{ display: "flex", gap: 1, flexDirection: { xs: "column", sm: "row" } }}>
-                  <Button
-                    fullWidth
-                    variant="outlined"
-                    startIcon={<PrintIcon />}
-                    onClick={() => void imprimirComanda(pedido._id)}
-                    disabled={actualizando}
-                  >
-                    Imprimir comanda
-                  </Button>
-                  <Button
-                    fullWidth
-                    variant="contained"
-                    color="success"
-                    startIcon={<CheckCircleOutlineIcon />}
-                    onClick={() => void marcarComoListo(pedido._id)}
-                    disabled={actualizando}
-                  >
-                    Marcar como listo
-                  </Button>
-                </Box>
+                <Button
+                  fullWidth
+                  variant="contained"
+                  color="success"
+                  startIcon={<CheckCircleOutlineIcon />}
+                  onClick={() => void marcarComoListo(pedido._id)}
+                  disabled={actualizando}
+                >
+                  Marcar como listo
+                </Button>
               </CardContent>
             </Card>
           ))}
