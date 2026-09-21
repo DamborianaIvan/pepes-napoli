@@ -219,8 +219,8 @@ export const Dashboard = () => {
   const obtenerEstadosPermitidos = (pedido: Pedido): EstadoPedido[] => {
     const transiciones: Record<EstadoPedido, EstadoPedido[]> = {
       ABIERTO: ["CONFIRMADO"], CONFIRMADO: ["EN_COCINA"],
-      EN_COCINA: ["LISTO"], LISTO: pedido.tipoPedido === "DELIVERY" ? ["EN_CAMINO"] : ["ENTREGADO"],
-      EN_CAMINO: ["ENTREGADO", "CANCELADO"], ENTREGADO: [], CANCELADO: [],
+      EN_COCINA: ["LISTO"], LISTO: pedido.tipoPedido === "DELIVERY" ? ["EN_CAMINO"] : pedido.tipoPedido === "SALON" ? ["SERVIDO"] : ["ENTREGADO"],
+      SERVIDO: [], EN_CAMINO: ["ENTREGADO", "CANCELADO"], ENTREGADO: [], CANCELADO: [],
     };
     return transiciones[pedido.estadoPedido];
   };
