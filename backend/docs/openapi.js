@@ -11,7 +11,8 @@ export const openapiDefinition = {
     { name: 'Productos', description: 'Catálogo y disponibilidad' },
     { name: 'Pedidos', description: 'Gestión de pedidos' },
     { name: 'Mesas', description: 'Gestión de mesas del salón' },
-    { name: 'Caja', description: 'Apertura, cobros, movimientos y cierre de caja' }
+    { name: 'Caja', description: 'Apertura, cobros, movimientos y cierre de caja' },
+    { name: 'Tickets', description: 'Comprobantes de venta imprimibles' }
   ],
   components: {
     securitySchemes: { bearerAuth: { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' } },
@@ -118,6 +119,25 @@ export const openapiDefinition = {
               }
             }
           }
+        }
+      },
+      TicketVenta: {
+        type: 'object',
+        properties: {
+          tipo: { type: 'string', enum: ['VENTA'] },
+          version: { type: 'integer', example: 1 },
+          pedidoId: { type: 'string' },
+          numeroPedido: { type: 'string' },
+          fechaPedido: { type: 'string', format: 'date-time' },
+          fechaCierre: { type: 'string', format: 'date-time', nullable: true },
+          tipoPedido: { type: 'string', enum: ['SALON', 'DELIVERY', 'TAKEAWAY'] },
+          contexto: { type: 'object' },
+          productos: { type: 'array', items: { type: 'object' } },
+          totalOriginal: { type: 'number' },
+          descuento: { type: 'object' },
+          totalFinal: { type: 'number' },
+          pagos: { type: 'array', items: { type: 'object' } },
+          comentario: { type: 'string' }
         }
       },
       Caja: {

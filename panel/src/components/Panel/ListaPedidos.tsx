@@ -10,8 +10,10 @@ import "react-date-range/dist/styles.css";
 import "react-date-range/dist/theme/default.css";
 import "./ListaPedidos.css";
 import InventoryIcon from "@mui/icons-material/Inventory";
+import PrintIcon from "@mui/icons-material/Print";
 import { getSession } from "../../auth/session";
 import { hasPermission, PERMISSIONS } from "../../types/auth";
+import { imprimirTicketVenta } from "../../utils/printTicket";
 import {
   ESTADOS_PEDIDO,
   ETIQUETAS_ESTADO_PEDIDO,
@@ -101,6 +103,18 @@ const ListaPedidos = () => {
     return () => document.removeEventListener("mousedown", handleClickFuera);
   }, [mostrarCalendario]);
 
+  const imprimirVenta = async (pedido: Pedido) => {
+    const token = session?.token;
+    if (!token) return;
+
+    try {
+      await imprimirTicketVenta(pedido._id, token);
+      setMensajeAccion(null);
+    } catch (error) {
+      setMensajeAccion(error instanceof Error ? error.message : "No se pudo imprimir el ticket.");
+    }
+  };
+
   const pedidosFiltrados = pedidos.filter((pedido) => {
     if (filtros.fechas.startDate && filtros.fechas.endDate) {
       const inicio = dayjs(filtros.fechas.startDate).startOf("day");
@@ -125,6 +139,7 @@ const ListaPedidos = () => {
   const canEditOrders = session?.rol ? hasPermission(session.rol, PERMISSIONS.ORDERS_EDIT) : false;
   const canCancelOrders = session?.rol ? hasPermission(session.rol, PERMISSIONS.ORDERS_CANCEL) : false;
   const canChangeStatus = session?.rol ? hasPermission(session.rol, PERMISSIONS.ORDERS_CHANGE_STATUS) : false;
+  const canPrintSale = session?.rol === "ADMIN" || session?.rol === "CAJERO";
 
   const cargarProductosDisponibles = async () => {
     try {
@@ -322,6 +337,19 @@ const ListaPedidos = () => {
             </div>
             {expandedId === pedido._id && <div className="detalle">
               <Button size="small" variant="outlined" onClick={(event) => { event.stopPropagation(); void abrirDetalle(pedido._id); }}>Ver detalle</Button>
+              {canPrintSale && pedido.estadoPago === "PAGADO" && pedido.estadoPedido !== "CANCELADO" && (
+                <Button
+                  size="small"
+                  variant="outlined"
+                  startIcon={<PrintIcon />}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    void imprimirVenta(pedido);
+                  }}
+                >
+                  Ticket
+                </Button>
+              )}
               {canEditOrders && pedido.estadoPedido === "ABIERTO" && <Button size="small" variant="outlined" onClick={(event) => { event.stopPropagation(); void abrirDetalle(pedido._id); }}>Editar</Button>}
               {canCancelOrders && !["ENTREGADO", "CANCELADO"].includes(pedido.estadoPedido) && <Button size="small" color="error" variant="outlined" onClick={(event) => { event.stopPropagation(); void abrirDetalle(pedido._id); }}>Cancelar</Button>}
               <p>📞 Teléfono: {pedido.telefono || "-"}</p>
@@ -418,6 +446,11 @@ const ListaPedidos = () => {
           )}
         </DialogContent>
         <DialogActions className="pedido-dialog-actions">
+          {pedidoSeleccionado && canPrintSale && pedidoSeleccionado.estadoPago === "PAGADO" && pedidoSeleccionado.estadoPedido !== "CANCELADO" && !modoEdicion && (
+            <Button startIcon={<PrintIcon />} onClick={() => void imprimirVenta(pedidoSeleccionado)}>
+              Ticket
+            </Button>
+          )}
           {pedidoSeleccionado && canEditOrders && pedidoSeleccionado.estadoPedido === "ABIERTO" && !modoEdicion && <Button onClick={() => { setModoEdicion(true); void cargarProductosDisponibles(); }}>Editar</Button>}
           {pedidoSeleccionado && modoEdicion && <Button onClick={() => setModoEdicion(false)}>Cancelar edición</Button>}
           {pedidoSeleccionado && modoEdicion && <Button variant="contained" disabled={guardando || productosEdicion.length === 0} onClick={() => void guardarEdicion()}>Guardar cambios</Button>}

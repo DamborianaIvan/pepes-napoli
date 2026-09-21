@@ -49,6 +49,20 @@ export const paths = {
       })
     }
   },
+  '/api/pedidos/{id}/ticket/venta': {
+    get: {
+      tags: ['Tickets'],
+      summary: 'Generar comprobante de venta',
+      security: auth,
+      parameters: [id],
+      responses: secured({
+        200: { description: 'Comprobante de venta', content: json(ref('TicketVenta')) },
+        403: { $ref: '#/components/responses/Forbidden' },
+        404: { $ref: '#/components/responses/NotFound' },
+        409: error('Pedido no pagado o cancelado')
+      })
+    }
+  },
   '/api/pedidos/{id}/listo': {
     patch: {
       tags: ['Pedidos'],
