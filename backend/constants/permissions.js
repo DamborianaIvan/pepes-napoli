@@ -9,7 +9,8 @@ export const PERMISSIONS = Object.freeze({
   CASH_CLOSE: 'cash:close',
   STOCK_ADJUST: 'stock:adjust',
   PRODUCTS_MANAGE: 'products:manage',
-  REPORTS_VIEW: 'reports:view'
+  REPORTS_VIEW: 'reports:view',
+  USERS_MANAGE: 'users:manage'
 });
 
 export const PERMISSIONS_VALUES = Object.freeze(Object.values(PERMISSIONS));
