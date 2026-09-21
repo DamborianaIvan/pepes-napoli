@@ -124,6 +124,7 @@ const ListaPedidos = () => {
 
   const canEditOrders = session?.rol ? hasPermission(session.rol, PERMISSIONS.ORDERS_EDIT) : false;
   const canCancelOrders = session?.rol ? hasPermission(session.rol, PERMISSIONS.ORDERS_CANCEL) : false;
+  const canChangeStatus = session?.rol ? hasPermission(session.rol, PERMISSIONS.ORDERS_CHANGE_STATUS) : false;
 
   const cargarProductosDisponibles = async () => {
     try {
@@ -198,6 +199,40 @@ const ListaPedidos = () => {
       setMensajeAccion("No se pudo actualizar el pedido.");
     } finally {
       setGuardando(false);
+    }
+  };
+
+  const obtenerEstadosPermitidos = (pedido: Pedido): EstadoPedido[] => {
+    const transiciones: Record<EstadoPedido, EstadoPedido[]> = {
+      ABIERTO: ["CONFIRMADO"],
+      CONFIRMADO: ["EN_COCINA"],
+      EN_COCINA: ["LISTO"],
+      LISTO: pedido.tipoPedido === "DELIVERY" ? ["EN_CAMINO"] : ["ENTREGADO"],
+      EN_CAMINO: ["ENTREGADO"],
+      ENTREGADO: [],
+      CANCELADO: [],
+    };
+    return transiciones[pedido.estadoPedido];
+  };
+
+  const actualizarEstado = async (nuevoEstado: EstadoPedido) => {
+    if (!pedidoSeleccionado) return;
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/pedidos/${pedidoSeleccionado._id}/estado`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session?.token}`,
+        },
+        body: JSON.stringify({ estadoPedido: nuevoEstado }),
+      });
+      if (!res.ok) throw new Error();
+      const actualizado = (await res.json()) as Pedido;
+      setPedidoSeleccionado(actualizado);
+      setPedidos((actuales) => actuales.map((pedido) => pedido._id === actualizado._id ? actualizado : pedido));
+      setMensajeAccion("Estado actualizado correctamente.");
+    } catch {
+      setMensajeAccion("No se pudo actualizar el estado del pedido.");
     }
   };
 
@@ -301,7 +336,9 @@ const ListaPedidos = () => {
       </div>
 
       <Dialog open={Boolean(pedidoSeleccionado)} onClose={() => setPedidoSeleccionado(null)} maxWidth="sm" fullWidth>
-        <DialogTitle className="pedido-dialog-title">Pedido #${pedidoSeleccionado?._id.slice(-6)}</DialogTitle>
+        <DialogTitle className="pedido-dialog-title">
+          Pedido #{pedidoSeleccionado?._id.slice(-6)}
+        </DialogTitle>
         <DialogContent className="pedido-dialog-content">
           {mensajeAccion && <Alert severity={mensajeAccion.includes("correctamente") ? "success" : "error"} sx={{ mb: 2 }}>{mensajeAccion}</Alert>}
           {pedidoSeleccionado && (
@@ -311,6 +348,25 @@ const ListaPedidos = () => {
                 <div><span>Tipo</span><strong>{ETIQUETAS_TIPO_PEDIDO[pedidoSeleccionado.tipoPedido]}</strong></div>
                 <div><span>{pedidoSeleccionado.tipoPedido === "SALON" && pedidoSeleccionado.mesaId ? "Mesa" : "Cliente"}</span><strong>{obtenerNombrePedido(pedidoSeleccionado)}</strong></div>
               </div>
+              {canChangeStatus && !modoEdicion && obtenerEstadosPermitidos(pedidoSeleccionado).length > 0 && (
+                <div className="pedido-estado-accion">
+                  <TextField
+                    select
+                    fullWidth
+                    size="small"
+                    label="Avanzar estado"
+                    value=""
+                    onChange={(event) => void actualizarEstado(event.target.value as EstadoPedido)}
+                  >
+                    <MenuItem value="">Seleccionar siguiente estado</MenuItem>
+                    {obtenerEstadosPermitidos(pedidoSeleccionado).map((estado) => (
+                      <MenuItem key={estado} value={estado}>
+                        {ETIQUETAS_ESTADO_PEDIDO[estado]}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                </div>
+              )}
               <div className="pedido-info-secundaria">
                 <span>Teléfono: {pedidoSeleccionado.telefono || "-"}</span>
                 <span>Pago: {pedidoSeleccionado.estadoPago}</span>
