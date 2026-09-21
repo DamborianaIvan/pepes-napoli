@@ -344,7 +344,7 @@ export const Dashboard = () => {
             
 
             {/* Select para delivery */}
-            {canChangeStatus && rol === "DELIVERY" &&
+            {canChangeStatus && rol === "DELIVERY" && obtenerEstadosPermitidos(pedido).length > 0 &&
               (pedido.estadoPedido === "LISTO" || pedido.estadoPedido === "EN_CAMINO") && (
                 <TextField
                   select
@@ -369,7 +369,7 @@ export const Dashboard = () => {
               )}
 
             {/* Select para admin */}
-            {rol === "ADMIN" && (
+            {rol === "ADMIN" && obtenerEstadosPermitidos(pedido).length > 0 && (
               <TextField
                 select
                 label="Estado"
