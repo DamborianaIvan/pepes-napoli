@@ -17,7 +17,6 @@ export const ESTADOS_PEDIDO = Object.freeze({
 
 export const ESTADOS_PAGO = Object.freeze({
   PENDIENTE: 'PENDIENTE',
-  PARCIAL: 'PARCIAL',
   PAGADO: 'PAGADO',
   ANULADO: 'ANULADO'
 });
