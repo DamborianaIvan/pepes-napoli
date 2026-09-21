@@ -189,9 +189,42 @@ router.patch('/:id/estado', protect, requirePermission(PERMISSIONS.ORDERS_CHANGE
 }));
 
 // Eliminación destructiva: solo ADMIN. La eliminación lógica se evaluará en F2/F4.
+router.patch('/:id/cancelar', protect, requirePermission(PERMISSIONS.ORDERS_CANCEL), asyncHandler(async (req, res) => {
+  const pedido = await Pedido.findById(req.params.id);
+  if (!pedido) throw new ApiError(404, 'Pedido no encontrado');
+
+  if (pedido.estadoPedido === ESTADOS_PEDIDO.ENTREGADO || pedido.estadoPedido === ESTADOS_PEDIDO.CANCELADO) {
+    throw new ApiError(409, 'El pedido ya se encuentra en un estado final', {
+      estadoPedido: pedido.estadoPedido
+    });
+  }
+
+  if (!puedeTransicionarPedido(pedido.estadoPedido, ESTADOS_PEDIDO.CANCELADO, pedido.tipoPedido)) {
+    throw new ApiError(409, 'El pedido no puede ser cancelado desde su estado actual', {
+      estadoPedido: pedido.estadoPedido,
+      tipoPedido: pedido.tipoPedido
+    });
+  }
+
+  pedido.estadoPedido = ESTADOS_PEDIDO.CANCELADO;
+  await pedido.save();
+
+  if (pedido.tipoPedido === TIPOS_PEDIDO.SALON && pedido.mesaId) {
+    await Mesa.findByIdAndUpdate(pedido.mesaId, { estado: 'LIBRE' });
+  }
+
+  return res.json(pedido);
+}));
+
 router.delete('/:id', protect, restrictTo(ROLES.ADMIN), asyncHandler(async (req, res) => {
   const pedido = await Pedido.findById(req.params.id);
   if (!pedido) throw new ApiError(404, 'Pedido no encontrado');
+
+  if (pedido.estadoPedido !== ESTADOS_PEDIDO.ABIERTO) {
+    throw new ApiError(409, 'Solo se puede eliminar de forma destructiva un pedido abierto', {
+      estadoPedido: pedido.estadoPedido
+    });
+  }
 
   await Pedido.findByIdAndDelete(req.params.id);
   return res.json({ message: 'Pedido eliminado correctamente' });
