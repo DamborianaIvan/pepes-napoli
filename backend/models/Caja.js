@@ -14,8 +14,7 @@ const CajaSchema = new mongoose.Schema({
     type: String,
     enum: Object.values(ESTADOS_CAJA),
     default: ESTADOS_CAJA.ABIERTA,
-    required: true,
-    index: true
+    required: true
   },
   montoInicial: {
     type: Number,
