@@ -82,7 +82,7 @@ router.post('/', protect, requirePermission(PERMISSIONS.ORDERS_CREATE), asyncHan
     pagos: [],
     mesaId: mesa?._id ?? null,
     usuarioId: req.usuario.id,
-    estadoPedido: ESTADOS_PEDIDO.ABIERTO,
+    estadoPedido: ESTADOS_PEDIDO.CONFIRMADO,
     estadoPago: ESTADOS_PAGO.PENDIENTE
   });
 
@@ -105,7 +105,6 @@ router.get('/:id', protect, asyncHandler(async (req, res) => {
   if (!pedido) throw new ApiError(404, 'Pedido no encontrado');
   return res.json(pedido);
 }));
-
 
 router.patch('/:id', protect, requirePermission(PERMISSIONS.ORDERS_EDIT), asyncHandler(async (req, res) => {
   const { productos, nombreCliente, telefono, direccion, comentario } = req.body;
@@ -153,7 +152,6 @@ router.patch('/:id', protect, requirePermission(PERMISSIONS.ORDERS_EDIT), asyncH
   return res.json(pedido);
 }));
 
-
 // Cambio de estado: requiere orders:change_status. Las restricciones finas por rol/estado/tipo corresponden a F2/KDS.
 router.patch('/:id/estado', protect, requirePermission(PERMISSIONS.ORDERS_CHANGE_STATUS), asyncHandler(async (req, res) => {
   const { estadoPedido } = req.body;
@@ -192,7 +190,6 @@ router.patch('/:id/estado', protect, requirePermission(PERMISSIONS.ORDERS_CHANGE
   return res.json(pedido);
 }));
 
-// Eliminación destructiva: solo ADMIN. La eliminación lógica se evaluará en F2/F4.
 router.patch('/:id/cancelar', protect, requirePermission(PERMISSIONS.ORDERS_CANCEL), asyncHandler(async (req, res) => {
   const pedido = await Pedido.findById(req.params.id);
   if (!pedido) throw new ApiError(404, 'Pedido no encontrado');
