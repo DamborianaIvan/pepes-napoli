@@ -45,21 +45,6 @@ export const agruparPagosActivos = (pagos = []) => {
   return Array.from(acumulados, ([metodo, monto]) => ({ metodo, monto }));
 };
 
-export const crearTicketCocina = (pedido) => ({
-  tipo: 'COCINA',
-  version: 1,
-  pedidoId: obtenerId(pedido._id),
-  numeroPedido: obtenerNumeroPedido(pedido),
-  fechaPedido: pedido.fechaPedido,
-  tipoPedido: pedido.tipoPedido,
-  contexto: crearContexto(pedido),
-  productos: pedido.productos.map((producto) => ({
-    nombre: producto.nombreSnapshot,
-    cantidad: producto.cantidad
-  })),
-  comentario: pedido.comentario ?? ''
-});
-
 export const crearTicketVenta = (pedido) => ({
   tipo: 'VENTA',
   version: 1,
