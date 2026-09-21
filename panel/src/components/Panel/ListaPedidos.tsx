@@ -247,9 +247,9 @@ const ListaPedidos = () => {
         </div>)}
       </div>
 
-      <Dialog open={Boolean(pedidoSeleccionado)} onClose={() => setPedidoSeleccionado(null)} maxWidth="sm" fullWidth>
-        <DialogTitle>Pedido {pedidoSeleccionado?._id.slice(-6)}</DialogTitle>
-        <DialogContent>
+      <Dialog open={Boolean(pedidoSeleccionado)} onClose={() => setPedidoSeleccionado(null)} maxWidth="sm" fullWidth><div className="pedido-dialog">
+        <DialogTitle className="pedido-dialog-title">Pedido #{pedidoSeleccionado?._id.slice(-6)}</DialogTitle>
+        <DialogContent className="pedido-dialog-content">
           {mensajeAccion && <Alert severity={mensajeAccion.includes("correctamente") ? "success" : "error"} sx={{ mb: 2 }}>{mensajeAccion}</Alert>}
           {pedidoSeleccionado && <>
             <Typography variant="body2">Estado: {ETIQUETAS_ESTADO_PEDIDO[pedidoSeleccionado.estadoPedido]}</Typography>
@@ -265,7 +265,7 @@ const ListaPedidos = () => {
             </> : <ul>{pedidoSeleccionado.productos.map((producto, index) => <li key={`${producto.productoId}-${index}`}>{producto.cantidad} × {producto.nombreSnapshot} — ${producto.subtotal.toLocaleString("es-AR")}</li>)}</ul>}
           </>}
         </DialogContent>
-        <DialogActions>
+        <DialogActions className="pedido-dialog-actions">
           {pedidoSeleccionado && canEditOrders && pedidoSeleccionado.estadoPedido === "ABIERTO" && !modoEdicion && <Button onClick={() => setModoEdicion(true)}>Editar</Button>}
           {pedidoSeleccionado && modoEdicion && <Button onClick={() => setModoEdicion(false)}>Cancelar edición</Button>}
           {pedidoSeleccionado && modoEdicion && <Button variant="contained" disabled={guardando || productosEdicion.length === 0} onClick={() => void guardarEdicion()}>Guardar cambios</Button>}
