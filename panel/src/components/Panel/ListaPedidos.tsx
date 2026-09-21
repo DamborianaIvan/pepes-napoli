@@ -50,6 +50,8 @@ const ListaPedidos = () => {
   const [productosEdicion, setProductosEdicion] = useState<ProductoPedido[]>([]);
   const [guardando, setGuardando] = useState(false);
   const [mensajeAccion, setMensajeAccion] = useState<string | null>(null);
+  const [productosDisponibles, setProductosDisponibles] = useState<{ _id: string; nombre: string; categoria: string; precio: number; disponible: boolean }[]>([]);
+  const [productoParaAgregar, setProductoParaAgregar] = useState("");
   const [paginaActual, setPaginaActual] = useState(1);
   const pedidosPorPagina = 20;
   const calendarioRef = useRef<HTMLDivElement>(null);
@@ -107,6 +109,29 @@ const ListaPedidos = () => {
 
   const canEditOrders = session?.rol ? hasPermission(session.rol, PERMISSIONS.ORDERS_EDIT) : false;
   const canCancelOrders = session?.rol ? hasPermission(session.rol, PERMISSIONS.ORDERS_CANCEL) : false;
+
+  const cargarProductosDisponibles = async () => {
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/productos`);
+      if (!res.ok) throw new Error();
+      const data = await res.json() as { _id: string; nombre: string; categoria: string; precio: number; disponible: boolean }[];
+      setProductosDisponibles(data.filter((producto) => producto.disponible));
+    } catch {
+      setMensajeAccion("No se pudieron cargar los productos disponibles.");
+    }
+  };
+
+  const agregarProductoEdicion = () => {
+    if (!productoParaAgregar) return;
+    const producto = productosDisponibles.find((item) => item._id === productoParaAgregar);
+    if (!producto) return;
+    if (productosEdicion.some((item) => item.productoId === producto._id)) {
+      setMensajeAccion("El producto ya está en el pedido. Modificá su cantidad.");
+      return;
+    }
+    setProductosEdicion((actuales) => [...actuales, { productoId: producto._id, nombreSnapshot: producto.nombre, cantidad: 1, precioUnitario: producto.precio, subtotal: producto.precio }]);
+    setProductoParaAgregar("");
+  };
 
   const abrirDetalle = async (id: string) => {
     try {
