@@ -1,9 +1,10 @@
 import jwt from 'jsonwebtoken';
 import { config } from '../config.js';
 import { PERMISSIONS_VALUES, hasPermission } from '../constants/permissions.js';
+import Usuario from '../models/Usuario.js';
 import { ApiError } from '../utils/apiError.js';
 
-export const protect = (req, res, next) => {
+export const protect = async (req, res, next) => {
   const authorization = req.headers.authorization;
 
   if (!authorization || !authorization.startsWith('Bearer ')) {
@@ -21,9 +22,25 @@ export const protect = (req, res, next) => {
   }
 
   try {
-    req.usuario = jwt.verify(token, config.jwtSecret);
+    const payload = jwt.verify(token, config.jwtSecret);
+    const usuario = await Usuario.findById(payload.id);
+
+    if (!usuario || !usuario.activo) {
+      return next(new ApiError(401, 'Usuario inactivo o no encontrado', {
+        reason: 'INACTIVE_USER'
+      }));
+    }
+
+    req.usuario = {
+      id: usuario._id.toString(),
+      rol: usuario.rol,
+      nombre: usuario.nombre
+    };
+
     return next();
   } catch (error) {
+    if (error instanceof ApiError) return next(error);
+
     return next(new ApiError(401, 'Token inválido o expirado', {
       reason: 'INVALID_TOKEN'
     }));
