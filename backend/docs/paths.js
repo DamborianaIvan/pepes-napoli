@@ -6,6 +6,20 @@ const error = (description) => ({ description, content: json(ref('Error')) });
 const secured = (responses) => ({ 401: { $ref: '#/components/responses/Unauthorized' }, ...responses });
 
 export const paths = {
+  '/api/usuarios': {
+    get: { tags: ['Usuarios'], summary: 'Listar usuarios', security: auth, responses: secured({ 200: { description: 'Lista de usuarios', content: json({ type: 'array', items: { type: 'object' } }) }, 403: { $ref: '#/components/responses/Forbidden' } }) },
+    post: { tags: ['Usuarios'], summary: 'Crear usuario', security: auth, requestBody: { required: true, content: json({ type: 'object', required: ['nombre', 'nombreUsuario', 'email', 'password', 'rol'], properties: { nombre: { type: 'string' }, nombreUsuario: { type: 'string' }, email: { type: 'string', format: 'email' }, password: { type: 'string', format: 'password' }, rol: { type: 'string', enum: ['ADMIN', 'CAJERO', 'CHEF', 'DELIVERY'] } } }) }, responses: secured({ 201: { description: 'Usuario creado' }, 400: error('Datos inválidos'), 409: error('Usuario duplicado') }) }
+  },
+  '/api/usuarios/{id}': {
+    patch: { tags: ['Usuarios'], summary: 'Editar usuario o rol', security: auth, parameters: [id], requestBody: { required: true, content: json({ type: 'object' }) }, responses: secured({ 200: { description: 'Usuario actualizado' }, 400: error('Datos inválidos'), 403: { $ref: '#/components/responses/Forbidden' }, 404: { $ref: '#/components/responses/NotFound' }, 409: error('Operación no permitida') }) }
+  },
+  '/api/usuarios/{id}/estado': {
+    patch: { tags: ['Usuarios'], summary: 'Activar o desactivar usuario', security: auth, parameters: [id], requestBody: { required: true, content: json({ type: 'object', required: ['activo'], properties: { activo: { type: 'boolean' } } }) }, responses: secured({ 200: { description: 'Estado actualizado' }, 403: { $ref: '#/components/responses/Forbidden' }, 404: { $ref: '#/components/responses/NotFound' }, 409: error('Operación no permitida') }) }
+  },
+  '/api/usuarios/{id}/password': {
+    patch: { tags: ['Usuarios'], summary: 'Cambiar contraseña', security: auth, parameters: [id], requestBody: { required: true, content: json({ type: 'object', required: ['password'], properties: { password: { type: 'string', format: 'password' } } }) }, responses: secured({ 200: { description: 'Contraseña actualizada' }, 400: error('Contraseña inválida'), 404: { $ref: '#/components/responses/NotFound' } }) }
+  },
+
   '/api/auth/register': { post: { tags: ['Auth'], summary: 'Registrar usuario', requestBody: { required: true, content: json({ type: 'object', required: ['nombre', 'nombreUsuario', 'email', 'password'], properties: { nombre: { type: 'string' }, nombreUsuario: { type: 'string' }, email: { type: 'string', format: 'email' }, password: { type: 'string', format: 'password' }, rol: { type: 'string', enum: ['admin'] } } }) }, responses: { 201: { description: 'Usuario creado', content: json({ type: 'object', properties: { message: { type: 'string' } } }) }, 400: error('Nombre de usuario en uso'), 500: error('Error interno') } } },
   '/api/auth/login': { post: { tags: ['Auth'], summary: 'Iniciar sesión', requestBody: { required: true, content: json({ type: 'object', required: ['nombreUsuario', 'password'], properties: { nombreUsuario: { type: 'string' }, password: { type: 'string', format: 'password' } } }) }, responses: { 200: { description: 'JWT emitido', content: json(ref('TokenResponse')) }, 400: error('Credenciales incorrectas'), 500: error('Error interno') } } },
   '/api/productos': {
