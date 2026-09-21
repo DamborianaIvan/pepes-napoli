@@ -272,19 +272,66 @@ const ListaPedidos = () => {
         </div>)}
       </div>
 
-      <Dialog open={Boolean(pedidoSeleccionado)} onClose={() => setPedidoSeleccionado(null)} maxWidth="sm" fullWidth><div className="pedido-dialog">
-        <DialogTitle className="pedido-dialog-title">Pedido #{pedidoSeleccionado?._id.slice(-6)}</DialogTitle>
+      <Dialog open={Boolean(pedidoSeleccionado)} onClose={() => setPedidoSeleccionado(null)} maxWidth="sm" fullWidth>
+        <DialogTitle className="pedido-dialog-title">Pedido #${pedidoSeleccionado?._id.slice(-6)}</DialogTitle>
         <DialogContent className="pedido-dialog-content">
           {mensajeAccion && <Alert severity={mensajeAccion.includes("correctamente") ? "success" : "error"} sx={{ mb: 2 }}>{mensajeAccion}</Alert>}
-          {pedidoSeleccionado && <>
-            <div className="pedido-meta"><div><span>Estado</span><strong>{ETIQUETAS_ESTADO_PEDIDO[pedidoSeleccionado.estadoPedido]}</strong></div><div><span>Tipo</span><strong>{ETIQUETAS_TIPO_PEDIDO[pedidoSeleccionado.tipoPedido]}</strong></div><div><span>Cliente</span><strong>{pedidoSeleccionado.nombreCliente || "Sin nombre"}</strong></div></div>
-            <div className="pedido-info-secundaria"><span>Teléfono: {pedidoSeleccionado.telefono || "-"}</span><span>Pago: {pedidoSeleccionado.estadoPago}</span>{pedidoSeleccionado.direccion && <span>Dirección: {pedidoSeleccionado.direccion}</span>}</div>
-            {modoEdicion && pedidoSeleccionado.estadoPedido === "ABIERTO" ? <>
-              <div className="agregar-producto"><TextField select fullWidth size="small" label="Agregar producto" value={productoParaAgregar} onChange={(event) => setProductoParaAgregar(event.target.value)} onOpen={() => void cargarProductosDisponibles()}><MenuItem value="">Seleccionar producto</MenuItem>{productosDisponibles.filter((producto) => !productosEdicion.some((item) => item.productoId === producto._id)).map((producto) => <MenuItem key={producto._id} value={producto._id}>{producto.nombre} — ${producto.precio.toLocaleString("es-AR")}</MenuItem>)}</TextField><Button variant="outlined" onClick={agregarProductoEdicion} disabled={!productoParaAgregar}>Agregar</Button></div>
-              {productosEdicion.map((producto, index) => <div className="pedido-producto" key={`${producto.productoId}-${index}`}><div className="pedido-producto-info"><strong>{producto.nombreSnapshot}</strong><span>${producto.precioUnitario.toLocaleString("es-AR")} c/u</span></div><TextField type="number" size="small" label="Cantidad" value={producto.cantidad} inputProps={{ min: 1 }} onChange={(event) => actualizarCantidad(index, Math.max(1, Number(event.target.value)))} /><span className="pedido-producto-subtotal">${(producto.precioUnitario * producto.cantidad).toLocaleString("es-AR")}</span><Button color="error" size="small" onClick={() => quitarProducto(index)}>Quitar</Button></div>)}
-              <div className="pedido-total"><span>Total recalculado</span><strong>${productosEdicion.reduce((total, producto) => total + producto.precioUnitario * producto.cantidad, 0).toLocaleString("es-AR")}</strong></div>
-            </> : <div className="pedido-productos-lista">{pedidoSeleccionado.productos.map((producto, index) => <div className="pedido-producto" key={`${producto.productoId}-${index}`}><div className="pedido-producto-info"><strong>{producto.nombreSnapshot}</strong><span>{producto.cantidad} × ${producto.precioUnitario.toLocaleString("es-AR")}</span></div><span className="pedido-producto-subtotal">${producto.subtotal.toLocaleString("es-AR")}</span></div>)}</div>}
-          </>}
+          {pedidoSeleccionado && (
+            <>
+              <div className="pedido-meta">
+                <div><span>Estado</span><strong>{ETIQUETAS_ESTADO_PEDIDO[pedidoSeleccionado.estadoPedido]}</strong></div>
+                <div><span>Tipo</span><strong>{ETIQUETAS_TIPO_PEDIDO[pedidoSeleccionado.tipoPedido]}</strong></div>
+                <div><span>Cliente</span><strong>{pedidoSeleccionado.nombreCliente || "Sin nombre"}</strong></div>
+              </div>
+              <div className="pedido-info-secundaria">
+                <span>Teléfono: {pedidoSeleccionado.telefono || "-"}</span>
+                <span>Pago: {pedidoSeleccionado.estadoPago}</span>
+                {pedidoSeleccionado.direccion && <span>Dirección: {pedidoSeleccionado.direccion}</span>}
+              </div>
+              {modoEdicion && pedidoSeleccionado.estadoPedido === "ABIERTO" ? (
+                <>
+                  <div className="agregar-producto">
+                    <TextField select fullWidth size="small" label="Agregar producto" value={productoParaAgregar} onChange={(event) => setProductoParaAgregar(event.target.value)} onOpen={() => void cargarProductosDisponibles()}>
+                      <MenuItem value="">Seleccionar producto</MenuItem>
+                      {productosDisponibles.filter((producto) => !productosEdicion.some((item) => item.productoId === producto._id)).map((producto) => (
+                        <MenuItem key={producto._id} value={producto._id}>{producto.nombre} — ${producto.precio.toLocaleString("es-AR")}</MenuItem>
+                      ))}
+                    </TextField>
+                    <Button variant="outlined" onClick={agregarProductoEdicion} disabled={!productoParaAgregar}>Agregar</Button>
+                  </div>
+                  <div className="pedido-productos-lista">
+                    {productosEdicion.map((producto, index) => (
+                      <div className="pedido-producto" key={\`${producto.productoId}-${index}\`}>
+                        <div className="pedido-producto-info">
+                          <strong>{producto.nombreSnapshot}</strong>
+                          <span>${producto.precioUnitario.toLocaleString("es-AR")} c/u</span>
+                        </div>
+                        <TextField type="number" size="small" label="Cantidad" value={producto.cantidad} inputProps={{ min: 1 }} onChange={(event) => actualizarCantidad(index, Math.max(1, Number(event.target.value)))} />
+                        <span className="pedido-producto-subtotal">${(producto.precioUnitario * producto.cantidad).toLocaleString("es-AR")}</span>
+                        <Button color="error" size="small" onClick={() => quitarProducto(index)}>Quitar</Button>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="pedido-total">
+                    <span>Total recalculado</span>
+                    <strong>${productosEdicion.reduce((total, producto) => total + producto.precioUnitario * producto.cantidad, 0).toLocaleString("es-AR")}</strong>
+                  </div>
+                </>
+              ) : (
+                <div className="pedido-productos-lista">
+                  {pedidoSeleccionado.productos.map((producto, index) => (
+                    <div className="pedido-producto" key={\`${producto.productoId}-${index}\`}>
+                      <div className="pedido-producto-info">
+                        <strong>{producto.nombreSnapshot}</strong>
+                        <span>{producto.cantidad} × ${producto.precioUnitario.toLocaleString("es-AR")}</span>
+                      </div>
+                      <span className="pedido-producto-subtotal">${producto.subtotal.toLocaleString("es-AR")}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
         </DialogContent>
         <DialogActions className="pedido-dialog-actions">
           {pedidoSeleccionado && canEditOrders && pedidoSeleccionado.estadoPedido === "ABIERTO" && !modoEdicion && <Button onClick={() => setModoEdicion(true)}>Editar</Button>}
