@@ -38,7 +38,7 @@ test('protect rechaza tokens inválidos', async () => {
   assert.equal(result.nextError.details.reason, 'INVALID_TOKEN');
 });
 
-test('protect rechaza un JWT válido cuando el usuario no existe', async () => {
+test('protect rechaza un JWT válido cuando el usuario no existe', { skip: !process.env.MONGODB_TEST_URI }, async () => {
   const token = jwt.sign({ id: '000000000000000000000000', rol: 'ADMIN' }, config.jwtSecret, {
     expiresIn: '1h'
   });
