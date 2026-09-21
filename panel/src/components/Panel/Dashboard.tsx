@@ -207,8 +207,7 @@ export const Dashboard = () => {
     });
 
   const obtenerEtiquetaMesa = (pedido: Pedido) => {
-    const mesaId = typeof pedido.mesaId === "string" ? pedido.mesaId : pedido.mesaId?._id;
-    const mesa = mesas.find((item) => item._id === mesaId);
+    const mesa = mesas.find((item) => item._id === pedido.mesaId);
     return mesa?.nombre || (mesa ? `Mesa ${mesa.numero}` : "Mesa sin asignar");
   };
 
@@ -363,12 +362,9 @@ export const Dashboard = () => {
                       <MenuItem key="entregado" value="ENTREGADO">Entregado</MenuItem>,
                     ]
                   }
-                  {pedido.estadoPedido === "EN_CAMINO" &&
-                    [
-                      <MenuItem key="in-distribution" value="in-distribution">En reparto</MenuItem>,
-                      ,
-                    ]
-                  }
+                  {pedido.estadoPedido === "EN_CAMINO" && (
+                    <MenuItem key="entregado" value="ENTREGADO">Entregado</MenuItem>
+                  )}
                 </TextField>
               )}
 
