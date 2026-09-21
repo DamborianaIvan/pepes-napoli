@@ -103,7 +103,7 @@ router.get('/', protect, asyncHandler(async (req, res) => {
 router.get('/cocina', protect, restrictTo(ROLES.ADMIN, ROLES.CAJERO, ROLES.CHEF), asyncHandler(async (req, res) => {
   const pedidos = await Pedido.find({
     estadoPedido: ESTADOS_PEDIDO.EN_COCINA
-  }).sort({ fechaPedido: 1 });
+  }).populate('mesaId', 'numero nombre').sort({ fechaPedido: 1 });
 
   return res.json(pedidos);
 }));
