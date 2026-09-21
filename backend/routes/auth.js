@@ -51,7 +51,7 @@ router.post('/login', async (req, res, next) => {
     }
 
     const usuario = await Usuario.findOne({ nombreUsuario }).select('+password');
-    if (!usuario) {
+    if (!usuario || !usuario.activo) {
       throw new ApiError(401, 'Usuario o contraseña incorrectos');
     }
 
