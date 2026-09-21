@@ -218,3 +218,7 @@
 .pedido-total { display: flex; justify-content: space-between; margin-top: 1rem; padding-top: 1rem; border-top: 2px solid #d1d5db; font-size: 1.1rem; }
 .pedido-dialog-actions { border-top: 1px solid #e5e7eb; padding: 1rem 1.5rem !important; }
 @media (max-width: 600px) { .pedido-meta { grid-template-columns: 1fr; } .pedido-producto { flex-wrap: wrap; } .pedido-producto-subtotal { margin-left: auto; } }
+
+.pedido-info-secundaria { display:flex; flex-wrap:wrap; gap:0.75rem; margin-bottom:1rem; color:#4b5563; font-size:0.9rem; }
+.agregar-producto { display:flex; gap:0.75rem; align-items:center; margin-bottom:1rem; }
+.agregar-producto .MuiFormControl-root { flex:1; }
