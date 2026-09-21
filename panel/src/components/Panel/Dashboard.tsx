@@ -381,9 +381,7 @@ export const Dashboard = () => {
                 style={{ marginTop: "0.5rem" }}
               >
                {
-                obtenerEstadosPermitidos(
-                  pedido.tipoPedido
-                ).map(
+                obtenerEstadosPermitidos(pedido).map(
                   estado => (
                     <MenuItem
                       key={estado}
