@@ -301,7 +301,7 @@ const ListaPedidos = () => {
                   </div>
                   <div className="pedido-productos-lista">
                     {productosEdicion.map((producto, index) => (
-                      <div className="pedido-producto" key={\`${producto.productoId}-${index}\`}>
+                      <div className="pedido-producto" key={`${producto.productoId}-${index}`}>
                         <div className="pedido-producto-info">
                           <strong>{producto.nombreSnapshot}</strong>
                           <span>${producto.precioUnitario.toLocaleString("es-AR")} c/u</span>
@@ -320,7 +320,7 @@ const ListaPedidos = () => {
               ) : (
                 <div className="pedido-productos-lista">
                   {pedidoSeleccionado.productos.map((producto, index) => (
-                    <div className="pedido-producto" key={\`${producto.productoId}-${index}\`}>
+                    <div className="pedido-producto" key={`${producto.productoId}-${index}`}>
                       <div className="pedido-producto-info">
                         <strong>{producto.nombreSnapshot}</strong>
                         <span>{producto.cantidad} × ${producto.precioUnitario.toLocaleString("es-AR")}</span>
