@@ -113,7 +113,8 @@ export const Dashboard = () => {
               "ABIERTO",
               "CONFIRMADO",
               "EN_COCINA",
-              "LISTO"
+              "LISTO",
+              "SERVIDO"
             ].includes(p.estadoPedido)
         ).length;
         const deliveryActivos = visibles.filter(
@@ -135,7 +136,8 @@ export const Dashboard = () => {
               "ABIERTO",
               "CONFIRMADO",
               "EN_COCINA",
-              "LISTO"
+              "LISTO",
+              "SERVIDO"
             ].includes(p.estadoPedido)
         ).length;
 
