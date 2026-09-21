@@ -134,7 +134,7 @@ const Mesas = () => {
     const accion = estado === "PAGADO" ? "cobro" : "cancelación";
     if (!window.confirm(`¿Confirmás el ${accion} del pedido y la liberación de la mesa ${mesa.numero}?`)) return;
 
-    const token = localStorage.getItem("token");
+    const token = session?.token;
     const headers = { "Content-Type": "application/json", Authorization: `Bearer ${token}` };
 
     try {
