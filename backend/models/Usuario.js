@@ -31,6 +31,10 @@ const UsuarioSchema = new mongoose.Schema({
     enum: ROLES_VALUES,
     default: ROLES.ADMIN
   },
+  activo: {
+    type: Boolean,
+    default: true
+  },
   fechaCreacion: {
     type: Date,
     default: Date.now

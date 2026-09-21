@@ -10,6 +10,7 @@ import "react-date-range/dist/styles.css";
 import "react-date-range/dist/theme/default.css";
 import "./ListaPedidos.css";
 import InventoryIcon from "@mui/icons-material/Inventory";
+import { getSession } from "../../auth/session";
 import {
   ESTADOS_PEDIDO,
   ETIQUETAS_ESTADO_PEDIDO,
@@ -27,6 +28,7 @@ dayjs.extend(isBetween);
 dayjs.locale("es");
 
 const ListaPedidos = () => {
+  const session = getSession();
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [filtros, setFiltros] = useState({
     usuario: "",
@@ -48,7 +50,7 @@ const ListaPedidos = () => {
   useEffect(() => {
     const fetchPedidos = async () => {
       try {
-        const token = localStorage.getItem("token");
+        const token = session?.token;
         const res = await fetch(`${import.meta.env.VITE_API_URL}/api/pedidos`, {
           headers: { Authorization: `Bearer ${token}` },
         });

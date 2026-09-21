@@ -4,6 +4,7 @@ import PeopleAltOutlinedIcon from "@mui/icons-material/PeopleAltOutlined";
 import ReceiptLongOutlinedIcon from "@mui/icons-material/ReceiptLongOutlined";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import TableRestaurantIcon from "@mui/icons-material/TableRestaurant";
+import { getSession } from "../../auth/session";
 import "./Mesas.css";
 
 interface Mesa {
@@ -47,6 +48,7 @@ const formatoPesos = (monto: number) =>
   });
 
 const Mesas = () => {
+  const session = getSession();
   const [mesas, setMesas] = useState<Mesa[]>([]);
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [mesaSeleccionada, setMesaSeleccionada] = useState<Mesa | null>(null);
@@ -56,7 +58,7 @@ const Mesas = () => {
   const [cerrandoPedidoId, setCerrandoPedidoId] = useState<string | null>(null);
 
   const cargarDatos = useCallback(async () => {
-    const token = localStorage.getItem("token");
+    const token = session?.token;
     const headers = { Authorization: `Bearer ${token}` };
 
     try {
@@ -132,7 +134,7 @@ const Mesas = () => {
     const accion = estado === "PAGADO" ? "cobro" : "cancelación";
     if (!window.confirm(`¿Confirmás el ${accion} del pedido y la liberación de la mesa ${mesa.numero}?`)) return;
 
-    const token = localStorage.getItem("token");
+    const token = session?.token;
     const headers = { "Content-Type": "application/json", Authorization: `Bearer ${token}` };
 
     try {

@@ -3,19 +3,21 @@ import { Box, Card, CardContent, Typography, MenuItem, Select, FormControl, Inpu
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 import AssessmentIcon from "@mui/icons-material/Assessment";
 import { ETIQUETAS_METODO_PAGO, ESTADOS_PAGO, type MetodoPago, type Pedido, type EstadoPago, type TipoPedido } from "../../types/pedido";
+import { getSession } from "../../auth/session";
 
 const API_URL = import.meta.env.VITE_API_URL;
 type Periodo = "dia" | "semana" | "mes";
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042"];
 
 const Reportes: React.FC = () => {
+  const session = getSession();
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [periodo, setPeriodo] = useState<Periodo>("mes");
 
   useEffect(() => {
     async function obtenerPedidos() {
       try {
-        const token = localStorage.getItem("token");
+        const token = session?.token;
         const res = await fetch(`${API_URL}/api/pedidos`, { headers: { Authorization: `Bearer ${token}` } });
         if (!res.ok) throw new Error("Error al obtener pedidos");
         setPedidos(await res.json());

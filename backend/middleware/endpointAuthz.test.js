@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import express from 'express';
-import { protect, restrictTo } from './auth.js';
+import { requirePermission } from './auth.js';
 import { ROLES } from '../constants/roles.js';
+import { PERMISSIONS, hasPermission } from '../constants/permissions.js';
 
 const authorizationError = async (middleware, role) => {
   let error;
@@ -14,71 +14,53 @@ const authorizationError = async (middleware, role) => {
   return error;
 };
 
-const app = express();
-app.use(express.json());
-
-// Estas cadenas reproducen las barreras de autorización de las rutas mutables.
 const endpointPolicies = {
-  productosAdmin: restrictTo(ROLES.ADMIN),
-  mesasGestion: restrictTo(ROLES.ADMIN, ROLES.CAJERO),
-  mesasDelete: restrictTo(ROLES.ADMIN),
-  pedidosCreate: restrictTo(ROLES.ADMIN, ROLES.CAJERO),
-  pedidosDelete: restrictTo(ROLES.ADMIN)
+  pedidosCreate: requirePermission(PERMISSIONS.ORDERS_CREATE),
+  pedidosChangeStatus: requirePermission(PERMISSIONS.ORDERS_CHANGE_STATUS),
+  productosManage: requirePermission(PERMISSIONS.PRODUCTS_MANAGE),
+  stockAdjust: requirePermission(PERMISSIONS.STOCK_ADJUST)
 };
 
-void app;
+test('pedidos: crear respeta orders:create', async () => {
+  assert.equal(await authorizationError(endpointPolicies.pedidosCreate, ROLES.ADMIN), undefined);
+  assert.equal(await authorizationError(endpointPolicies.pedidosCreate, ROLES.CAJERO), undefined);
 
-test('productos: CHEF y DELIVERY no pueden administrar productos', async () => {
-  for (const role of [ROLES.CHEF, ROLES.DELIVERY]) {
-    const error = await authorizationError(endpointPolicies.productosAdmin, role);
-    assert.equal(error.statusCode, 403);
-    assert.equal(error.details.reason, 'INSUFFICIENT_ROLE');
-  }
-});
-
-test('productos: ADMIN puede administrar productos', async () => {
-  assert.equal(await authorizationError(endpointPolicies.productosAdmin, ROLES.ADMIN), undefined);
-});
-
-test('mesas: CHEF y DELIVERY no pueden modificar mesas', async () => {
-  for (const role of [ROLES.CHEF, ROLES.DELIVERY]) {
-    const error = await authorizationError(endpointPolicies.mesasGestion, role);
-    assert.equal(error.statusCode, 403);
-  }
-});
-
-test('mesas: ADMIN y CAJERO pueden gestionar mesas', async () => {
-  assert.equal(await authorizationError(endpointPolicies.mesasGestion, ROLES.ADMIN), undefined);
-  assert.equal(await authorizationError(endpointPolicies.mesasGestion, ROLES.CAJERO), undefined);
-});
-
-test('mesas: eliminar requiere ADMIN', async () => {
-  const cajeroError = await authorizationError(endpointPolicies.mesasDelete, ROLES.CAJERO);
-  assert.equal(cajeroError.statusCode, 403);
-  assert.equal(await authorizationError(endpointPolicies.mesasDelete, ROLES.ADMIN), undefined);
-});
-
-test('pedidos: crear requiere ADMIN o CAJERO', async () => {
   for (const role of [ROLES.CHEF, ROLES.DELIVERY]) {
     const error = await authorizationError(endpointPolicies.pedidosCreate, role);
     assert.equal(error.statusCode, 403);
+    assert.equal(error.details.reason, 'INSUFFICIENT_PERMISSION');
   }
-
-  assert.equal(await authorizationError(endpointPolicies.pedidosCreate, ROLES.ADMIN), undefined);
-  assert.equal(await authorizationError(endpointPolicies.pedidosCreate, ROLES.CAJERO), undefined);
 });
 
-test('pedidos: eliminar requiere ADMIN', async () => {
+test('pedidos: cambio de estado respeta orders:change_status', async () => {
+  for (const role of [ROLES.ADMIN, ROLES.CAJERO, ROLES.CHEF, ROLES.DELIVERY]) {
+    assert.equal(await authorizationError(endpointPolicies.pedidosChangeStatus, role), undefined);
+  }
+});
+
+test('productos: administración respeta products:manage', async () => {
+  assert.equal(await authorizationError(endpointPolicies.productosManage, ROLES.ADMIN), undefined);
+
   for (const role of [ROLES.CAJERO, ROLES.CHEF, ROLES.DELIVERY]) {
-    const error = await authorizationError(endpointPolicies.pedidosDelete, role);
+    const error = await authorizationError(endpointPolicies.productosManage, role);
     assert.equal(error.statusCode, 403);
+    assert.equal(error.details.reason, 'INSUFFICIENT_PERMISSION');
   }
-
-  assert.equal(await authorizationError(endpointPolicies.pedidosDelete, ROLES.ADMIN), undefined);
 });
 
-// Verificación estructural para evitar que una ruta mutable pierda protect por accidente.
-test('rutas protegidas: las políticas mutables exigen autenticación antes del rol', () => {
-  assert.equal(typeof protect, 'function');
-  assert.equal(typeof express, 'function');
+test('stock: ajuste respeta stock:adjust', async () => {
+  assert.equal(await authorizationError(endpointPolicies.stockAdjust, ROLES.ADMIN), undefined);
+
+  for (const role of [ROLES.CAJERO, ROLES.CHEF, ROLES.DELIVERY]) {
+    const error = await authorizationError(endpointPolicies.stockAdjust, role);
+    assert.equal(error.statusCode, 403);
+    assert.equal(error.details.reason, 'INSUFFICIENT_PERMISSION');
+  }
+});
+
+test('matriz de permisos: solo los roles definidos reciben cada permiso', () => {
+  assert.equal(hasPermission(ROLES.ADMIN, PERMISSIONS.PRODUCTS_MANAGE), true);
+  assert.equal(hasPermission(ROLES.CAJERO, PERMISSIONS.PRODUCTS_MANAGE), false);
+  assert.equal(hasPermission(ROLES.CHEF, PERMISSIONS.ORDERS_CHANGE_STATUS), true);
+  assert.equal(hasPermission(ROLES.DELIVERY, PERMISSIONS.ORDERS_CHANGE_STATUS), true);
 });

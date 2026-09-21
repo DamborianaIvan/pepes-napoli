@@ -3,6 +3,8 @@ import { TextField, MenuItem, Box, Typography } from "@mui/material";
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import InventoryIcon from "@mui/icons-material/Inventory";
 import { Link } from "react-router-dom";
+import { getSession } from "../../auth/session";
+import { hasPermission, PERMISSIONS } from "../../types/auth";
 import "./Dashboard.css";
 
 interface Pedido {
@@ -64,7 +66,10 @@ export const Dashboard = () => {
   });
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [mesas, setMesas] = useState<Mesa[]>([]);
-  const [rol, setRol] = useState<string | null>(null);
+  const session = getSession();
+  const rol = session?.rol ?? null;
+  const canCreateOrders = rol ? hasPermission(rol, PERMISSIONS.ORDERS_CREATE) : false;
+  const canChangeStatus = rol ? hasPermission(rol, PERMISSIONS.ORDERS_CHANGE_STATUS) : false;
   const [snackbar, setSnackbar] = useState<{ mensaje: string; tipo: "ok" | "error" } | null>(null);
   const [mostrarDashboardCards, setMostrarDashboardCards] = useState(true);
 
@@ -80,9 +85,8 @@ export const Dashboard = () => {
 
 
   const obtenerPedidos = () => {
-    const token = localStorage.getItem("token");
-    const rolGuardado = localStorage.getItem("rol");
-    setRol(rolGuardado);
+    const token = session?.token;
+    const rolGuardado = rol;
     fetch(`${import.meta.env.VITE_API_URL}/api/pedidos`, {
       headers: { Authorization: `Bearer ${token}` },
     })
@@ -101,7 +105,7 @@ export const Dashboard = () => {
         });
 
         const entregadosHoy = pedidosDelDia.filter((p) => {
-          if (rolGuardado === "delivery") {
+          if (rolGuardado === "DELIVERY") {
             return (
               p.estado.toLowerCase() === "entregado" &&
               p.tipoEntrega.toLowerCase() === "delivery"
@@ -121,7 +125,7 @@ export const Dashboard = () => {
 
         const visibles = pedidosDelDia
           .filter((p) => {
-            if (rolGuardado === "delivery") {
+            if (rolGuardado === "DELIVERY") {
               return (
                 p.tipoEntrega === "DELIVERY" &&
                 ["LISTO", "EN_CAMINO", 'ENTREGADO'].includes(p.estado)
@@ -199,7 +203,7 @@ export const Dashboard = () => {
       });
   };
   const actualizarEstado = async (id: string, nuevoEstado: string) => {
-    const token = localStorage.getItem("token");
+    const token = session?.token;
     try {
       const res = await fetch(`${import.meta.env.VITE_API_URL}/api/pedidos/${id}/estado`, {
         method: "PATCH",
@@ -304,11 +308,11 @@ export const Dashboard = () => {
         <Typography variant="h4" component="span">
           DASHBOARD
         </Typography>
-         <Link to="/panel/nuevo-pedido">
+         {canCreateOrders && <Link to="/panel/nuevo-pedido">
                   <button type="button" className="login-button">
                     NUEVO PEDIDO
                   </button>
-                </Link>
+                </Link>}
       </Box>
 
 
@@ -415,7 +419,7 @@ export const Dashboard = () => {
             <p><strong>Estado:</strong> {estadosTraducidos[pedido.estado] || pedido.estado}</p>
             <p><strong>Fecha:</strong> {new Date(pedido.fechaPedido).toLocaleString()}</p>
 
-            {rol === "admin" && pedido.tipoPedido === "SALON" && !["PAGADO", "CANCELADO"].includes(pedido.estado) && (
+            {canChangeStatus && rol === "ADMIN" && pedido.tipoPedido === "SALON" && !["PAGADO", "CANCELADO"].includes(pedido.estado) && (
               <button
                 type="button"
                 className="login-button"
@@ -426,7 +430,7 @@ export const Dashboard = () => {
             )}
 
             {/* Select para delivery */}
-            {rol === "delivery" &&
+            {canChangeStatus && rol === "DELIVERY" &&
               (pedido.estado === "LISTO" || pedido.estado === "EN_CAMINO") && (
                 <TextField
                   select
@@ -454,7 +458,7 @@ export const Dashboard = () => {
               )}
 
             {/* Select para admin */}
-            {rol === "admin" && (
+            {rol === "ADMIN" && (
               <TextField
                 select
                 label="Estado"

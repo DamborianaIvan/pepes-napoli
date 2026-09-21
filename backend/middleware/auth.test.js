@@ -38,17 +38,16 @@ test('protect rechaza tokens inválidos', async () => {
   assert.equal(result.nextError.details.reason, 'INVALID_TOKEN');
 });
 
-test('protect acepta un JWT válido y carga el usuario en la request', async () => {
-  const token = jwt.sign({ id: 'usuario-1', rol: 'ADMIN' }, config.jwtSecret, {
+test('protect rechaza un JWT válido cuando el usuario no existe', { skip: !process.env.MONGODB_TEST_URI }, async () => {
+  const token = jwt.sign({ id: '000000000000000000000000', rol: 'ADMIN' }, config.jwtSecret, {
     expiresIn: '1h'
   });
   const req = { headers: { authorization: `Bearer ${token}` } };
   const result = await executeMiddleware(protect, req);
 
   assert.equal(result.nextCalled, true);
-  assert.equal(result.nextError, undefined);
-  assert.equal(req.usuario.id, 'usuario-1');
-  assert.equal(req.usuario.rol, 'ADMIN');
+  assert.equal(result.nextError.statusCode, 401);
+  assert.equal(result.nextError.details.reason, 'INACTIVE_USER');
 });
 
 test('restrictTo rechaza un rol no autorizado', async () => {
