@@ -11,26 +11,11 @@ export interface TicketContexto {
   direccion: string | null;
 }
 
-export interface TicketProductoCocina {
+export interface TicketProductoVenta {
   nombre: string;
   cantidad: number;
-}
-
-export interface TicketProductoVenta extends TicketProductoCocina {
   precioUnitario: number;
   subtotal: number;
-}
-
-export interface TicketCocina {
-  tipo: "COCINA";
-  version: number;
-  pedidoId: string | null;
-  numeroPedido: string;
-  fechaPedido: string;
-  tipoPedido: TipoPedido;
-  contexto: TicketContexto;
-  productos: TicketProductoCocina[];
-  comentario: string;
 }
 
 export interface TicketVenta {
