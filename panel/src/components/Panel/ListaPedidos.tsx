@@ -112,12 +112,15 @@ const ListaPedidos = () => {
 
   const cargarProductosDisponibles = async () => {
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/productos`);
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/productos`, {
+        headers: { Authorization: `Bearer ${session?.token}` },
+      });
       if (!res.ok) throw new Error();
-      const data = await res.json() as { _id: string; nombre: string; categoria: string; precio: number; disponible: boolean }[];
-      setProductosDisponibles(data.filter((producto) => producto.disponible));
+      const payload = await res.json() as { _id: string; nombre: string; categoria: string; precio: number; disponible: boolean }[] | { productos?: { _id: string; nombre: string; categoria: string; precio: number; disponible: boolean }[] };
+      const data = Array.isArray(payload) ? payload : payload.productos ?? [];
+      setProductosDisponibles(data);
     } catch {
-      setMensajeAccion("No se pudieron cargar los productos disponibles.");
+      setMensajeAccion("No se pudieron cargar los productos.");
     }
   };
 
@@ -141,6 +144,7 @@ const ListaPedidos = () => {
       setPedidoSeleccionado(pedido);
       setProductosEdicion(pedido.productos);
       setModoEdicion(false);
+      setProductoParaAgregar("");
       setMensajeAccion(null);
     } catch {
       setMensajeAccion("No se pudo cargar el detalle del pedido.");
@@ -293,7 +297,7 @@ const ListaPedidos = () => {
                   <div className="agregar-producto">
                     <TextField select fullWidth size="small" label="Agregar producto" value={productoParaAgregar} onChange={(event) => setProductoParaAgregar(event.target.value)} onOpen={() => void cargarProductosDisponibles()}>
                       <MenuItem value="">Seleccionar producto</MenuItem>
-                      {productosDisponibles.filter((producto) => !productosEdicion.some((item) => item.productoId === producto._id)).map((producto) => (
+                      {productosDisponibles.filter((producto) => producto.disponible && !productosEdicion.some((item) => item.productoId === producto._id)).map((producto) => (
                         <MenuItem key={producto._id} value={producto._id}>{producto.nombre} — ${producto.precio.toLocaleString("es-AR")}</MenuItem>
                       ))}
                     </TextField>
@@ -334,7 +338,7 @@ const ListaPedidos = () => {
           )}
         </DialogContent>
         <DialogActions className="pedido-dialog-actions">
-          {pedidoSeleccionado && canEditOrders && pedidoSeleccionado.estadoPedido === "ABIERTO" && !modoEdicion && <Button onClick={() => setModoEdicion(true)}>Editar</Button>}
+          {pedidoSeleccionado && canEditOrders && pedidoSeleccionado.estadoPedido === "ABIERTO" && !modoEdicion && <Button onClick={() => { setModoEdicion(true); void cargarProductosDisponibles(); }}>Editar</Button>}
           {pedidoSeleccionado && modoEdicion && <Button onClick={() => setModoEdicion(false)}>Cancelar edición</Button>}
           {pedidoSeleccionado && modoEdicion && <Button variant="contained" disabled={guardando || productosEdicion.length === 0} onClick={() => void guardarEdicion()}>Guardar cambios</Button>}
           {pedidoSeleccionado && canCancelOrders && !["ENTREGADO", "CANCELADO"].includes(pedidoSeleccionado.estadoPedido) && !modoEdicion && <Button color="error" onClick={() => void cancelarPedido()}>Cancelar pedido</Button>}
