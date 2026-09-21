@@ -71,6 +71,94 @@ describe('integración: gestión de pedidos', { skip: !INTEGRATION_ENABLED }, ()
     return { pedido, producto };
   };
 
+  test('GET /api/pedidos/cocina devuelve solo pedidos EN_COCINA ordenados por antigüedad', async () => {
+    await crearUsuario();
+    const admin = await loginComo('admin-test', 'password-admin-123');
+
+    const producto = await crearProducto();
+    const primero = await Pedido.create({
+      tipoPedido: 'TAKEAWAY',
+      nombreCliente: 'Primero',
+      productos: [{
+        productoId: producto._id,
+        nombreSnapshot: producto.nombre,
+        cantidad: 1,
+        precioUnitario: producto.precio,
+        subtotal: producto.precio
+      }],
+      total: producto.precio,
+      pagos: [],
+      estadoPedido: 'EN_COCINA',
+      estadoPago: 'PENDIENTE',
+      fechaPedido: new Date('2026-01-01T10:00:00.000Z')
+    });
+    await Pedido.create({
+      tipoPedido: 'TAKEAWAY',
+      nombreCliente: 'Listo',
+      productos: [{
+        productoId: producto._id,
+        nombreSnapshot: producto.nombre,
+        cantidad: 1,
+        precioUnitario: producto.precio,
+        subtotal: producto.precio
+      }],
+      total: producto.precio,
+      pagos: [],
+      estadoPedido: 'LISTO',
+      estadoPago: 'PENDIENTE',
+      fechaPedido: new Date('2026-01-01T09:00:00.000Z')
+    });
+
+    const { response, body } = await requestJson('/api/pedidos/cocina', {
+      headers: authorization(admin.token)
+    });
+
+    assert.equal(response.status, 200);
+    assert.deepEqual(body.map((pedido) => pedido._id), [primero._id.toString()]);
+  });
+
+  test('PATCH /api/pedidos/:id/listo permite pasar de EN_COCINA a LISTO', async () => {
+    await crearUsuario();
+    const admin = await loginComo('admin-test', 'password-admin-123');
+    const { pedido } = await crearPedidoConfirmado(admin.token);
+
+    const { response, body } = await requestJson(`/api/pedidos/${pedido._id}/listo`, {
+      method: 'PATCH',
+      headers: authorization(admin.token)
+    });
+
+    assert.equal(response.status, 200);
+    assert.equal(body.estadoPedido, 'LISTO');
+
+    const persisted = await Pedido.findById(pedido._id);
+    assert.equal(persisted.estadoPedido, 'LISTO');
+  });
+
+  test('PATCH /api/pedidos/:id/listo rechaza pedidos que ya no están en cocina', async () => {
+    await crearUsuario();
+    const admin = await loginComo('admin-test', 'password-admin-123');
+    const { pedido } = await crearPedidoConfirmado(admin.token);
+
+    await Pedido.findByIdAndUpdate(pedido._id, { estadoPedido: 'LISTO' });
+
+    const { response } = await requestJson(`/api/pedidos/${pedido._id}/listo`, {
+      method: 'PATCH',
+      headers: authorization(admin.token)
+    });
+
+    assert.equal(response.status, 409);
+  });
+
+  test('GET /api/pedidos/cocina y PATCH /listo requieren autenticación', async () => {
+    const lista = await requestJson('/api/pedidos/cocina');
+    const listo = await requestJson('/api/pedidos/000000000000000000000000/listo', {
+      method: 'PATCH'
+    });
+
+    assert.equal(lista.response.status, 401);
+    assert.equal(listo.response.status, 401);
+  });
+
   test('POST crea pedidos directamente en EN_COCINA', async () => {
     await crearUsuario();
     const admin = await loginComo('admin-test', 'password-admin-123');
