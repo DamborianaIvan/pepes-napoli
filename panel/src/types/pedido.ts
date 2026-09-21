@@ -13,7 +13,7 @@ export const ESTADOS_PEDIDO = [
 ] as const;
 export type EstadoPedido = (typeof ESTADOS_PEDIDO)[number];
 
-export const ESTADOS_PAGO = ['PENDIENTE', 'PARCIAL', 'PAGADO', 'ANULADO'] as const;
+export const ESTADOS_PAGO = ['PENDIENTE', 'PAGADO', 'ANULADO'] as const;
 export type EstadoPago = (typeof ESTADOS_PAGO)[number];
 
 export const METODOS_PAGO = ['EFECTIVO', 'TRANSFERENCIA', 'DEBITO', 'CREDITO'] as const;
@@ -27,6 +27,30 @@ export interface ProductoPedido {
   subtotal: number;
 }
 
+export interface PagoPedido {
+  metodo: MetodoPago;
+  monto: number;
+  usuarioId?: string | null;
+  cajaId?: string | null;
+  fecha?: string;
+  estado?: 'ACTIVO' | 'ANULADO';
+  anuladoPor?: string | null;
+  fechaAnulacion?: string | null;
+}
+
+export interface DescuentoPedido {
+  porcentaje: number;
+  monto: number;
+  aplicadoPor?: string | null;
+  fecha?: string | null;
+}
+
+export interface CierrePedido {
+  cerrado: boolean;
+  fecha?: string | null;
+  usuarioId?: string | null;
+}
+
 export interface Pedido {
   _id: string;
   nombreCliente: string | null;
@@ -34,12 +58,15 @@ export interface Pedido {
   direccion: string | null;
   productos: ProductoPedido[];
   total: number;
+  totalFinal?: number | null;
+  descuento?: DescuentoPedido;
   estadoPedido: EstadoPedido;
   estadoPago: EstadoPago;
   fechaPedido: string;
   usuarioId: string | null;
   mesaId: string | null;
-  pagos: { metodo: MetodoPago; monto: number }[];
+  pagos: PagoPedido[];
+  cierre?: CierrePedido;
   tipoPedido: TipoPedido;
   comentario?: string;
 }

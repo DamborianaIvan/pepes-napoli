@@ -49,7 +49,7 @@ const Reportes: React.FC = () => {
   const totalPorTipoPedido: Record<Exclude<TipoPedido, "SALON">, number> = { DELIVERY: 0, TAKEAWAY: 0 };
 
   pedidosCobrados.forEach((pedido) => {
-    pedido.pagos.forEach((pago) => { totalPorMetodoPago[pago.metodo] += pago.monto; });
+    pedido.pagos.filter((pago) => pago.estado !== "ANULADO").forEach((pago) => { totalPorMetodoPago[pago.metodo] += pago.monto; });
     if (pedido.tipoPedido === "DELIVERY") totalPorTipoPedido.DELIVERY++;
     else if (pedido.tipoPedido === "TAKEAWAY") totalPorTipoPedido.TAKEAWAY++;
   });
@@ -63,7 +63,7 @@ const Reportes: React.FC = () => {
 
   const productoMasPedido = Object.values(productosContados).sort((a, b) => b.cantidad - a.cantidad)[0];
   const totalProductos = Object.values(productosContados).reduce((acc, p) => acc + p.cantidad, 0);
-  const totalIngresos = pedidosCobrados.reduce((acc, pedido) => acc + (pedido.total || 0), 0);
+  const totalIngresos = pedidosCobrados.reduce((acc, pedido) => acc + (pedido.totalFinal ?? pedido.total ?? 0), 0);
   const dataPiePago = (Object.keys(ETIQUETAS_METODO_PAGO) as MetodoPago[]).map((metodo) => ({ name: ETIQUETAS_METODO_PAGO[metodo], value: totalPorMetodoPago[metodo] }));
   const dataPieEntrega = [
     { name: "Delivery", value: totalPorTipoPedido.DELIVERY },

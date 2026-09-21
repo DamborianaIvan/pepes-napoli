@@ -35,6 +35,7 @@ const formatoPesos = (monto: number) =>
 
 const Mesas = () => {
   const session = getSession();
+  const puedeGestionarMesas = session?.rol === "ADMIN" || session?.rol === "CAJERO";
   const [mesas, setMesas] = useState<Mesa[]>([]);
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [mesaSeleccionada, setMesaSeleccionada] = useState<Mesa | null>(null);
@@ -85,6 +86,7 @@ const Mesas = () => {
       .filter(
         (pedido) =>
           pedido.tipoPedido === "SALON" &&
+          !pedido.cierre?.cerrado &&
           !ESTADOS_FINALIZADOS.has(pedido.estadoPedido) &&
           obtenerIdMesa(pedido.mesaId),
       )
@@ -111,6 +113,31 @@ const Mesas = () => {
   const pedidoSeleccionado = mesaSeleccionada
     ? pedidosActivosPorMesa.get(mesaSeleccionada._id)
     : undefined;
+
+  const liberarMesaHuerfana = async (mesa: Mesa) => {
+    if (!window.confirm(`La mesa ${mesa.numero} figura ocupada pero no tiene un pedido activo asociado. ¿Querés liberarla?`)) return;
+
+    const token = session?.token;
+    const headers = { "Content-Type": "application/json", Authorization: `Bearer ${token}` };
+
+    try {
+      setError(null);
+      setMensaje(null);
+      const response = await fetch(`${API_URL}/api/mesas/${mesa._id}/estado`, {
+        method: "PATCH",
+        headers,
+        body: JSON.stringify({ estado: "LIBRE" }),
+      });
+      if (!response.ok) throw new Error("No se pudo liberar la mesa.");
+
+      setMesaSeleccionada(null);
+      setMensaje(`Mesa ${mesa.numero} liberada correctamente.`);
+      await cargarDatos();
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : "No se pudo liberar la mesa.");
+      await cargarDatos();
+    }
+  };
 
   const finalizarPedidoYLiberarMesa = async (
     mesa: Mesa,
@@ -231,13 +258,12 @@ const Mesas = () => {
                 {pedido ? (
                   <span className="mesa-pedido">
                     <ReceiptLongOutlinedIcon fontSize="small" /> Pedido {pedido.estadoPedido}
-                    <strong>{formatoPesos(pedido.total)}</strong>
+                    <strong>{formatoPesos(pedido.totalFinal ?? pedido.total)}</strong>
                   </span>
                 ) : (
                   <span className="mesa-disponible">Disponible para un nuevo pedido</span>
                 )}
-                {pedido && (
-                  <>
+                {pedido?.estadoPedido === "LISTO" && (
                   <button
                     className="mesa-action"
                     type="button"
@@ -247,8 +273,10 @@ const Mesas = () => {
                       void actualizarEstadoPedido(mesa, pedido, "SERVIDO");
                     }}
                   >
-                    {cerrandoPedidoId === pedido._id ? "Cerrando..." : "Marcar como servido"}
+                    {cerrandoPedidoId === pedido._id ? "Actualizando..." : "Marcar como servido"}
                   </button>
+                )}
+                {pedido && ["EN_COCINA", "LISTO"].includes(pedido.estadoPedido) && (
                   <button
                     className="mesa-cancel-action"
                     type="button"
@@ -260,7 +288,27 @@ const Mesas = () => {
                   >
                     Cancelar pedido
                   </button>
-                  </>
+                )}
+                {pedido?.estadoPedido === "SERVIDO" && !pedido.cierre?.cerrado && (
+                  <Link
+                    className="mesa-action"
+                    to="/panel/caja"
+                    onClick={(event) => event.stopPropagation()}
+                  >
+                    Ir a caja para cobrar/cerrar
+                  </Link>
+                )}
+                {!pedido && mesa.estado === "OCUPADA" && puedeGestionarMesas && (
+                  <button
+                    className="mesa-cancel-action"
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      void liberarMesaHuerfana(mesa);
+                    }}
+                  >
+                    Liberar mesa
+                  </button>
                 )}
               </article>
             );
@@ -303,31 +351,54 @@ const Mesas = () => {
                     </li>
                   ))}
                 </ul>
-                <strong className="mesa-total">Total: {formatoPesos(pedidoSeleccionado.total)}</strong>
+                <strong className="mesa-total">Total: {formatoPesos(pedidoSeleccionado.totalFinal ?? pedidoSeleccionado.total)}</strong>
                 {pedidoSeleccionado.comentario && <p className="mesa-comentario">{pedidoSeleccionado.comentario}</p>}
-                <button
-                  className="mesa-modal-action"
-                  type="button"
-                  disabled={cerrandoPedidoId === pedidoSeleccionado._id}
-                  onClick={() => void finalizarPedidoYLiberarMesa(mesaSeleccionada, pedidoSeleccionado, "SERVIDO")}
-                >
-                  {cerrandoPedidoId === pedidoSeleccionado._id ? "Cerrando pedido..." : "Marcar como servido"}
-                </button>
-                <button
-                  className="mesa-modal-cancel-action"
-                  type="button"
-                  disabled={cerrandoPedidoId === pedidoSeleccionado._id}
-                  onClick={() => void finalizarPedidoYLiberarMesa(mesaSeleccionada, pedidoSeleccionado, "CANCELADO")}
-                >
-                  Cancelar pedido y liberar mesa
-                </button>
+                {pedidoSeleccionado.estadoPedido === "LISTO" && (
+                  <button
+                    className="mesa-modal-action"
+                    type="button"
+                    disabled={cerrandoPedidoId === pedidoSeleccionado._id}
+                    onClick={() => void finalizarPedidoYLiberarMesa(mesaSeleccionada, pedidoSeleccionado, "SERVIDO")}
+                  >
+                    {cerrandoPedidoId === pedidoSeleccionado._id ? "Actualizando..." : "Marcar como servido"}
+                  </button>
+                )}
+                {["EN_COCINA", "LISTO"].includes(pedidoSeleccionado.estadoPedido) && (
+                  <button
+                    className="mesa-modal-cancel-action"
+                    type="button"
+                    disabled={cerrandoPedidoId === pedidoSeleccionado._id}
+                    onClick={() => void finalizarPedidoYLiberarMesa(mesaSeleccionada, pedidoSeleccionado, "CANCELADO")}
+                  >
+                    Cancelar pedido y liberar mesa
+                  </button>
+                )}
+                {pedidoSeleccionado.estadoPedido === "SERVIDO" && !pedidoSeleccionado.cierre?.cerrado && (
+                  <Link
+                    className="mesa-modal-action"
+                    to="/panel/caja"
+                    onClick={() => setMesaSeleccionada(null)}
+                  >
+                    Ir a caja para cobrar/cerrar
+                  </Link>
+                )}
               </div>
             ) : (
               <div className="mesa-sin-pedido">
                 <p>No hay un pedido activo en esta mesa.</p>
-                <Link to="/panel/nuevo-pedido" onClick={() => setMesaSeleccionada(null)}>
-                  Crear pedido
-                </Link>
+                {mesaSeleccionada.estado === "OCUPADA" && puedeGestionarMesas ? (
+                  <button
+                    className="mesa-modal-cancel-action"
+                    type="button"
+                    onClick={() => void liberarMesaHuerfana(mesaSeleccionada)}
+                  >
+                    Liberar mesa huérfana
+                  </button>
+                ) : (
+                  <Link to="/panel/nuevo-pedido" onClick={() => setMesaSeleccionada(null)}>
+                    Crear pedido
+                  </Link>
+                )}
               </div>
             )}
 

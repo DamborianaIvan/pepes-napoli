@@ -13,6 +13,7 @@ import MenuIcon from "@mui/icons-material/Menu";
 import PersonIcon from "@mui/icons-material/Person";
 import ManageAccountsIcon from "@mui/icons-material/ManageAccounts";
 import RestaurantMenuIcon from "@mui/icons-material/RestaurantMenu";
+import PointOfSaleIcon from "@mui/icons-material/PointOfSale";
 import { clearSession, getSession } from "../../auth/session";
 import { hasPermission, PERMISSIONS } from "../../types/auth";
 
@@ -38,6 +39,11 @@ const Sidebar = () => {
     : false;
   const canViewReports = rol
     ? hasPermission(rol, PERMISSIONS.REPORTS_VIEW)
+    : false;
+  const canViewCaja = rol
+    ? hasPermission(rol, PERMISSIONS.CASH_OPEN) ||
+      hasPermission(rol, PERMISSIONS.CASH_CLOSE) ||
+      hasPermission(rol, PERMISSIONS.CASH_CHARGE)
     : false;
   const canViewKitchen = rol === "ADMIN" || rol === "CAJERO" || rol === "CHEF";
 
@@ -92,6 +98,13 @@ const Sidebar = () => {
             <Link to="/panel/cocina" onClick={() => setOpen(false)}>
               <RestaurantMenuIcon className="sidebar-icon" />
               COCINA
+            </Link>
+          )}
+
+          {canViewCaja && (
+            <Link to="/panel/caja" onClick={() => setOpen(false)}>
+              <PointOfSaleIcon className="sidebar-icon" />
+              CAJA
             </Link>
           )}
 

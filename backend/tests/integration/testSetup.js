@@ -5,6 +5,8 @@ import Usuario from '../../models/Usuario.js';
 import Pedido from '../../models/Pedido.js';
 import Producto from '../../models/Producto.js';
 import Mesa from '../../models/Mesa.js';
+import Caja from '../../models/Caja.js';
+import MovimientoCaja from '../../models/MovimientoCaja.js';
 
 export const TEST_MONGODB_URI = process.env.MONGODB_TEST_URI;
 export const INTEGRATION_ENABLED = Boolean(TEST_MONGODB_URI);
@@ -81,12 +83,13 @@ export const authorization = (token) => ({
   authorization: `Bearer ${token}`
 });
 
-
 export const limpiarPedidos = async () => {
   await Promise.all([
     Pedido.deleteMany({}),
     Producto.deleteMany({}),
-    Mesa.deleteMany({})
+    Mesa.deleteMany({}),
+    MovimientoCaja.deleteMany({}),
+    Caja.deleteMany({})
   ]);
 };
 
