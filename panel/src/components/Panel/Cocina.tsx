@@ -89,6 +89,11 @@ const Cocina = () => {
       return "Salón";
     }
 
+    if (pedido.tipoPedido === "DELIVERY") {
+      return [pedido.nombreCliente, pedido.direccion].filter(Boolean).join(" · ")
+        || ETIQUETAS_TIPO_PEDIDO[pedido.tipoPedido as TipoPedido];
+    }
+
     return pedido.nombreCliente || ETIQUETAS_TIPO_PEDIDO[pedido.tipoPedido as TipoPedido];
   };
 
