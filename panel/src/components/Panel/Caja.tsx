@@ -41,6 +41,7 @@ const Caja = () => {
   const token = session?.token;
   const [caja, setCaja] = useState<CajaActual | null>(null);
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
+  const [mesas, setMesas] = useState<{ _id: string; numero: number; nombre?: string | null }[]>([]);
   const [montoInicial, setMontoInicial] = useState("");
   const [efectivoDeclarado, setEfectivoDeclarado] = useState("");
   const [descuentos, setDescuentos] = useState<Record<string, string>>({});
@@ -68,12 +69,14 @@ const Caja = () => {
   const refrescar = useCallback(async () => {
     if (!token) return;
     try {
-      const [cajaActual, pedidosActuales] = await Promise.all([
+      const [cajaActual, pedidosActuales, mesasActuales] = await Promise.all([
         api("/api/caja/actual"),
         api("/api/pedidos"),
+        api("/api/mesas"),
       ]);
       setCaja(cajaActual);
       setPedidos(pedidosActuales);
+      setMesas(mesasActuales);
     } catch (error) {
       setMensaje({ tipo: "error", texto: error instanceof Error ? error.message : "Error cargando caja" });
     }
@@ -87,6 +90,18 @@ const Caja = () => {
     () => pedidos.filter((pedido) => pedido.estadoPedido !== "CANCELADO" && !pedido.cierre?.cerrado),
     [pedidos],
   );
+
+  const obtenerIdentificacionPedido = (pedido: Pedido) => {
+    if (pedido.tipoPedido === "SALON" && pedido.mesaId) {
+      const mesa = mesas.find((item) => item._id === pedido.mesaId);
+      if (mesa) {
+        return mesa.nombre ? `Mesa ${mesa.numero} · ${mesa.nombre}` : `Mesa ${mesa.numero}`;
+      }
+      return "Mesa";
+    }
+
+    return pedido.nombreCliente || "Sin nombre";
+  };
 
   const ejecutar = async (accion: () => Promise<unknown>, exito: string) => {
     setProcesando(true);
@@ -258,7 +273,7 @@ const Caja = () => {
                       Pedido #{pedido._id.slice(-6)} · {ETIQUETAS_TIPO_PEDIDO[pedido.tipoPedido]}
                     </Typography>
                     <Typography variant="body2">
-                      {pedido.nombreCliente || "Sin nombre"} · {pedido.estadoPedido} · Pago: {pedido.estadoPago}
+                      {obtenerIdentificacionPedido(pedido)} · {pedido.estadoPedido} · Pago: {pedido.estadoPago}
                     </Typography>
                   </Box>
                   <Box textAlign={{ md: "right" }}>
