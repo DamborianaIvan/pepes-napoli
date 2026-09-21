@@ -1,4 +1,5 @@
-import { FormEvent, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
+import type { FormEvent } from "react";
 import { Alert, Box, Button, MenuItem, Paper, Snackbar, TextField, Typography } from "@mui/material";
 import { getSession } from "../../auth/session";
 import { PERMISSIONS, hasPermission, ROLES, ETIQUETAS_ROL, type Rol } from "../../types/auth";
