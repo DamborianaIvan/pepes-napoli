@@ -112,7 +112,7 @@ const NuevoPedido = () => {
     <Box className="nuevoPedido-container">
       <Box className="nuevoPedido-header">
         <Typography variant="h4" component="span">NUEVO PEDIDO</Typography>
-        <Typography color="text.secondary" sx={{ mt: 1 }}>Armá el pedido y confirmalo.</Typography>
+        <Typography color="text.secondary" sx={{ mt: 1 }}>Armá el pedido y crealo.</Typography>
       </Box>
 
       <Grid container spacing={3}>
