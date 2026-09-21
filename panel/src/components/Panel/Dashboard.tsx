@@ -125,7 +125,7 @@ export const Dashboard = () => {
 
         const visibles = pedidosDelDia
           .filter((p) => {
-            if (rolGuardado === "delivery") {
+            if (rolGuardado === "DELIVERY") {
               return (
                 p.tipoEntrega === "DELIVERY" &&
                 ["LISTO", "EN_CAMINO", 'ENTREGADO'].includes(p.estado)
@@ -458,7 +458,7 @@ export const Dashboard = () => {
               )}
 
             {/* Select para admin */}
-            {rol === "admin" && (
+            {rol === "ADMIN" && (
               <TextField
                 select
                 label="Estado"
