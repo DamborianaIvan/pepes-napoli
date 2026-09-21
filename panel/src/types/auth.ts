@@ -26,6 +26,7 @@ export const PERMISSIONS = {
   STOCK_ADJUST: 'stock:adjust',
   PRODUCTS_MANAGE: 'products:manage',
   REPORTS_VIEW: 'reports:view',
+  USERS_MANAGE: 'users:manage',
 } as const;
 
 export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
@@ -41,6 +42,7 @@ export const PERMISSIONS_BY_ROLE: Record<Rol, readonly Permission[]> = {
     PERMISSIONS.STOCK_ADJUST,
     PERMISSIONS.PRODUCTS_MANAGE,
     PERMISSIONS.REPORTS_VIEW,
+    PERMISSIONS.USERS_MANAGE,
   ],
   CAJERO: [
     PERMISSIONS.ORDERS_CREATE,
