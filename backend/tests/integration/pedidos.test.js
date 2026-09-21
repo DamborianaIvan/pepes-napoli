@@ -33,7 +33,7 @@ describe('integración: gestión de pedidos', { skip: !INTEGRATION_ENABLED }, ()
     await desconectarBaseDePrueba();
   });
 
-  const crearPedidoAbierto = async (adminToken) => {
+  const crearPedidoConfirmado = async (adminToken) => {
     const producto = await crearProducto();
     const { response, body } = await requestJson('/api/pedidos', {
       method: 'POST',
@@ -46,13 +46,45 @@ describe('integración: gestión de pedidos', { skip: !INTEGRATION_ENABLED }, ()
       })
     });
     assert.equal(response.status, 201);
+    assert.equal(body.estadoPedido, 'CONFIRMADO');
     return { pedido: body, producto };
   };
 
-  test('ADMIN puede editar cantidades y el total conserva el precio histórico', async () => {
+  const crearPedidoAbierto = async () => {
+    const producto = await crearProducto();
+    const pedido = await Pedido.create({
+      tipoPedido: 'TAKEAWAY',
+      nombreCliente: 'Cliente Test',
+      telefono: '123456',
+      productos: [{
+        productoId: producto._id,
+        nombreSnapshot: producto.nombre,
+        cantidad: 1,
+        precioUnitario: producto.precio,
+        subtotal: producto.precio
+      }],
+      total: producto.precio,
+      pagos: [],
+      estadoPedido: 'ABIERTO',
+      estadoPago: 'PENDIENTE'
+    });
+    return { pedido, producto };
+  };
+
+  test('POST crea pedidos directamente en CONFIRMADO', async () => {
     await crearUsuario();
     const admin = await loginComo('admin-test', 'password-admin-123');
-    const { pedido, producto } = await crearPedidoAbierto(admin.token);
+
+    const { pedido } = await crearPedidoConfirmado(admin.token);
+
+    assert.equal(pedido.estadoPedido, 'CONFIRMADO');
+    assert.equal(pedido.estadoPago, 'PENDIENTE');
+  });
+
+  test('ADMIN puede editar un pedido abierto y conserva el precio histórico', async () => {
+    await crearUsuario();
+    const admin = await loginComo('admin-test', 'password-admin-123');
+    const { pedido, producto } = await crearPedidoAbierto();
 
     await ProductoUpdatePrecio(producto._id, 1500);
 
@@ -73,7 +105,7 @@ describe('integración: gestión de pedidos', { skip: !INTEGRATION_ENABLED }, ()
     assert.equal(body.total, 3000);
   });
 
-  test('CAJERO puede editar y CHEF no puede editar pedidos', async () => {
+  test('CAJERO puede editar y CHEF no puede editar pedidos abiertos', async () => {
     await crearUsuario();
     await Usuario.create({
       nombre: 'Cajero Test',
@@ -90,10 +122,9 @@ describe('integración: gestión de pedidos', { skip: !INTEGRATION_ENABLED }, ()
       rol: 'CHEF'
     });
 
-    const admin = await loginComo('admin-test', 'password-admin-123');
     const cajero = await loginComo('cajero-test', 'password-cajero-123');
     const chef = await loginComo('chef-test', 'password-chef-123');
-    const { pedido, producto } = await crearPedidoAbierto(admin.token);
+    const { pedido, producto } = await crearPedidoAbierto();
 
     const editCajero = await requestJson(`/api/pedidos/${pedido._id}`, {
       method: 'PATCH',
@@ -117,14 +148,7 @@ describe('integración: gestión de pedidos', { skip: !INTEGRATION_ENABLED }, ()
   test('un pedido confirmado no puede editarse', async () => {
     await crearUsuario();
     const admin = await loginComo('admin-test', 'password-admin-123');
-    const { pedido, producto } = await crearPedidoAbierto(admin.token);
-
-    const confirmar = await requestJson(`/api/pedidos/${pedido._id}/estado`, {
-      method: 'PATCH',
-      headers: authorization(admin.token),
-      body: JSON.stringify({ estadoPedido: 'CONFIRMADO' })
-    });
-    assert.equal(confirmar.response.status, 200);
+    const { pedido, producto } = await crearPedidoConfirmado(admin.token);
 
     const edit = await requestJson(`/api/pedidos/${pedido._id}`, {
       method: 'PATCH',
@@ -133,6 +157,7 @@ describe('integración: gestión de pedidos', { skip: !INTEGRATION_ENABLED }, ()
         productos: [{ productoId: producto._id.toString(), cantidad: 2 }]
       })
     });
+
     assert.equal(edit.response.status, 409);
   });
 
@@ -146,9 +171,8 @@ describe('integración: gestión de pedidos', { skip: !INTEGRATION_ENABLED }, ()
       rol: 'CAJERO'
     });
 
-    const admin = await loginComo('admin-test', 'password-admin-123');
     const cajero = await loginComo('cajero-test', 'password-cajero-123');
-    const { pedido } = await crearPedidoAbierto(admin.token);
+    const { pedido } = await crearPedidoConfirmado((await loginComo('admin-test', 'password-admin-123')).token);
 
     const cancel = await requestJson(`/api/pedidos/${pedido._id}/cancelar`, {
       method: 'PATCH',
@@ -175,7 +199,7 @@ describe('integración: gestión de pedidos', { skip: !INTEGRATION_ENABLED }, ()
 
     const admin = await loginComo('admin-test', 'password-admin-123');
     const chef = await loginComo('chef-test', 'password-chef-123');
-    const { pedido } = await crearPedidoAbierto(admin.token);
+    const { pedido } = await crearPedidoConfirmado(admin.token);
 
     const cancel = await requestJson(`/api/pedidos/${pedido._id}/cancelar`, {
       method: 'PATCH',
@@ -189,9 +213,9 @@ describe('integración: gestión de pedidos', { skip: !INTEGRATION_ENABLED }, ()
   test('no se puede cancelar un pedido entregado', async () => {
     await crearUsuario();
     const admin = await loginComo('admin-test', 'password-admin-123');
-    const { pedido } = await crearPedidoAbierto(admin.token);
+    const { pedido } = await crearPedidoConfirmado(admin.token);
 
-    for (const estadoPedido of ['CONFIRMADO', 'EN_COCINA', 'LISTO', 'ENTREGADO']) {
+    for (const estadoPedido of ['EN_COCINA', 'LISTO', 'ENTREGADO']) {
       const transition = await requestJson(`/api/pedidos/${pedido._id}/estado`, {
         method: 'PATCH',
         headers: authorization(admin.token),
@@ -212,7 +236,7 @@ describe('integración: gestión de pedidos', { skip: !INTEGRATION_ENABLED }, ()
   test('eliminación destructiva queda limitada a pedidos abiertos', async () => {
     await crearUsuario();
     const admin = await loginComo('admin-test', 'password-admin-123');
-    const { pedido } = await crearPedidoAbierto(admin.token);
+    const { pedido } = await crearPedidoAbierto();
 
     const eliminar = await requestJson(`/api/pedidos/${pedido._id}`, {
       method: 'DELETE',
