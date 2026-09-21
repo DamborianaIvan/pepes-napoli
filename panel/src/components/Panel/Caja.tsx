@@ -95,7 +95,11 @@ const Caja = () => {
     if (pedido.tipoPedido === "SALON" && pedido.mesaId) {
       const mesa = mesas.find((item) => item._id === pedido.mesaId);
       if (mesa) {
-        return mesa.nombre ? `Mesa ${mesa.numero} · ${mesa.nombre}` : `Mesa ${mesa.numero}`;
+        const nombre = mesa.nombre?.trim();
+        const nombreGenerico = nombre && /^mesa\s+\d+$/i.test(nombre);
+        return nombre && !nombreGenerico
+          ? `Mesa ${mesa.numero} · ${nombre}`
+          : `Mesa ${mesa.numero}`;
       }
       return "Mesa";
     }

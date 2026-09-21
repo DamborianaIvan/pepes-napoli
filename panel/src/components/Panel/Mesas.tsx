@@ -85,6 +85,7 @@ const Mesas = () => {
       .filter(
         (pedido) =>
           pedido.tipoPedido === "SALON" &&
+          !pedido.cierre?.cerrado &&
           !ESTADOS_FINALIZADOS.has(pedido.estadoPedido) &&
           obtenerIdMesa(pedido.mesaId),
       )
@@ -231,13 +232,12 @@ const Mesas = () => {
                 {pedido ? (
                   <span className="mesa-pedido">
                     <ReceiptLongOutlinedIcon fontSize="small" /> Pedido {pedido.estadoPedido}
-                    <strong>{formatoPesos(pedido.total)}</strong>
+                    <strong>{formatoPesos(pedido.totalFinal ?? pedido.total)}</strong>
                   </span>
                 ) : (
                   <span className="mesa-disponible">Disponible para un nuevo pedido</span>
                 )}
-                {pedido && (
-                  <>
+                {pedido?.estadoPedido === "LISTO" && (
                   <button
                     className="mesa-action"
                     type="button"
@@ -247,8 +247,10 @@ const Mesas = () => {
                       void actualizarEstadoPedido(mesa, pedido, "SERVIDO");
                     }}
                   >
-                    {cerrandoPedidoId === pedido._id ? "Cerrando..." : "Marcar como servido"}
+                    {cerrandoPedidoId === pedido._id ? "Actualizando..." : "Marcar como servido"}
                   </button>
+                )}
+                {pedido && ["EN_COCINA", "LISTO"].includes(pedido.estadoPedido) && (
                   <button
                     className="mesa-cancel-action"
                     type="button"
@@ -260,7 +262,15 @@ const Mesas = () => {
                   >
                     Cancelar pedido
                   </button>
-                  </>
+                )}
+                {pedido?.estadoPedido === "SERVIDO" && !pedido.cierre?.cerrado && (
+                  <Link
+                    className="mesa-action"
+                    to="/panel/caja"
+                    onClick={(event) => event.stopPropagation()}
+                  >
+                    Ir a caja para cobrar/cerrar
+                  </Link>
                 )}
               </article>
             );
@@ -303,24 +313,37 @@ const Mesas = () => {
                     </li>
                   ))}
                 </ul>
-                <strong className="mesa-total">Total: {formatoPesos(pedidoSeleccionado.total)}</strong>
+                <strong className="mesa-total">Total: {formatoPesos(pedidoSeleccionado.totalFinal ?? pedidoSeleccionado.total)}</strong>
                 {pedidoSeleccionado.comentario && <p className="mesa-comentario">{pedidoSeleccionado.comentario}</p>}
-                <button
-                  className="mesa-modal-action"
-                  type="button"
-                  disabled={cerrandoPedidoId === pedidoSeleccionado._id}
-                  onClick={() => void finalizarPedidoYLiberarMesa(mesaSeleccionada, pedidoSeleccionado, "SERVIDO")}
-                >
-                  {cerrandoPedidoId === pedidoSeleccionado._id ? "Cerrando pedido..." : "Marcar como servido"}
-                </button>
-                <button
-                  className="mesa-modal-cancel-action"
-                  type="button"
-                  disabled={cerrandoPedidoId === pedidoSeleccionado._id}
-                  onClick={() => void finalizarPedidoYLiberarMesa(mesaSeleccionada, pedidoSeleccionado, "CANCELADO")}
-                >
-                  Cancelar pedido y liberar mesa
-                </button>
+                {pedidoSeleccionado.estadoPedido === "LISTO" && (
+                  <button
+                    className="mesa-modal-action"
+                    type="button"
+                    disabled={cerrandoPedidoId === pedidoSeleccionado._id}
+                    onClick={() => void finalizarPedidoYLiberarMesa(mesaSeleccionada, pedidoSeleccionado, "SERVIDO")}
+                  >
+                    {cerrandoPedidoId === pedidoSeleccionado._id ? "Actualizando..." : "Marcar como servido"}
+                  </button>
+                )}
+                {["EN_COCINA", "LISTO"].includes(pedidoSeleccionado.estadoPedido) && (
+                  <button
+                    className="mesa-modal-cancel-action"
+                    type="button"
+                    disabled={cerrandoPedidoId === pedidoSeleccionado._id}
+                    onClick={() => void finalizarPedidoYLiberarMesa(mesaSeleccionada, pedidoSeleccionado, "CANCELADO")}
+                  >
+                    Cancelar pedido y liberar mesa
+                  </button>
+                )}
+                {pedidoSeleccionado.estadoPedido === "SERVIDO" && !pedidoSeleccionado.cierre?.cerrado && (
+                  <Link
+                    className="mesa-modal-action"
+                    to="/panel/caja"
+                    onClick={() => setMesaSeleccionada(null)}
+                  >
+                    Ir a caja para cobrar/cerrar
+                  </Link>
+                )}
               </div>
             ) : (
               <div className="mesa-sin-pedido">
