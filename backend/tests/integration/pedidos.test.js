@@ -71,7 +71,7 @@ describe('integración: gestión de pedidos', { skip: !INTEGRATION_ENABLED }, ()
     return { pedido, producto };
   };
 
-  test('POST crea pedidos directamente en CONFIRMADO', async () => {
+  test('POST crea pedidos directamente en EN_COCINA', async () => {
     await crearUsuario();
     const admin = await loginComo('admin-test', 'password-admin-123');
 
@@ -145,7 +145,7 @@ describe('integración: gestión de pedidos', { skip: !INTEGRATION_ENABLED }, ()
     assert.equal(editChef.response.status, 403);
   });
 
-  test('un pedido confirmado no puede editarse', async () => {
+  test('un pedido en cocina no puede editarse', async () => {
     await crearUsuario();
     const admin = await loginComo('admin-test', 'password-admin-123');
     const { pedido, producto } = await crearPedidoConfirmado(admin.token);
