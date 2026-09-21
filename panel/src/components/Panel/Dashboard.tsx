@@ -359,7 +359,7 @@ export const Dashboard = () => {
                 </li>
               ))}
             </ul>
-            <p><strong>Total:</strong> {formatoPesos(pedido.total)}</p>
+            <p><strong>Total:</strong> {formatoPesos(pedido.totalFinal ?? pedido.total)}</p>
             <p><strong>Método Pago:</strong> {pedido.estadoPago}</p>
             <p><strong>Entrega:</strong> {pedido.tipoPedido}</p>
             {pedido.tipoPedido !== "SALON" && (
