@@ -131,6 +131,31 @@ describe('integración: caja y pagos', { skip: !INTEGRATION_ENABLED }, () => {
     assert.equal(caja.body.totalesPorMetodo.DEBITO, 10000);
   });
 
+  test('un descuento del cien por ciento deja el pedido pagado sin movimientos de cobro', async () => {
+    const admin = await prepararAdmin();
+    await abrirCaja(admin.token);
+    const pedido = await crearPedidoTakeaway(admin.token);
+
+    const descuento = await requestJson(`/api/pedidos/${pedido._id}/descuento`, {
+      method: 'PATCH',
+      headers: authorization(admin.token),
+      body: JSON.stringify({ porcentaje: 100 })
+    });
+
+    assert.equal(descuento.response.status, 200);
+    assert.equal(descuento.body.totalFinal, 0);
+    assert.equal(descuento.body.estadoPago, 'PAGADO');
+    assert.equal(descuento.body.pagos.length, 0);
+
+    const caja = await requestJson('/api/caja/actual', {
+      headers: authorization(admin.token)
+    });
+    assert.equal(caja.body.totalesPorMetodo.EFECTIVO, 0);
+    assert.equal(caja.body.totalesPorMetodo.TRANSFERENCIA, 0);
+    assert.equal(caja.body.totalesPorMetodo.DEBITO, 0);
+    assert.equal(caja.body.totalesPorMetodo.CREDITO, 0);
+  });
+
   test('anula el cobro completo sin borrar el historial', async () => {
     const admin = await prepararAdmin();
     await abrirCaja(admin.token);

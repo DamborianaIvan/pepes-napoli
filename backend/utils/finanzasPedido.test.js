@@ -10,6 +10,14 @@ test('calcularDescuento conserva total original y calcula porcentaje', () => {
   });
 });
 
+test('calcularDescuento admite un descuento del cien por ciento', () => {
+  assert.deepEqual(calcularDescuento(15000, 100), {
+    porcentaje: 100,
+    monto: 15000,
+    totalFinal: 0
+  });
+});
+
 test('calcularDescuento rechaza porcentajes fuera de rango', () => {
   assert.throws(() => calcularDescuento(20000, -1));
   assert.throws(() => calcularDescuento(20000, 101));
@@ -33,4 +41,8 @@ test('validarPagosCobro rechaza una suma menor o mayor al total', () => {
   assert.throws(() => validarPagosCobro([
     { metodo: 'EFECTIVO', monto: 21000 }
   ], 20000));
+});
+
+test('validarPagosCobro rechaza cobrar sin medios de pago', () => {
+  assert.throws(() => validarPagosCobro([], 20000));
 });
