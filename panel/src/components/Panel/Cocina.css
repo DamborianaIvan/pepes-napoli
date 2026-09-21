@@ -1,0 +1,79 @@
+.cocina-container {
+  padding: 1.5rem;
+}
+
+.cocina-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.cocina-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  gap: 1rem;
+  align-items: start;
+}
+
+.cocina-card {
+  height: 100%;
+}
+
+.cocina-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.cocina-contexto {
+  font-weight: 700;
+  margin-bottom: 1rem;
+}
+
+.cocina-productos {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-bottom: 1rem;
+}
+
+.cocina-producto {
+  display: flex;
+  gap: 0.6rem;
+  align-items: baseline;
+}
+
+.cocina-comentario {
+  padding: 0.75rem;
+  margin-bottom: 1rem;
+  border-radius: 6px;
+  background: #f5f5f5;
+}
+
+.cocina-estado {
+  min-height: 300px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 0.75rem;
+  text-align: center;
+}
+
+@media (max-width: 768px) {
+  .cocina-container {
+    padding: 1rem;
+  }
+
+  .cocina-header {
+    flex-direction: column;
+  }
+
+  .cocina-header button {
+    align-self: stretch;
+  }
+}
