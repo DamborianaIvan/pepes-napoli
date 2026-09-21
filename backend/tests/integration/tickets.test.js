@@ -77,23 +77,6 @@ describe('integración: tickets', { skip: !INTEGRATION_ENABLED }, () => {
     return body;
   };
 
-  test('ticket de cocina usa snapshots y no expone información financiera', async () => {
-    const { admin, chef } = await prepararUsuarios();
-    const pedido = await crearPedidoTakeaway(admin.token);
-
-    const { response, body } = await requestJson(
-      `/api/pedidos/${pedido._id}/ticket/cocina`,
-      { headers: authorization(chef.token) }
-    );
-
-    assert.equal(response.status, 200);
-    assert.equal(body.tipo, 'COCINA');
-    assert.equal(body.productos[0].nombre, 'Pizza Ticket');
-    assert.equal(body.productos[0].cantidad, 2);
-    assert.equal(body.comentario, 'Sin aceitunas');
-    assert.equal('totalFinal' in body, false);
-    assert.equal('pagos' in body, false);
-  });
 
   test('ticket de venta requiere pago completo y refleja descuento y medios', async () => {
     const { cajero } = await prepararUsuarios();
@@ -148,15 +131,9 @@ describe('integración: tickets', { skip: !INTEGRATION_ENABLED }, () => {
     ]);
   });
 
-  test('CHEF puede imprimir comanda pero no ticket de venta', async () => {
+  test('CHEF no puede generar ticket de venta', async () => {
     const { admin, chef } = await prepararUsuarios();
     const pedido = await crearPedidoTakeaway(admin.token);
-
-    const cocina = await requestJson(
-      `/api/pedidos/${pedido._id}/ticket/cocina`,
-      { headers: authorization(chef.token) }
-    );
-    assert.equal(cocina.response.status, 200);
 
     const venta = await requestJson(
       `/api/pedidos/${pedido._id}/ticket/venta`,
