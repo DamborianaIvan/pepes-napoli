@@ -47,14 +47,14 @@ router.post('/abrir', protect, requirePermission(PERMISSIONS.CASH_OPEN), asyncHa
   return res.status(201).json(caja);
 }));
 
-router.get('/actual', protect, asyncHandler(async (req, res) => {
+router.get('/actual', protect, requirePermission(PERMISSIONS.CASH_CHARGE), asyncHandler(async (req, res) => {
   const caja = await Caja.findOne({ estado: ESTADOS_CAJA.ABIERTA })
     .populate('abiertaPor', 'nombre rol');
 
   return res.json(caja);
 }));
 
-router.get('/:id/movimientos', protect, asyncHandler(async (req, res) => {
+router.get('/:id/movimientos', protect, requirePermission(PERMISSIONS.CASH_CHARGE), asyncHandler(async (req, res) => {
   const caja = await Caja.findById(req.params.id);
   if (!caja) throw new ApiError(404, 'Caja no encontrada');
 
