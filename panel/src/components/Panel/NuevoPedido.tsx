@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import Snackbar from "@mui/material/Snackbar";
-import { Box, Grid, Card, CardContent, Typography, Button, Divider, TextField, Alert, Dialog, DialogTitle, DialogContent, DialogActions, MenuItem, IconButton } from "@mui/material";
+import { Box, Grid, Card, CardContent, Typography, Button, Divider, TextField, Alert, MenuItem, IconButton } from "@mui/material";
 import RemoveIcon from "@mui/icons-material/Remove";
 import AddIcon from "@mui/icons-material/Add";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
@@ -16,7 +16,6 @@ const API_URL = import.meta.env.VITE_API_URL;
 const NuevoPedido = () => {
   const [productos, setProductos] = useState<Producto[]>([]);
   const [mesas, setMesas] = useState<Mesa[]>([]);
-  const [dialogConfirmar, setDialogConfirmar] = useState(false);
   const [guardandoPedido, setGuardandoPedido] = useState(false);
   const [tipoPedido, setTipoPedido] = useState<TipoPedido>(TIPOS_PEDIDO[0]);
   const [nombreCliente, setNombreCliente] = useState("");
@@ -24,10 +23,8 @@ const NuevoPedido = () => {
   const [direccion, setDireccion] = useState("");
   const [comentario, setComentario] = useState("");
   const [mesaId, setMesaId] = useState<string>("");
-  const [pedidoCreado, setPedidoCreado] = useState<Pedido | null>(null);
   const [productosPedido, setProductosPedido] = useState<ProductoPedido[]>([]);
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: "success" | "error" | "info" | "warning" }>({ open: false, message: "", severity: "info" });
-  const [pedidoExitoso, setPedidoExitoso] = useState(false);
   const token = getSession()?.token || "";
   const axiosConfig = useMemo(() => ({ headers: { Authorization: `Bearer ${token}` } }), [token]);
 
@@ -75,21 +72,12 @@ const NuevoPedido = () => {
 
   const eliminarProducto = (productoId: string | null) => setProductosPedido(prev => prev.filter(item => item.productoId !== productoId));
 
-  const abrirConfirmacion = () => {
+  const crearPedido = async () => {
     if (productosPedido.length === 0) return setSnackbar({ open: true, message: "Debe agregar al menos un producto.", severity: "warning" });
     if (tipoPedido === "SALON" && !mesaId) return setSnackbar({ open: true, message: "Seleccione una mesa.", severity: "warning" });
-    setDialogConfirmar(true);
-  };
 
-  const limpiarFormulario = () => {
-    setProductosPedido([]); setMesaId(""); setNombreCliente(""); setTelefono(""); setDireccion(""); setComentario(""); setTipoPedido("SALON");
-  };
-
-  const handleCrearPedido = async () => {
     setGuardandoPedido(true);
     try {
-      if (productosPedido.length === 0) throw new Error("Debe agregar al menos un producto");
-      if (tipoPedido === "SALON" && !mesaId) throw new Error("Debe seleccionar una mesa");
       if (tipoPedido === "DELIVERY" && (!nombreCliente || !telefono || !direccion)) throw new Error("Complete todos los datos del cliente");
       if (tipoPedido === "TAKEAWAY" && (!nombreCliente || !telefono)) throw new Error("Complete todos los datos del cliente");
 
@@ -103,10 +91,8 @@ const NuevoPedido = () => {
         mesaId: tipoPedido === "SALON" ? mesaId : null,
       };
 
-      setDialogConfirmar(false);
       const response = await axios.post<Pedido>(`${API_URL}/api/pedidos`, payload, axiosConfig);
-      setPedidoCreado(response.data);
-      setPedidoExitoso(true);
+      setSnackbar({ open: true, message: `Pedido #${response.data._id.slice(-6)} creado y confirmado correctamente.`, severity: "success" });
       limpiarFormulario();
     } catch (error) {
       const message = error instanceof Error && !axios.isAxiosError(error) ? error.message : (axios.isAxiosError(error) ? error.response?.data?.error?.message || error.response?.data?.message : undefined);
@@ -114,6 +100,10 @@ const NuevoPedido = () => {
     } finally {
       setGuardandoPedido(false);
     }
+  };
+
+  const limpiarFormulario = () => {
+    setProductosPedido([]); setMesaId(""); setNombreCliente(""); setTelefono(""); setDireccion(""); setComentario(""); setTipoPedido("SALON");
   };
 
   const formatCurrency = (value: number) => value.toLocaleString("es-AR", { style: "currency", currency: "ARS" });
@@ -231,25 +221,14 @@ const NuevoPedido = () => {
                   </Box>
                 </Box>
 
-                <Button className="guardar-btn" variant="contained" onClick={abrirConfirmacion} disabled={guardandoPedido}>
-                  Confirmar pedido
+                <Button className="guardar-btn" variant="contained" onClick={crearPedido} disabled={guardandoPedido}>
+                  Crear pedido
                 </Button>
               </Box>
             </CardContent>
           </Card>
         </Grid>
       </Grid>
-
-      <Dialog open={dialogConfirmar} onClose={() => setDialogConfirmar(false)}>
-        <DialogTitle>Confirmar pedido</DialogTitle>
-        <DialogContent>
-          <Typography>Vas a registrar un pedido por {formatCurrency(total)}.</Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDialogConfirmar(false)}>Cancelar</Button>
-          <Button variant="contained" onClick={handleCrearPedido} disabled={guardandoPedido}>Confirmar</Button>
-        </DialogActions>
-      </Dialog>
 
       <Snackbar open={snackbar.open} autoHideDuration={5000} onClose={() => setSnackbar({ ...snackbar, open: false })}>
         <Alert severity={snackbar.severity}>{snackbar.message}</Alert>
