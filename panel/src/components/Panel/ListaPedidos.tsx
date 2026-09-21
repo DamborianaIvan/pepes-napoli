@@ -111,7 +111,7 @@ const ListaPedidos = () => {
       filtros.usuario.trim() &&
       !(pedido.nombreCliente ?? "").toLowerCase().includes(filtros.usuario.toLowerCase().trim())
     ) return false;
-    if (filtros.metodoPago && !pedido.pagos.some((pago) => pago.metodo === filtros.metodoPago)) return false;
+    if (filtros.metodoPago && !pedido.pagos.some((pago) => pago.estado !== "ANULADO" && pago.metodo === filtros.metodoPago)) return false;
     if (filtros.tipoPedido && pedido.tipoPedido !== filtros.tipoPedido) return false;
     if (estadoPedido && pedido.estadoPedido !== estadoPedido) return false;
     return true;
@@ -317,7 +317,7 @@ const ListaPedidos = () => {
           <h3 className="fecha-header">{dia}</h3>
           {pedidosDia.map((pedido) => <div key={pedido._id} className={`pedido-item ${expandedId === pedido._id ? "expandido" : ""}`} onClick={() => setExpandedId((prev) => prev === pedido._id ? null : pedido._id)}>
             <div className="resumen">
-              <strong>{obtenerNombrePedido(pedido)}</strong> - {ETIQUETAS_ESTADO_PEDIDO[pedido.estadoPedido]} - ${pedido.total.toLocaleString("es-AR")}
+              <strong>{obtenerNombrePedido(pedido)}</strong> - {ETIQUETAS_ESTADO_PEDIDO[pedido.estadoPedido]} - ${(pedido.totalFinal ?? pedido.total).toLocaleString("es-AR")}
               <br /><small>{dayjs(pedido.fechaPedido).format("HH:mm")} hs</small>
             </div>
             {expandedId === pedido._id && <div className="detalle">
@@ -327,7 +327,7 @@ const ListaPedidos = () => {
               <p>📞 Teléfono: {pedido.telefono || "-"}</p>
               <p>🚚 Tipo de pedido: {ETIQUETAS_TIPO_PEDIDO[pedido.tipoPedido]}</p>
               <p>💳 Estado de pago: {pedido.estadoPago}</p>
-              <p>💳 Pagos: {pedido.pagos.length ? pedido.pagos.map((pago) => `${ETIQUETAS_METODO_PAGO[pago.metodo]} $${pago.monto.toLocaleString("es-AR")}`).join(" · ") : "Pendiente"}</p>
+              <p>💳 Pagos: {pedido.pagos.some((pago) => pago.estado !== "ANULADO") ? pedido.pagos.filter((pago) => pago.estado !== "ANULADO").map((pago) => `${ETIQUETAS_METODO_PAGO[pago.metodo]} ${pago.monto.toLocaleString("es-AR")}`).join(" · ") : "Pendiente"}</p>
               {pedido.direccion && <p>🏠 Dirección: {pedido.direccion}</p>}
               {pedido.comentario && <p>💬 Comentario: {pedido.comentario}</p>}
               <ul>{pedido.productos.map((prod, i) => <li key={`${pedido._id}-${i}`}>{prod.cantidad} x {prod.nombreSnapshot} (${prod.precioUnitario.toLocaleString("es-AR")})</li>)}</ul>
