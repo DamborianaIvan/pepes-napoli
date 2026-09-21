@@ -151,6 +151,8 @@ const ListaPedidos = () => {
   const canEditOrders = session?.rol ? hasPermission(session.rol, PERMISSIONS.ORDERS_EDIT) : false;
   const canCancelOrders = session?.rol ? hasPermission(session.rol, PERMISSIONS.ORDERS_CANCEL) : false;
   const canChangeStatus = session?.rol ? hasPermission(session.rol, PERMISSIONS.ORDERS_CHANGE_STATUS) : false;
+  const canPrintKitchen = session?.rol === "ADMIN" || session?.rol === "CAJERO" || session?.rol === "CHEF";
+  const canPrintSale = session?.rol === "ADMIN" || session?.rol === "CAJERO";
 
   const cargarProductosDisponibles = async () => {
     try {
@@ -348,7 +350,7 @@ const ListaPedidos = () => {
             </div>
             {expandedId === pedido._id && <div className="detalle">
               <Button size="small" variant="outlined" onClick={(event) => { event.stopPropagation(); void abrirDetalle(pedido._id); }}>Ver detalle</Button>
-              {pedido.estadoPedido !== "CANCELADO" && (
+              {canPrintKitchen && pedido.estadoPedido !== "CANCELADO" && (
                 <Button
                   size="small"
                   variant="outlined"
@@ -361,7 +363,7 @@ const ListaPedidos = () => {
                   Comanda
                 </Button>
               )}
-              {pedido.estadoPago === "PAGADO" && pedido.estadoPedido !== "CANCELADO" && (
+              {canPrintSale && pedido.estadoPago === "PAGADO" && pedido.estadoPedido !== "CANCELADO" && (
                 <Button
                   size="small"
                   variant="outlined"
@@ -470,12 +472,12 @@ const ListaPedidos = () => {
           )}
         </DialogContent>
         <DialogActions className="pedido-dialog-actions">
-          {pedidoSeleccionado && pedidoSeleccionado.estadoPedido !== "CANCELADO" && !modoEdicion && (
+          {pedidoSeleccionado && canPrintKitchen && pedidoSeleccionado.estadoPedido !== "CANCELADO" && !modoEdicion && (
             <Button startIcon={<PrintIcon />} onClick={() => void imprimirComanda(pedidoSeleccionado)}>
               Comanda
             </Button>
           )}
-          {pedidoSeleccionado && pedidoSeleccionado.estadoPago === "PAGADO" && pedidoSeleccionado.estadoPedido !== "CANCELADO" && !modoEdicion && (
+          {pedidoSeleccionado && canPrintSale && pedidoSeleccionado.estadoPago === "PAGADO" && pedidoSeleccionado.estadoPedido !== "CANCELADO" && !modoEdicion && (
             <Button startIcon={<PrintIcon />} onClick={() => void imprimirVenta(pedidoSeleccionado)}>
               Ticket
             </Button>
