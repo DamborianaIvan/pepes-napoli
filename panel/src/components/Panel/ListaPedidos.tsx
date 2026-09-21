@@ -32,6 +32,7 @@ dayjs.locale("es");
 const ListaPedidos = () => {
   const session = getSession();
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
+  const [mesas, setMesas] = useState<{ _id: string; numero: number }[]>([]);
   const [filtros, setFiltros] = useState({
     usuario: "",
     metodoPago: "" as MetodoPago | "",
@@ -71,7 +72,21 @@ const ListaPedidos = () => {
       }
     };
 
+    const fetchMesas = async () => {
+      try {
+        const res = await fetch(`${import.meta.env.VITE_API_URL}/api/mesas`, {
+          headers: { Authorization: `Bearer ${session?.token}` },
+        });
+        if (!res.ok) throw new Error();
+        const data: { _id: string; numero: number }[] = await res.json();
+        setMesas(data);
+      } catch (err) {
+        console.error("Error obteniendo mesas:", err);
+      }
+    };
+
     void fetchPedidos();
+    void fetchMesas();
     const interval = setInterval(() => void fetchPedidos(), 10000);
     return () => clearInterval(interval);
   }, []);
@@ -214,6 +229,15 @@ const ListaPedidos = () => {
     setPaginaActual(1);
   };
 
+  const obtenerNombrePedido = (pedido: Pedido) => {
+    if (pedido.nombreCliente) return pedido.nombreCliente;
+    if (pedido.tipoPedido === "SALON" && pedido.mesaId) {
+      const mesa = mesas.find((item) => item._id === pedido.mesaId);
+      if (mesa) return `Mesa ${mesa.numero}`;
+    }
+    return "Cliente sin nombre";
+  };
+
   const pedidosPorDia = pedidosPaginados.reduce((acc, pedido) => {
     const dia = dayjs(pedido.fechaPedido).format("dddd DD [de] MMMM");
     if (!acc[dia]) acc[dia] = [];
@@ -257,7 +281,7 @@ const ListaPedidos = () => {
           <h3 className="fecha-header">{dia}</h3>
           {pedidosDia.map((pedido) => <div key={pedido._id} className={`pedido-item ${expandedId === pedido._id ? "expandido" : ""}`} onClick={() => setExpandedId((prev) => prev === pedido._id ? null : pedido._id)}>
             <div className="resumen">
-              <strong>{pedido.nombreCliente || "Cliente sin nombre"}</strong> - {ETIQUETAS_ESTADO_PEDIDO[pedido.estadoPedido]} - ${pedido.total.toLocaleString("es-AR")}
+              <strong>{obtenerNombrePedido(pedido)}</strong> - {ETIQUETAS_ESTADO_PEDIDO[pedido.estadoPedido]} - ${pedido.total.toLocaleString("es-AR")}
               <br /><small>{dayjs(pedido.fechaPedido).format("HH:mm")} hs</small>
             </div>
             {expandedId === pedido._id && <div className="detalle">
@@ -285,7 +309,7 @@ const ListaPedidos = () => {
               <div className="pedido-meta">
                 <div><span>Estado</span><strong>{ETIQUETAS_ESTADO_PEDIDO[pedidoSeleccionado.estadoPedido]}</strong></div>
                 <div><span>Tipo</span><strong>{ETIQUETAS_TIPO_PEDIDO[pedidoSeleccionado.tipoPedido]}</strong></div>
-                <div><span>Cliente</span><strong>{pedidoSeleccionado.nombreCliente || "Sin nombre"}</strong></div>
+                <div><span>{pedidoSeleccionado.tipoPedido === "SALON" && pedidoSeleccionado.mesaId ? "Mesa" : "Cliente"}</span><strong>{obtenerNombrePedido(pedidoSeleccionado)}</strong></div>
               </div>
               <div className="pedido-info-secundaria">
                 <span>Teléfono: {pedidoSeleccionado.telefono || "-"}</span>
