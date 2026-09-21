@@ -23,6 +23,7 @@ export const PERMISSIONS = {
   ORDERS_CHANGE_STATUS: 'orders:change_status',
   CASH_OPEN: 'cash:open',
   CASH_CLOSE: 'cash:close',
+  CASH_CHARGE: 'cash:charge',
   STOCK_ADJUST: 'stock:adjust',
   PRODUCTS_MANAGE: 'products:manage',
   REPORTS_VIEW: 'reports:view',
@@ -39,6 +40,7 @@ export const PERMISSIONS_BY_ROLE: Record<Rol, readonly Permission[]> = {
     PERMISSIONS.ORDERS_CHANGE_STATUS,
     PERMISSIONS.CASH_OPEN,
     PERMISSIONS.CASH_CLOSE,
+    PERMISSIONS.CASH_CHARGE,
     PERMISSIONS.STOCK_ADJUST,
     PERMISSIONS.PRODUCTS_MANAGE,
     PERMISSIONS.REPORTS_VIEW,
@@ -51,6 +53,7 @@ export const PERMISSIONS_BY_ROLE: Record<Rol, readonly Permission[]> = {
     PERMISSIONS.ORDERS_CHANGE_STATUS,
     PERMISSIONS.CASH_OPEN,
     PERMISSIONS.CASH_CLOSE,
+    PERMISSIONS.CASH_CHARGE,
     PERMISSIONS.REPORTS_VIEW,
   ],
   CHEF: [

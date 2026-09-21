@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom"; 
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { AuthLogin } from "./components/Login/AuthLogin";
 import { AuthRegister } from "./components/Login/AuthRegister";
 import PanelLayout from "./components/Panel/PanelLayout";
@@ -7,10 +7,11 @@ import { ListaPedidos } from "./components/Panel/ListaPedidos";
 import Mesas from "./components/Panel/Mesas";
 import NuevoPedido from "./components/Panel/NuevoPedido";
 import { PrivateRoute } from "./components/Panel/PrivateRoute";
-import  Reportes  from "./components/Panel/Reportes";
-import  ProductoManager  from "./components/Panel/ProductoManager";
+import Reportes from "./components/Panel/Reportes";
+import ProductoManager from "./components/Panel/ProductoManager";
 import UsuarioManager from "./components/Panel/UsuarioManager";
 import Cocina from "./components/Panel/Cocina";
+import Caja from "./components/Panel/Caja";
 
 export default function App() {
   return (
@@ -32,6 +33,7 @@ export default function App() {
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="pedidos" element={<ListaPedidos />} />
           <Route path="cocina" element={<Cocina />} />
+          <Route path="caja" element={<Caja />} />
           <Route path="reportes" element={<Reportes />} />
           <Route path="crear-producto" element={<ProductoManager />} />
           <Route path="usuarios" element={<UsuarioManager />} />
