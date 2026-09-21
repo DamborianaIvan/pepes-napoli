@@ -375,7 +375,7 @@ const ListaPedidos = () => {
               {modoEdicion && pedidoSeleccionado.estadoPedido === "ABIERTO" ? (
                 <>
                   <div className="agregar-producto">
-                    <TextField select fullWidth size="small" label="Agregar producto" value={productoParaAgregar} onChange={(event) => setProductoParaAgregar(event.target.value)} onOpen={() => void cargarProductosDisponibles()}>
+                    <TextField select fullWidth size="small" label="Agregar producto" value={productoParaAgregar} onChange={(event) => setProductoParaAgregar(event.target.value)}>
                       <MenuItem value="">Seleccionar producto</MenuItem>
                       {productosDisponibles.filter((producto) => producto.disponible && !productosEdicion.some((item) => item.productoId === producto._id)).map((producto) => (
                         <MenuItem key={producto._id} value={producto._id}>{producto.nombre} — ${producto.precio.toLocaleString("es-AR")}</MenuItem>
