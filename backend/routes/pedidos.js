@@ -17,6 +17,7 @@ import {
 import { puedeTransicionarPedido } from '../constants/estadoPedido.js';
 import {
   calcularTotalPedido,
+  normalizarProductosEdicionPedido,
   normalizarProductosPedido,
   validarDatosClientePedido
 } from '../utils/pedido.js';
@@ -104,6 +105,54 @@ router.get('/:id', protect, asyncHandler(async (req, res) => {
   if (!pedido) throw new ApiError(404, 'Pedido no encontrado');
   return res.json(pedido);
 }));
+
+
+router.patch('/:id', protect, requirePermission(PERMISSIONS.ORDERS_EDIT), asyncHandler(async (req, res) => {
+  const { productos, nombreCliente, telefono, direccion, comentario } = req.body;
+
+  const pedido = await Pedido.findById(req.params.id);
+  if (!pedido) throw new ApiError(404, 'Pedido no encontrado');
+
+  if (pedido.estadoPedido !== ESTADOS_PEDIDO.ABIERTO) {
+    throw new ApiError(409, 'Solo se pueden editar pedidos abiertos', {
+      estadoPedido: pedido.estadoPedido
+    });
+  }
+
+  if (!Array.isArray(productos) || productos.length === 0) {
+    throw new ApiError(400, 'El pedido debe contener al menos un producto', {
+      field: 'productos'
+    });
+  }
+
+  validarDatosClientePedido({
+    tipoPedido: pedido.tipoPedido,
+    nombreCliente,
+    telefono,
+    direccion
+  });
+
+  const productoIds = productos.map((item) => item?.productoId);
+  if (productoIds.some((id) => !mongoose.isValidObjectId(id))) {
+    throw new ApiError(400, 'Todos los productos deben tener un productoId válido', {
+      field: 'productos.productoId'
+    });
+  }
+
+  const productosDB = await Producto.find({ _id: { $in: productoIds } });
+  const productosNormalizados = normalizarProductosEdicionPedido(productos, pedido, productosDB);
+
+  pedido.nombreCliente = nombreCliente;
+  pedido.telefono = telefono;
+  pedido.direccion = direccion;
+  pedido.comentario = comentario ?? '';
+  pedido.productos = productosNormalizados;
+  pedido.total = calcularTotalPedido(productosNormalizados);
+
+  await pedido.save();
+  return res.json(pedido);
+}));
+
 
 // Cambio de estado: requiere orders:change_status. Las restricciones finas por rol/estado/tipo corresponden a F2/KDS.
 router.patch('/:id/estado', protect, requirePermission(PERMISSIONS.ORDERS_CHANGE_STATUS), asyncHandler(async (req, res) => {
