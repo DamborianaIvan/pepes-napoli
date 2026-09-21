@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { TextField, MenuItem, Box, Typography } from "@mui/material";
+import { TextField, MenuItem, Box, Typography, Button } from "@mui/material";
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import InventoryIcon from "@mui/icons-material/Inventory";
 import { Link } from "react-router-dom";
@@ -29,6 +29,7 @@ export const Dashboard = () => {
   const rol = session?.rol ?? null;
   const canCreateOrders = rol ? hasPermission(rol, PERMISSIONS.ORDERS_CREATE) : false;
   const canChangeStatus = rol ? hasPermission(rol, PERMISSIONS.ORDERS_CHANGE_STATUS) : false;
+  const canCancelOrders = rol ? hasPermission(rol, PERMISSIONS.ORDERS_CANCEL) : false;
   const [snackbar, setSnackbar] = useState<{ mensaje: string; tipo: "ok" | "error" } | null>(null);
   const [mostrarDashboardCards, setMostrarDashboardCards] = useState(true);
 
@@ -190,10 +191,35 @@ export const Dashboard = () => {
     setTimeout(() => setSnackbar(null), 3000);
   };
 
+  const cancelarPedido = async (id: string) => {
+    const token = session?.token;
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/pedidos/${id}/cancelar`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!res.ok) {
+        setSnackbar({ mensaje: "❌ No se pudo cancelar el pedido.", tipo: "error" });
+        return;
+      }
+
+      await obtenerPedidos();
+      setSnackbar({ mensaje: "✅ Pedido cancelado correctamente.", tipo: "ok" });
+    } catch {
+      setSnackbar({ mensaje: "❌ Error al cancelar el pedido.", tipo: "error" });
+    }
+
+    setTimeout(() => setSnackbar(null), 3000);
+  };
+
   const obtenerEstadosPermitidos = (pedido: Pedido): EstadoPedido[] => {
     const transiciones: Record<EstadoPedido, EstadoPedido[]> = {
-      ABIERTO: ["CONFIRMADO", "CANCELADO"], CONFIRMADO: ["EN_COCINA", "CANCELADO"],
-      EN_COCINA: ["LISTO", "CANCELADO"], LISTO: pedido.tipoPedido === "DELIVERY" ? ["EN_CAMINO", "CANCELADO"] : ["ENTREGADO", "CANCELADO"],
+      ABIERTO: ["CONFIRMADO"], CONFIRMADO: ["EN_COCINA"],
+      EN_COCINA: ["LISTO"], LISTO: pedido.tipoPedido === "DELIVERY" ? ["EN_CAMINO"] : ["ENTREGADO"],
       EN_CAMINO: ["ENTREGADO", "CANCELADO"], ENTREGADO: [], CANCELADO: [],
     };
     return transiciones[pedido.estadoPedido];
@@ -367,6 +393,18 @@ export const Dashboard = () => {
                   )}
                 </TextField>
               )}
+
+            {canCancelOrders && obtenerEstadosPermitidos(pedido).length > 0 && (
+              <Button
+                variant="outlined"
+                color="error"
+                size="small"
+                onClick={() => void cancelarPedido(pedido._id)}
+                sx={{ marginTop: "0.5rem" }}
+              >
+                Cancelar pedido
+              </Button>
+            )}
 
             {/* Select para admin */}
             {rol === "ADMIN" && obtenerEstadosPermitidos(pedido).length > 0 && (
