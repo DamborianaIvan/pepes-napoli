@@ -21,8 +21,10 @@ import type { Pedido } from "../../types/pedido";
 const API_URL = import.meta.env.VITE_API_URL;
 const ESTADOS_FINALIZADOS = new Set(["ENTREGADO", "CANCELADO"]);
 
-const obtenerIdMesa = (mesaId: Pedido["mesaId"]) =>
-  typeof mesaId === "string" ? mesaId : mesaId?._id;
+type MesaPedido = Pedido["mesaId"] | { _id: string } | null;
+
+const obtenerIdMesa = (mesaId: MesaPedido) =>
+  typeof mesaId === "string" ? mesaId : mesaId && "_id" in mesaId ? mesaId._id : undefined;
 
 const formatoPesos = (monto: number) =>
   monto.toLocaleString("es-AR", {
@@ -109,6 +111,14 @@ const Mesas = () => {
   const pedidoSeleccionado = mesaSeleccionada
     ? pedidosActivosPorMesa.get(mesaSeleccionada._id)
     : undefined;
+
+  const finalizarPedidoYLiberarMesa = async (
+    mesa: Mesa,
+    pedido: Pedido,
+    estado: "SERVIDO" | "CANCELADO",
+  ) => {
+    await actualizarEstadoPedido(mesa, pedido, estado);
+  };
 
   const actualizarEstadoPedido = async (
     mesa: Mesa,
