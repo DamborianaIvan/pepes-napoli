@@ -11,7 +11,9 @@ import {
   Typography,
 } from "@mui/material";
 import PointOfSaleIcon from "@mui/icons-material/PointOfSale";
+import PrintIcon from "@mui/icons-material/Print";
 import { getSession } from "../../auth/session";
+import { imprimirTicketVenta } from "../../utils/printTicket";
 import {
   ETIQUETAS_METODO_PAGO,
   ETIQUETAS_TIPO_PEDIDO,
@@ -180,6 +182,19 @@ const Caja = () => {
     () => api(`/api/pedidos/${pedido._id}/cerrar`, { method: "POST" }),
     "Pedido cerrado correctamente.",
   );
+
+  const imprimirVenta = async (pedido: Pedido) => {
+    if (!token) return;
+    try {
+      await imprimirTicketVenta(pedido._id, token);
+      setMensaje(null);
+    } catch (error) {
+      setMensaje({
+        tipo: "error",
+        texto: error instanceof Error ? error.message : "No se pudo imprimir el ticket.",
+      });
+    }
+  };
 
   if (!caja) {
     return (
@@ -354,6 +369,14 @@ const Caja = () => {
                       </Typography>
                     )}
                     <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
+                      <Button
+                        variant="outlined"
+                        startIcon={<PrintIcon />}
+                        disabled={procesando}
+                        onClick={() => void imprimirVenta(pedido)}
+                      >
+                        Imprimir ticket
+                      </Button>
                       {pedido.pagos.some((pago) => pago.estado !== "ANULADO") && (
                         <Button
                           color="error"
