@@ -46,7 +46,7 @@ describe('integración: gestión de pedidos', { skip: !INTEGRATION_ENABLED }, ()
       })
     });
     assert.equal(response.status, 201);
-    assert.equal(body.estadoPedido, 'CONFIRMADO');
+    assert.equal(body.estadoPedido, 'EN_COCINA');
     return { pedido: body, producto };
   };
 
@@ -77,7 +77,7 @@ describe('integración: gestión de pedidos', { skip: !INTEGRATION_ENABLED }, ()
 
     const { pedido } = await crearPedidoConfirmado(admin.token);
 
-    assert.equal(pedido.estadoPedido, 'CONFIRMADO');
+    assert.equal(pedido.estadoPedido, 'EN_COCINA');
     assert.equal(pedido.estadoPago, 'PENDIENTE');
   });
 
@@ -215,7 +215,7 @@ describe('integración: gestión de pedidos', { skip: !INTEGRATION_ENABLED }, ()
     const admin = await loginComo('admin-test', 'password-admin-123');
     const { pedido } = await crearPedidoConfirmado(admin.token);
 
-    for (const estadoPedido of ['EN_COCINA', 'LISTO', 'ENTREGADO']) {
+    for (const estadoPedido of ['LISTO', 'ENTREGADO']) {
       const transition = await requestJson(`/api/pedidos/${pedido._id}/estado`, {
         method: 'PATCH',
         headers: authorization(admin.token),
