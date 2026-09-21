@@ -13,7 +13,7 @@ import InventoryIcon from "@mui/icons-material/Inventory";
 import PrintIcon from "@mui/icons-material/Print";
 import { getSession } from "../../auth/session";
 import { hasPermission, PERMISSIONS } from "../../types/auth";
-import { imprimirTicketCocina, imprimirTicketVenta } from "../../utils/printTicket";
+import { imprimirTicketVenta } from "../../utils/printTicket";
 import {
   ESTADOS_PEDIDO,
   ETIQUETAS_ESTADO_PEDIDO,
@@ -103,18 +103,6 @@ const ListaPedidos = () => {
     return () => document.removeEventListener("mousedown", handleClickFuera);
   }, [mostrarCalendario]);
 
-  const imprimirComanda = async (pedido: Pedido) => {
-    const token = session?.token;
-    if (!token) return;
-
-    try {
-      await imprimirTicketCocina(pedido._id, token);
-      setMensajeAccion(null);
-    } catch (error) {
-      setMensajeAccion(error instanceof Error ? error.message : "No se pudo imprimir la comanda.");
-    }
-  };
-
   const imprimirVenta = async (pedido: Pedido) => {
     const token = session?.token;
     if (!token) return;
@@ -151,7 +139,6 @@ const ListaPedidos = () => {
   const canEditOrders = session?.rol ? hasPermission(session.rol, PERMISSIONS.ORDERS_EDIT) : false;
   const canCancelOrders = session?.rol ? hasPermission(session.rol, PERMISSIONS.ORDERS_CANCEL) : false;
   const canChangeStatus = session?.rol ? hasPermission(session.rol, PERMISSIONS.ORDERS_CHANGE_STATUS) : false;
-  const canPrintKitchen = session?.rol === "ADMIN" || session?.rol === "CAJERO" || session?.rol === "CHEF";
   const canPrintSale = session?.rol === "ADMIN" || session?.rol === "CAJERO";
 
   const cargarProductosDisponibles = async () => {
@@ -350,19 +337,6 @@ const ListaPedidos = () => {
             </div>
             {expandedId === pedido._id && <div className="detalle">
               <Button size="small" variant="outlined" onClick={(event) => { event.stopPropagation(); void abrirDetalle(pedido._id); }}>Ver detalle</Button>
-              {canPrintKitchen && pedido.estadoPedido !== "CANCELADO" && (
-                <Button
-                  size="small"
-                  variant="outlined"
-                  startIcon={<PrintIcon />}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    void imprimirComanda(pedido);
-                  }}
-                >
-                  Comanda
-                </Button>
-              )}
               {canPrintSale && pedido.estadoPago === "PAGADO" && pedido.estadoPedido !== "CANCELADO" && (
                 <Button
                   size="small"
@@ -472,11 +446,6 @@ const ListaPedidos = () => {
           )}
         </DialogContent>
         <DialogActions className="pedido-dialog-actions">
-          {pedidoSeleccionado && canPrintKitchen && pedidoSeleccionado.estadoPedido !== "CANCELADO" && !modoEdicion && (
-            <Button startIcon={<PrintIcon />} onClick={() => void imprimirComanda(pedidoSeleccionado)}>
-              Comanda
-            </Button>
-          )}
           {pedidoSeleccionado && canPrintSale && pedidoSeleccionado.estadoPago === "PAGADO" && pedidoSeleccionado.estadoPedido !== "CANCELADO" && !modoEdicion && (
             <Button startIcon={<PrintIcon />} onClick={() => void imprimirVenta(pedidoSeleccionado)}>
               Ticket
