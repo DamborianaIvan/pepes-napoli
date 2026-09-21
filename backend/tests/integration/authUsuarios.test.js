@@ -222,6 +222,7 @@ describe('integración: autenticación y gestión de usuarios', { skip: !INTEGRA
       rol: 'ADMIN'
     });
     const admin = await loginComo('admin-test', 'password-admin-123');
+    const segundoAdmin = await loginComo('admin-dos', 'password-admin-456');
 
     const primera = await requestJson(`/api/usuarios/${adminUsuario._id}/estado`, {
       method: 'PATCH',
@@ -232,7 +233,7 @@ describe('integración: autenticación y gestión de usuarios', { skip: !INTEGRA
 
     const segunda = await requestJson(`/api/usuarios/${otroAdmin._id}/estado`, {
       method: 'PATCH',
-      headers: authorization(admin.token),
+      headers: authorization(segundoAdmin.token),
       body: JSON.stringify({ activo: false })
     });
 
