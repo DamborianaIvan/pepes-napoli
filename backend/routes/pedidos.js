@@ -31,6 +31,7 @@ import {
   redondearMoneda,
   validarPagosCobro
 } from '../utils/finanzasPedido.js';
+import { crearTicketCocina, crearTicketVenta } from '../utils/ticket.js';
 
 const router = express.Router();
 
@@ -131,6 +132,34 @@ router.get('/cocina', protect, restrictTo(ROLES.ADMIN, ROLES.CAJERO, ROLES.CHEF)
   }).populate('mesaId', 'numero nombre').sort({ fechaPedido: 1 });
 
   return res.json(pedidos);
+}));
+
+router.get('/:id/ticket/cocina', protect, restrictTo(ROLES.ADMIN, ROLES.CAJERO, ROLES.CHEF), asyncHandler(async (req, res) => {
+  const pedido = await Pedido.findById(req.params.id).populate('mesaId', 'numero nombre');
+  if (!pedido) throw new ApiError(404, 'Pedido no encontrado');
+
+  if (pedido.estadoPedido === ESTADOS_PEDIDO.CANCELADO) {
+    throw new ApiError(409, 'No se puede generar una comanda para un pedido cancelado');
+  }
+
+  return res.json(crearTicketCocina(pedido));
+}));
+
+router.get('/:id/ticket/venta', protect, restrictTo(ROLES.ADMIN, ROLES.CAJERO), asyncHandler(async (req, res) => {
+  const pedido = await Pedido.findById(req.params.id).populate('mesaId', 'numero nombre');
+  if (!pedido) throw new ApiError(404, 'Pedido no encontrado');
+
+  if (pedido.estadoPago !== ESTADOS_PAGO.PAGADO) {
+    throw new ApiError(409, 'El pedido debe estar pagado para generar el ticket de venta', {
+      estadoPago: pedido.estadoPago
+    });
+  }
+
+  if (pedido.estadoPedido === ESTADOS_PEDIDO.CANCELADO) {
+    throw new ApiError(409, 'No se puede generar un ticket de venta para un pedido cancelado');
+  }
+
+  return res.json(crearTicketVenta(pedido));
 }));
 
 router.patch('/:id/listo', protect, restrictTo(ROLES.ADMIN, ROLES.CAJERO, ROLES.CHEF), asyncHandler(async (req, res) => {
