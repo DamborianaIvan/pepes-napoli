@@ -35,6 +35,7 @@ const formatoPesos = (monto: number) =>
 
 const Mesas = () => {
   const session = getSession();
+  const puedeGestionarMesas = session?.rol === "ADMIN" || session?.rol === "CAJERO";
   const [mesas, setMesas] = useState<Mesa[]>([]);
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [mesaSeleccionada, setMesaSeleccionada] = useState<Mesa | null>(null);
@@ -112,6 +113,31 @@ const Mesas = () => {
   const pedidoSeleccionado = mesaSeleccionada
     ? pedidosActivosPorMesa.get(mesaSeleccionada._id)
     : undefined;
+
+  const liberarMesaHuerfana = async (mesa: Mesa) => {
+    if (!window.confirm(`La mesa ${mesa.numero} figura ocupada pero no tiene un pedido activo asociado. ¿Querés liberarla?`)) return;
+
+    const token = session?.token;
+    const headers = { "Content-Type": "application/json", Authorization: `Bearer ${token}` };
+
+    try {
+      setError(null);
+      setMensaje(null);
+      const response = await fetch(`${API_URL}/api/mesas/${mesa._id}/estado`, {
+        method: "PATCH",
+        headers,
+        body: JSON.stringify({ estado: "LIBRE" }),
+      });
+      if (!response.ok) throw new Error("No se pudo liberar la mesa.");
+
+      setMesaSeleccionada(null);
+      setMensaje(`Mesa ${mesa.numero} liberada correctamente.`);
+      await cargarDatos();
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : "No se pudo liberar la mesa.");
+      await cargarDatos();
+    }
+  };
 
   const finalizarPedidoYLiberarMesa = async (
     mesa: Mesa,
@@ -272,6 +298,18 @@ const Mesas = () => {
                     Ir a caja para cobrar/cerrar
                   </Link>
                 )}
+                {!pedido && mesa.estado === "OCUPADA" && puedeGestionarMesas && (
+                  <button
+                    className="mesa-cancel-action"
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      void liberarMesaHuerfana(mesa);
+                    }}
+                  >
+                    Liberar mesa
+                  </button>
+                )}
               </article>
             );
           })}
@@ -348,9 +386,19 @@ const Mesas = () => {
             ) : (
               <div className="mesa-sin-pedido">
                 <p>No hay un pedido activo en esta mesa.</p>
-                <Link to="/panel/nuevo-pedido" onClick={() => setMesaSeleccionada(null)}>
-                  Crear pedido
-                </Link>
+                {mesaSeleccionada.estado === "OCUPADA" && puedeGestionarMesas ? (
+                  <button
+                    className="mesa-modal-cancel-action"
+                    type="button"
+                    onClick={() => void liberarMesaHuerfana(mesaSeleccionada)}
+                  >
+                    Liberar mesa huérfana
+                  </button>
+                ) : (
+                  <Link to="/panel/nuevo-pedido" onClick={() => setMesaSeleccionada(null)}>
+                    Crear pedido
+                  </Link>
+                )}
               </div>
             )}
 
