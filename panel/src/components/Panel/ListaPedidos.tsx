@@ -358,7 +358,6 @@ const ListaPedidos = () => {
                     value=""
                     onChange={(event) => void actualizarEstado(event.target.value as EstadoPedido)}
                   >
-                    <MenuItem value="">Seleccionar siguiente estado</MenuItem>
                     {obtenerEstadosPermitidos(pedidoSeleccionado).map((estado) => (
                       <MenuItem key={estado} value={estado}>
                         {ETIQUETAS_ESTADO_PEDIDO[estado]}
