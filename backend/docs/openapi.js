@@ -3,14 +3,15 @@ export const openapiDefinition = {
   info: {
     title: 'API Pepes Pizza',
     version: '1.0.0',
-    description: 'API para autenticación, productos, pedidos y mesas.'
+    description: 'API para autenticación, productos, pedidos, mesas, caja y pagos.'
   },
   servers: [{ url: process.env.BASE_URL || 'http://localhost:5000', description: 'Servidor configurado' }],
   tags: [
     { name: 'Auth', description: 'Autenticación de usuarios' },
     { name: 'Productos', description: 'Catálogo y disponibilidad' },
     { name: 'Pedidos', description: 'Gestión de pedidos' },
-    { name: 'Mesas', description: 'Gestión de mesas del salón' }
+    { name: 'Mesas', description: 'Gestión de mesas del salón' },
+    { name: 'Caja', description: 'Apertura, cobros, movimientos y cierre de caja' }
   ],
   components: {
     securitySchemes: { bearerAuth: { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' } },
@@ -63,7 +64,11 @@ export const openapiDefinition = {
         required: ['metodo', 'monto'],
         properties: {
           metodo: { type: 'string', enum: ['EFECTIVO', 'TRANSFERENCIA', 'DEBITO', 'CREDITO'] },
-          monto: { type: 'number', minimum: 0, example: 24000 }
+          monto: { type: 'number', minimum: 0, example: 24000 },
+          usuarioId: { type: 'string', nullable: true, readOnly: true },
+          cajaId: { type: 'string', nullable: true, readOnly: true },
+          fecha: { type: 'string', format: 'date-time', readOnly: true },
+          estado: { type: 'string', enum: ['ACTIVO', 'ANULADO'], readOnly: true }
         }
       },
       Pedido: {
@@ -79,10 +84,13 @@ export const openapiDefinition = {
           usuarioId: { type: 'string', nullable: true, readOnly: true },
           productos: { type: 'array', items: { $ref: '#/components/schemas/PedidoProducto' } },
           total: { type: 'number', minimum: 0, example: 24000, readOnly: true },
+          descuento: { type: 'object', readOnly: true, properties: { porcentaje: { type: 'number', minimum: 0, maximum: 100 }, monto: { type: 'number', minimum: 0 }, aplicadoPor: { type: 'string', nullable: true }, fecha: { type: 'string', format: 'date-time', nullable: true } } },
+          totalFinal: { type: 'number', minimum: 0, readOnly: true },
           pagos: { type: 'array', items: { $ref: '#/components/schemas/PagoPedido' } },
           comentario: { type: 'string', default: '' },
-          estadoPedido: { type: 'string', enum: ['ABIERTO', 'CONFIRMADO', 'EN_COCINA', 'LISTO', 'EN_CAMINO', 'ENTREGADO', 'CANCELADO'], default: 'ABIERTO' },
-          estadoPago: { type: 'string', enum: ['PENDIENTE', 'PARCIAL', 'PAGADO', 'ANULADO'], default: 'PENDIENTE' },
+          estadoPedido: { type: 'string', enum: ['ABIERTO', 'CONFIRMADO', 'EN_COCINA', 'LISTO', 'SERVIDO', 'EN_CAMINO', 'ENTREGADO', 'CANCELADO'], default: 'ABIERTO' },
+          estadoPago: { type: 'string', enum: ['PENDIENTE', 'PAGADO', 'ANULADO'], default: 'PENDIENTE' },
+          cierre: { type: 'object', readOnly: true, properties: { cerrado: { type: 'boolean' }, fecha: { type: 'string', format: 'date-time', nullable: true }, usuarioId: { type: 'string', nullable: true } } },
           fechaPedido: { type: 'string', format: 'date-time', readOnly: true },
           createdAt: { type: 'string', format: 'date-time', readOnly: true },
           updatedAt: { type: 'string', format: 'date-time', readOnly: true }
@@ -112,8 +120,22 @@ export const openapiDefinition = {
           }
         }
       },
+      Caja: {
+        type: 'object',
+        properties: {
+          _id: { type: 'string', readOnly: true },
+          estado: { type: 'string', enum: ['ABIERTA', 'CERRADA'] },
+          montoInicial: { type: 'number', minimum: 0 },
+          fechaApertura: { type: 'string', format: 'date-time' },
+          fechaCierre: { type: 'string', format: 'date-time', nullable: true },
+          totalesPorMetodo: { type: 'object', additionalProperties: { type: 'number' } },
+          efectivoEsperado: { type: 'number', nullable: true },
+          efectivoDeclarado: { type: 'number', nullable: true },
+          diferencia: { type: 'number', nullable: true }
+        }
+      },
       TokenResponse: { type: 'object', properties: { token: { type: 'string' }, rol: { type: 'string', example: 'admin' }, nombre: { type: 'string', example: 'Juan Pérez' }, id: { type: 'string' } } },
-      EstadoPedido: { type: 'object', required: ['estadoPedido'], properties: { estadoPedido: { type: 'string', enum: ['ABIERTO', 'CONFIRMADO', 'EN_COCINA', 'LISTO', 'EN_CAMINO', 'ENTREGADO', 'CANCELADO'] } } },
+      EstadoPedido: { type: 'object', required: ['estadoPedido'], properties: { estadoPedido: { type: 'string', enum: ['ABIERTO', 'CONFIRMADO', 'EN_COCINA', 'LISTO', 'SERVIDO', 'EN_CAMINO', 'ENTREGADO', 'CANCELADO'] } } },
       EstadoMesa: { type: 'object', required: ['estado'], properties: { estado: { type: 'string', enum: ['LIBRE', 'OCUPADA'] } } },
       StockGeneral: { type: 'object', required: ['stockGeneralActivo'], properties: { stockGeneralActivo: { type: 'boolean', default: true } } }
     },
