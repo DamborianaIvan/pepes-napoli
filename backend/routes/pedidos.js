@@ -165,6 +165,10 @@ router.patch('/:id/estado', protect, requirePermission(PERMISSIONS.ORDERS_CHANGE
     });
   }
 
+  if (estadoPedido === ESTADOS_PEDIDO.CANCELADO) {
+    throw new ApiError(403, 'La cancelación requiere el permiso orders:cancel');
+  }
+
   const pedido = await Pedido.findById(req.params.id);
   if (!pedido) throw new ApiError(404, 'Pedido no encontrado');
 
