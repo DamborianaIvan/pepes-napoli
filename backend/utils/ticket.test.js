@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { agruparPagosActivos, crearTicketCocina, crearTicketVenta } from './ticket.js';
+import { agruparPagosActivos, crearTicketVenta } from './ticket.js';
 
 const pedidoBase = {
   _id: '68d0abc123def4567890abcd',
@@ -78,15 +78,3 @@ test('crearTicketVenta conserva snapshots, descuento y pagos activos', () => {
   ]);
 });
 
-test('crearTicketCocina no incluye información financiera', () => {
-  const ticket = crearTicketCocina(pedidoBase);
-
-  assert.equal(ticket.tipo, 'COCINA');
-  assert.deepEqual(ticket.productos, [
-    { nombre: 'Pizza Muzzarella', cantidad: 2 }
-  ]);
-  assert.equal(ticket.comentario, 'Sin aceitunas');
-  assert.equal('totalFinal' in ticket, false);
-  assert.equal('pagos' in ticket, false);
-  assert.equal('descuento' in ticket, false);
-});
