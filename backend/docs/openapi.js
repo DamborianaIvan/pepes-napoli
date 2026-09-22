@@ -42,12 +42,25 @@ export const openapiDefinition = {
           imagen: { type: 'string', example: '' }, disponible: { type: 'boolean', default: true }
         }
       },
+      MesaLayout: {
+        type: 'object',
+        properties: {
+          x: { type: 'number', minimum: 0, maximum: 1200, example: 100 },
+          y: { type: 'number', minimum: 0, maximum: 700, example: 120 },
+          ancho: { type: 'number', minimum: 80, maximum: 280, example: 160 },
+          alto: { type: 'number', minimum: 80, maximum: 220, example: 100 },
+          rotacion: { type: 'number', minimum: 0, maximum: 359, example: 0 },
+          forma: { type: 'string', enum: ['RECTANGULAR', 'CUADRADA', 'REDONDA'], example: 'RECTANGULAR' }
+        }
+      },
       Mesa: {
         type: 'object', required: ['numero'], properties: {
           _id: { type: 'string', readOnly: true }, numero: { type: 'number', example: 1 },
           nombre: { type: 'string', nullable: true, example: 'Mesa ventana' }, capacidad: { type: 'number', default: 4, example: 4 },
           estado: { type: 'string', enum: ['LIBRE', 'OCUPADA'], default: 'LIBRE' }, activa: { type: 'boolean', default: true },
-          observaciones: { type: 'string', example: 'Cerca de la ventana' }, createdAt: { type: 'string', format: 'date-time', readOnly: true }, updatedAt: { type: 'string', format: 'date-time', readOnly: true }
+          observaciones: { type: 'string', example: 'Cerca de la ventana' },
+          layout: { $ref: '#/components/schemas/MesaLayout' },
+          createdAt: { type: 'string', format: 'date-time', readOnly: true }, updatedAt: { type: 'string', format: 'date-time', readOnly: true }
         }
       },
       PedidoProducto: {
