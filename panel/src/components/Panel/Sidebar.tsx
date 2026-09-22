@@ -14,6 +14,7 @@ import PersonIcon from "@mui/icons-material/Person";
 import ManageAccountsIcon from "@mui/icons-material/ManageAccounts";
 import RestaurantMenuIcon from "@mui/icons-material/RestaurantMenu";
 import PointOfSaleIcon from "@mui/icons-material/PointOfSale";
+import Inventory2Icon from "@mui/icons-material/Inventory2";
 import { clearSession, getSession } from "../../auth/session";
 import { hasPermission, PERMISSIONS } from "../../types/auth";
 
@@ -33,6 +34,9 @@ const Sidebar = () => {
     : false;
   const canManageProducts = rol
     ? hasPermission(rol, PERMISSIONS.PRODUCTS_MANAGE)
+    : false;
+  const canAdjustStock = rol
+    ? hasPermission(rol, PERMISSIONS.STOCK_ADJUST)
     : false;
   const canManageUsers = rol
     ? hasPermission(rol, PERMISSIONS.USERS_MANAGE)
@@ -112,6 +116,13 @@ const Sidebar = () => {
             <Link to="/panel/crear-producto" onClick={() => setOpen(false)}>
               <ReceiptLongIcon className="sidebar-icon" />
               MENÚ
+            </Link>
+          )}
+
+          {canAdjustStock && (
+            <Link to="/panel/stock" onClick={() => setOpen(false)}>
+              <Inventory2Icon className="sidebar-icon" />
+              STOCK
             </Link>
           )}
 

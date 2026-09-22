@@ -3,7 +3,7 @@ export const openapiDefinition = {
   info: {
     title: 'API Pepes Pizza',
     version: '1.0.0',
-    description: 'API para autenticación, productos, pedidos, mesas, caja y pagos.'
+    description: 'API para autenticación, productos, pedidos, mesas, caja, pagos, tickets y stock.'
   },
   servers: [{ url: process.env.BASE_URL || 'http://localhost:5000', description: 'Servidor configurado' }],
   tags: [
@@ -12,7 +12,8 @@ export const openapiDefinition = {
     { name: 'Pedidos', description: 'Gestión de pedidos' },
     { name: 'Mesas', description: 'Gestión de mesas del salón' },
     { name: 'Caja', description: 'Apertura, cobros, movimientos y cierre de caja' },
-    { name: 'Tickets', description: 'Comprobantes de venta imprimibles' }
+    { name: 'Tickets', description: 'Comprobantes de venta imprimibles' },
+    { name: 'Stock', description: 'Ingredientes, recetas, movimientos y alertas de inventario' }
   ],
   components: {
     securitySchemes: { bearerAuth: { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' } },
@@ -140,6 +141,53 @@ export const openapiDefinition = {
           comentario: { type: 'string' }
         }
       },
+      Ingrediente: {
+        type: 'object',
+        properties: {
+          _id: { type: 'string', readOnly: true },
+          nombre: { type: 'string', example: 'Mozzarella' },
+          unidad: { type: 'string', enum: ['G', 'KG', 'ML', 'L', 'UNIDAD'] },
+          stockActual: { type: 'number', example: 12.5 },
+          stockMinimo: { type: 'number', minimum: 0, example: 3 },
+          activo: { type: 'boolean', default: true },
+          stockBajo: { type: 'boolean', readOnly: true }
+        }
+      },
+      ComponenteReceta: {
+        type: 'object',
+        required: ['ingredienteId', 'cantidad'],
+        properties: {
+          ingredienteId: { type: 'string' },
+          cantidad: { type: 'number', exclusiveMinimum: 0 }
+        }
+      },
+      Receta: {
+        type: 'object',
+        properties: {
+          _id: { type: 'string', readOnly: true },
+          productoId: { type: 'string' },
+          componentes: {
+            type: 'array',
+            items: { $ref: '#/components/schemas/ComponenteReceta' }
+          },
+          activa: { type: 'boolean', default: true }
+        }
+      },
+      MovimientoStock: {
+        type: 'object',
+        properties: {
+          _id: { type: 'string', readOnly: true },
+          ingredienteId: { type: 'string' },
+          tipo: { type: 'string', enum: ['ENTRADA', 'SALIDA', 'AJUSTE', 'MERMA', 'CONSUMO'] },
+          cantidad: { type: 'number', exclusiveMinimum: 0 },
+          stockAnterior: { type: 'number' },
+          stockPosterior: { type: 'number' },
+          motivo: { type: 'string' },
+          pedidoId: { type: 'string', nullable: true },
+          usuarioId: { type: 'string', nullable: true },
+          fecha: { type: 'string', format: 'date-time' }
+        }
+      },
       Caja: {
         type: 'object',
         properties: {
@@ -156,8 +204,7 @@ export const openapiDefinition = {
       },
       TokenResponse: { type: 'object', properties: { token: { type: 'string' }, rol: { type: 'string', example: 'admin' }, nombre: { type: 'string', example: 'Juan Pérez' }, id: { type: 'string' } } },
       EstadoPedido: { type: 'object', required: ['estadoPedido'], properties: { estadoPedido: { type: 'string', enum: ['ABIERTO', 'CONFIRMADO', 'EN_COCINA', 'LISTO', 'SERVIDO', 'EN_CAMINO', 'ENTREGADO', 'CANCELADO'] } } },
-      EstadoMesa: { type: 'object', required: ['estado'], properties: { estado: { type: 'string', enum: ['LIBRE', 'OCUPADA'] } } },
-      StockGeneral: { type: 'object', required: ['stockGeneralActivo'], properties: { stockGeneralActivo: { type: 'boolean', default: true } } }
+      EstadoMesa: { type: 'object', required: ['estado'], properties: { estado: { type: 'string', enum: ['LIBRE', 'OCUPADA'] } } }
     },
     responses: {
       Unauthorized: { description: 'Token ausente, inválido o vencido', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },

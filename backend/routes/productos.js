@@ -2,7 +2,6 @@ import express from 'express';
 import { protect, requirePermission } from '../middleware/auth.js';
 import { PERMISSIONS } from '../constants/permissions.js';
 import Producto from '../models/Producto.js';
-import StockGeneral from '../models/StockGeneral.js';
 
 const router = express.Router();
 
@@ -68,39 +67,6 @@ router.get('/', async (req, res) => {
     res.json(productos);
   } catch (error) {
     res.status(500).json({ message: 'Error al obtener productos' });
-  }
-});
-
-// Esta ruta debe declararse antes de /:id para no ser interpretada como un ID.
-router.get('/configuracion/stock-general', async (req, res) => {
-  try {
-    let config = await StockGeneral.findOne();
-    if (!config) config = await StockGeneral.create({ stockGeneralActivo: true });
-    res.json({ stockGeneralActivo: config.stockGeneralActivo });
-  } catch (error) {
-    res.status(500).json({ message: 'Error al obtener configuración global' });
-  }
-});
-
-// Actualizar stock general: requiere stock:adjust.
-router.patch('/configuracion/stock-general', protect, requirePermission(PERMISSIONS.STOCK_ADJUST), async (req, res) => {
-  try {
-    const { stockGeneralActivo } = req.body;
-    if (typeof stockGeneralActivo !== 'boolean') {
-      return res.status(400).json({ message: 'Se espera el campo "stockGeneralActivo" como booleano' });
-    }
-
-    let config = await StockGeneral.findOne();
-    if (!config) {
-      config = new StockGeneral({ stockGeneralActivo });
-    } else {
-      config.stockGeneralActivo = stockGeneralActivo;
-    }
-
-    await config.save();
-    res.json({ message: `Stock general ${stockGeneralActivo ? 'activado' : 'desactivado'}`, config });
-  } catch (error) {
-    res.status(500).json({ message: 'Error al actualizar el estado de stock general' });
   }
 });
 

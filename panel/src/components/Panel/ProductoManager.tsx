@@ -74,8 +74,6 @@ const ProductoManager = () => {
 });
 
   const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [stockGeneralActivo, setStockGeneralActivo] = useState<boolean>(false);
-
   const token = getSession()?.token || "";
 
   const axiosConfig = useMemo(() => ({
@@ -99,30 +97,10 @@ const ProductoManager = () => {
     }
   }, [axiosConfig]);
 
-  const fetchStockGeneral = useCallback(async () => {
-    try {
-      const res = await axios.get(`${API_URL}/api/productos/configuracion/stock-general`, axiosConfig);
-      setStockGeneralActivo(res.data.stockGeneralActivo);
-    } catch {
-      setSnackbar({ open: true, message: "Error al obtener el stock general", severity: "error" });
-    }
-  }, [axiosConfig]);
-
-  const handleToggleStockGeneral = async () => {
-    try {
-      const nuevoEstado = !stockGeneralActivo;
-      await axios.patch(`${API_URL}/api/productos/configuracion/stock-general`, { stockGeneralActivo: nuevoEstado }, axiosConfig);
-      setStockGeneralActivo(nuevoEstado);
-      setSnackbar({ open: true, message: `Stock general ${nuevoEstado ? "activado" : "desactivado"}`, severity: "success" });
-    } catch {
-      setSnackbar({ open: true, message: "Error al actualizar el stock general", severity: "error" });
-    }
-  };
 
   useEffect(() => {
     fetchProductos();
-    fetchStockGeneral();
-  }, [fetchProductos, fetchStockGeneral]);
+  }, [fetchProductos]);
 
   const handleOpenDialog = (producto?: Producto) => {
   setFormErrors({});
@@ -228,12 +206,6 @@ const ProductoManager = () => {
         <Button startIcon={<AddCircleIcon />} variant="contained" color="primary" onClick={() => handleOpenDialog()}>
           Nuevo Producto
         </Button>
-      </div>
-
-      <div className="stock-general">
-        <label>
-          <input type="checkbox" checked={stockGeneralActivo} onChange={handleToggleStockGeneral} /> Hay stock general
-        </label>
       </div>
 
       {loading ? (

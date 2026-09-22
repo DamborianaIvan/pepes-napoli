@@ -14,6 +14,7 @@ import pedidosRoutes from './routes/pedidos.js';
 import mesasRoutes from './routes/mesas.js';
 import usuariosRoutes from './routes/usuarios.js';
 import cajaRoutes from './routes/caja.js';
+import stockRoutes from './routes/stock.js';
 
 const swaggerDocs = { ...openapiDefinition, paths };
 const app = express();
@@ -33,6 +34,7 @@ app.use('/api/pedidos', pedidosRoutes);
 app.use('/api/mesas', mesasRoutes);
 app.use('/api/usuarios', usuariosRoutes);
 app.use('/api/caja', cajaRoutes);
+app.use('/api/stock', stockRoutes);
 app.use(notFound);
 app.use(errorHandler);
 
