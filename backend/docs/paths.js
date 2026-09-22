@@ -260,6 +260,40 @@ export const paths = {
   '/api/caja/cerrar': { post: { tags: ['Caja'], summary: 'Cerrar caja y calcular arqueo', security: auth, requestBody: { required: true, content: json({ type: 'object', required: ['efectivoDeclarado'], properties: { efectivoDeclarado: { type: 'number', minimum: 0 } } }) }, responses: secured({ 200: { description: 'Caja cerrada', content: json(ref('Caja')) }, 409: error('No hay caja abierta') }) } },
   '/api/caja/{id}/movimientos': { get: { tags: ['Caja'], summary: 'Listar movimientos de caja', security: auth, parameters: [id], responses: secured({ 200: { description: 'Movimientos de caja', content: json({ type: 'array', items: { type: 'object' } }) }, 404: { $ref: '#/components/responses/NotFound' } }) } },
   '/api/mesas': { get: { tags: ['Mesas'], summary: 'Listar mesas', security: auth, responses: secured({ 200: { description: 'Lista de mesas', content: json({ type: 'array', items: ref('Mesa') }) }, 500: error('Error interno') }) }, post: { tags: ['Mesas'], summary: 'Crear mesa', security: auth, requestBody: { required: true, content: json(ref('Mesa')) }, responses: secured({ 201: { description: 'Mesa creada', content: json(ref('Mesa')) }, 400: error('Número de mesa duplicado'), 500: error('Error interno') }) } },
+  '/api/mesas/layout': {
+    patch: {
+      tags: ['Mesas'],
+      summary: 'Guardar layout completo del salón',
+      security: auth,
+      requestBody: {
+        required: true,
+        content: json({
+          type: 'object',
+          required: ['mesas'],
+          properties: {
+            mesas: {
+              type: 'array',
+              minItems: 1,
+              items: {
+                type: 'object',
+                required: ['id', 'layout'],
+                properties: {
+                  id: { type: 'string' },
+                  layout: ref('MesaLayout')
+                }
+              }
+            }
+          }
+        })
+      },
+      responses: secured({
+        200: { description: 'Plano actualizado' },
+        400: error('Layout inválido'),
+        403: { $ref: '#/components/responses/Forbidden' },
+        404: error('Mesa inexistente')
+      })
+    }
+  },
   '/api/mesas/{id}': { get: { tags: ['Mesas'], summary: 'Obtener mesa', security: auth, parameters: [id], responses: secured({ 200: { description: 'Mesa', content: json(ref('Mesa')) }, 404: { $ref: '#/components/responses/NotFound' }, 500: error('Error interno') }) }, put: { tags: ['Mesas'], summary: 'Actualizar mesa', security: auth, parameters: [id], requestBody: { required: true, content: json(ref('Mesa')) }, responses: secured({ 200: { description: 'Mesa actualizada', content: json(ref('Mesa')) }, 404: { $ref: '#/components/responses/NotFound' }, 500: error('Error interno') }) }, delete: { tags: ['Mesas'], summary: 'Eliminar mesa', security: auth, parameters: [id], responses: secured({ 200: { description: 'Mesa eliminada', content: json({ type: 'object', properties: { message: { type: 'string' } } }) }, 404: { $ref: '#/components/responses/NotFound' }, 500: error('Error interno') }) } },
   '/api/mesas/{id}/estado': { patch: { tags: ['Mesas'], summary: 'Actualizar estado de mesa', security: auth, parameters: [id], requestBody: { required: true, content: json(ref('EstadoMesa')) }, responses: secured({ 200: { description: 'Estado actualizado', content: json({ type: 'object', properties: { message: { type: 'string' }, mesa: ref('Mesa') } }) }, 404: { $ref: '#/components/responses/NotFound' }, 500: error('Error interno') }) } }
 };
