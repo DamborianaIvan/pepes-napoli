@@ -1,7 +1,9 @@
 import express from 'express';
+import mongoose from 'mongoose';
 import { protect, restrictTo } from '../middleware/auth.js';
 import { ROLES } from '../constants/roles.js';
 import Mesa from '../models/Mesa.js';
+import { FORMAS_MESA, PLANO_MESAS } from '../constants/mesa.js';
 
 const router = express.Router();
 const ROLES_GESTION_MESAS = [ROLES.ADMIN, ROLES.CAJERO];
@@ -13,6 +15,87 @@ router.get('/', protect, async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Error obteniendo mesas' });
+  }
+});
+
+
+// Persistir el plano completo: solo ADMIN.
+router.patch('/layout', protect, restrictTo(ROLES.ADMIN), async (req, res) => {
+  try {
+    const items = req.body?.mesas;
+    if (!Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ message: 'Se requiere al menos una mesa para guardar el plano' });
+    }
+
+    const ids = items.map((item) => item?.id);
+    if (ids.some((id) => !mongoose.isValidObjectId(id))) {
+      return res.status(400).json({ message: 'El plano contiene IDs de mesa inválidos' });
+    }
+
+    if (new Set(ids.map(String)).size !== ids.length) {
+      return res.status(400).json({ message: 'El plano no puede repetir mesas' });
+    }
+
+    const mesasExistentes = await Mesa.find({ _id: { $in: ids } }).select('_id');
+    if (mesasExistentes.length !== ids.length) {
+      return res.status(404).json({ message: 'Una o más mesas del plano no existen' });
+    }
+
+    const normalizados = [];
+
+    for (const item of items) {
+      const layout = item?.layout ?? {};
+      const x = Number(layout.x);
+      const y = Number(layout.y);
+      const ancho = Number(layout.ancho);
+      const alto = Number(layout.alto);
+      const rotacion = Number(layout.rotacion);
+      const forma = layout.forma;
+
+      const numerosValidos = [x, y, ancho, alto, rotacion].every(Number.isFinite);
+      if (!numerosValidos) {
+        return res.status(400).json({ message: 'El layout contiene valores numéricos inválidos' });
+      }
+
+      if (
+        ancho < PLANO_MESAS.MESA_ANCHO_MIN ||
+        ancho > PLANO_MESAS.MESA_ANCHO_MAX ||
+        alto < PLANO_MESAS.MESA_ALTO_MIN ||
+        alto > PLANO_MESAS.MESA_ALTO_MAX
+      ) {
+        return res.status(400).json({ message: 'El tamaño de una mesa está fuera de los límites permitidos' });
+      }
+
+      if (x < 0 || y < 0 || x + ancho > PLANO_MESAS.ANCHO || y + alto > PLANO_MESAS.ALTO) {
+        return res.status(400).json({ message: 'Una mesa queda fuera de los límites del plano' });
+      }
+
+      if (rotacion < 0 || rotacion >= 360) {
+        return res.status(400).json({ message: 'La rotación debe estar entre 0 y 359 grados' });
+      }
+
+      if (!Object.values(FORMAS_MESA).includes(forma)) {
+        return res.status(400).json({ message: 'Forma de mesa inválida' });
+      }
+
+      normalizados.push({
+        id: item.id,
+        layout: { x, y, ancho, alto, rotacion, forma }
+      });
+    }
+
+    await Mesa.bulkWrite(normalizados.map((item) => ({
+      updateOne: {
+        filter: { _id: item.id },
+        update: { $set: { layout: item.layout } }
+      }
+    })));
+
+    const mesas = await Mesa.find({ _id: { $in: ids } }).sort({ numero: 1 });
+    return res.json({ message: 'Plano actualizado correctamente', mesas });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: 'Error guardando el plano de mesas' });
   }
 });
 
