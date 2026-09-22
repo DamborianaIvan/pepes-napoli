@@ -391,7 +391,10 @@ const Mesas = () => {
 
     if (!pedido) {
       return modal ? (
-        <Link to="/panel/nuevo-pedido" onClick={() => setMesaSeleccionada(null)}>
+        <Link
+          to={`/panel/nuevo-pedido?mesaId=${mesa._id}`}
+          onClick={() => setMesaSeleccionada(null)}
+        >
           Crear pedido
         </Link>
       ) : null;
