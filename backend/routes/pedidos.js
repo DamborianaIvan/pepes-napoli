@@ -32,6 +32,7 @@ import {
   validarPagosCobro
 } from '../utils/finanzasPedido.js';
 import { crearTicketVenta } from '../utils/ticket.js';
+import { consumirStockPedido } from '../services/stockService.js';
 
 const router = express.Router();
 
@@ -389,17 +390,30 @@ router.post('/:id/cerrar', protect, requirePermission(PERMISSIONS.CASH_CHARGE), 
   };
   await pedido.save();
 
-  if (pedido.tipoPedido === TIPOS_PEDIDO.SALON && pedido.mesaId) {
-    try {
+  let mesaModificada = null;
+  let estadoMesaAnterior = null;
+
+  try {
+    if (pedido.tipoPedido === TIPOS_PEDIDO.SALON && pedido.mesaId) {
       const mesa = await Mesa.findById(pedido.mesaId);
       if (!mesa) throw new ApiError(409, 'No se encontró la mesa asociada al pedido');
+
+      mesaModificada = mesa;
+      estadoMesaAnterior = mesa.estado;
       mesa.estado = 'LIBRE';
       await mesa.save();
-    } catch (error) {
-      pedido.cierre = cierreAnterior;
-      await pedido.save().catch(() => {});
-      throw error;
     }
+
+    await consumirStockPedido(pedido, req.usuario.id);
+  } catch (error) {
+    if (mesaModificada && estadoMesaAnterior) {
+      mesaModificada.estado = estadoMesaAnterior;
+      await mesaModificada.save().catch(() => {});
+    }
+
+    pedido.cierre = cierreAnterior;
+    await pedido.save().catch(() => {});
+    throw error;
   }
 
   return res.json(pedido);
