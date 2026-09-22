@@ -18,8 +18,7 @@ const RecetaSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Producto',
     required: true,
-    unique: true,
-    index: true
+    unique: true
   },
   componentes: {
     type: [ComponenteRecetaSchema],
