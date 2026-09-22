@@ -66,9 +66,11 @@ const layoutBase = (mesa: Mesa, index: number): LayoutMesa => {
   const xAutomatico = 40 + (index % columnas) * 220;
   const yAutomatico = 45 + Math.floor(index / columnas) * 170;
   const tienePosicion =
-    Number.isFinite(mesa.layout?.x) &&
-    Number.isFinite(mesa.layout?.y) &&
-    !(mesa.layout?.x === 0 && mesa.layout?.y === 0 && index > 0);
+    typeof mesa.layout?.x === "number" &&
+    Number.isFinite(mesa.layout.x) &&
+    typeof mesa.layout?.y === "number" &&
+    Number.isFinite(mesa.layout.y) &&
+    !(mesa.layout.x === 0 && mesa.layout.y === 0 && index > 0);
 
   return {
     x: tienePosicion ? Number(mesa.layout?.x) : limitar(xAutomatico, 0, PLANO_ANCHO - ancho),
