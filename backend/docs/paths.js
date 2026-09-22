@@ -32,7 +32,179 @@ export const paths = {
     delete: { tags: ['Productos'], summary: 'Eliminar producto', security: auth, parameters: [id], responses: secured({ 200: { description: 'Producto eliminado', content: json({ type: 'object', properties: { message: { type: 'string' } } }) }, 403: { $ref: '#/components/responses/Forbidden' }, 404: { $ref: '#/components/responses/NotFound' }, 500: error('Error interno') }) }
   },
   '/api/productos/{id}/disponible': { patch: { tags: ['Productos'], summary: 'Cambiar disponibilidad', security: auth, parameters: [id], requestBody: { required: true, content: json({ type: 'object', required: ['disponible'], properties: { disponible: { type: 'boolean' } } }) }, responses: secured({ 200: { description: 'Disponibilidad actualizada', content: json({ type: 'object', properties: { message: { type: 'string' }, producto: ref('Producto') } }) }, 400: error('Valor inválido'), 403: { $ref: '#/components/responses/Forbidden' }, 404: { $ref: '#/components/responses/NotFound' }, 500: error('Error interno') }) } },
-  '/api/productos/configuracion/stock-general': { get: { tags: ['Productos'], summary: 'Obtener stock general', responses: { 200: { description: 'Estado global', content: json(ref('StockGeneral')) }, 500: error('Error interno') } }, patch: { tags: ['Productos'], summary: 'Actualizar stock general', security: auth, requestBody: { required: true, content: json(ref('StockGeneral')) }, responses: secured({ 200: { description: 'Estado actualizado', content: json({ type: 'object', properties: { message: { type: 'string' }, config: ref('StockGeneral') } }) }, 400: error('Valor inválido'), 403: { $ref: '#/components/responses/Forbidden' }, 500: error('Error interno') }) } },
+
+  '/api/stock/ingredientes': {
+    get: {
+      tags: ['Stock'],
+      summary: 'Listar ingredientes y estado de stock',
+      security: auth,
+      responses: secured({
+        200: { description: 'Ingredientes', content: json({ type: 'array', items: ref('Ingrediente') }) },
+        403: { $ref: '#/components/responses/Forbidden' }
+      })
+    },
+    post: {
+      tags: ['Stock'],
+      summary: 'Crear ingrediente',
+      security: auth,
+      requestBody: {
+        required: true,
+        content: json({
+          type: 'object',
+          required: ['nombre', 'unidad'],
+          properties: {
+            nombre: { type: 'string' },
+            unidad: { type: 'string', enum: ['G', 'KG', 'ML', 'L', 'UNIDAD'] },
+            stockMinimo: { type: 'number', minimum: 0 },
+            stockInicial: { type: 'number', minimum: 0 }
+          }
+        })
+      },
+      responses: secured({
+        201: { description: 'Ingrediente creado', content: json(ref('Ingrediente')) },
+        400: error('Datos inválidos'),
+        409: error('Ingrediente duplicado')
+      })
+    }
+  },
+  '/api/stock/ingredientes/{id}': {
+    patch: {
+      tags: ['Stock'],
+      summary: 'Editar ingrediente sin modificar stock directamente',
+      security: auth,
+      parameters: [id],
+      requestBody: { required: true, content: json({ type: 'object' }) },
+      responses: secured({
+        200: { description: 'Ingrediente actualizado', content: json(ref('Ingrediente')) },
+        404: { $ref: '#/components/responses/NotFound' },
+        409: error('Cambio incompatible con historial')
+      })
+    }
+  },
+  '/api/stock/ingredientes/{id}/estado': {
+    patch: {
+      tags: ['Stock'],
+      summary: 'Activar o desactivar ingrediente',
+      security: auth,
+      parameters: [id],
+      requestBody: {
+        required: true,
+        content: json({
+          type: 'object',
+          required: ['activo'],
+          properties: { activo: { type: 'boolean' } }
+        })
+      },
+      responses: secured({
+        200: { description: 'Estado actualizado', content: json(ref('Ingrediente')) },
+        404: { $ref: '#/components/responses/NotFound' },
+        409: error('Ingrediente usado por receta activa')
+      })
+    }
+  },
+  '/api/stock/ingredientes/{id}/movimientos': {
+    post: {
+      tags: ['Stock'],
+      summary: 'Registrar entrada, salida, ajuste o merma',
+      security: auth,
+      parameters: [id],
+      requestBody: {
+        required: true,
+        content: json({
+          type: 'object',
+          required: ['tipo'],
+          properties: {
+            tipo: { type: 'string', enum: ['ENTRADA', 'SALIDA', 'AJUSTE', 'MERMA'] },
+            cantidad: { type: 'number', exclusiveMinimum: 0 },
+            stockObjetivo: { type: 'number', minimum: 0 },
+            motivo: { type: 'string' }
+          }
+        })
+      },
+      responses: secured({
+        201: { description: 'Movimiento registrado' },
+        400: error('Movimiento inválido'),
+        409: error('Movimiento incompatible con stock actual')
+      })
+    }
+  },
+  '/api/stock/movimientos': {
+    get: {
+      tags: ['Stock'],
+      summary: 'Listar últimos movimientos de stock',
+      security: auth,
+      responses: secured({
+        200: { description: 'Movimientos', content: json({ type: 'array', items: ref('MovimientoStock') }) }
+      })
+    }
+  },
+  '/api/stock/alertas': {
+    get: {
+      tags: ['Stock'],
+      summary: 'Listar ingredientes con stock bajo',
+      security: auth,
+      responses: secured({
+        200: { description: 'Alertas de stock', content: json({ type: 'array', items: ref('Ingrediente') }) }
+      })
+    }
+  },
+  '/api/stock/recetas': {
+    get: {
+      tags: ['Stock'],
+      summary: 'Listar recetas',
+      security: auth,
+      responses: secured({
+        200: { description: 'Recetas', content: json({ type: 'array', items: ref('Receta') }) }
+      })
+    }
+  },
+  '/api/stock/recetas/{id}': {
+    put: {
+      tags: ['Stock'],
+      summary: 'Crear o reemplazar receta de un producto',
+      security: auth,
+      parameters: [id],
+      requestBody: {
+        required: true,
+        content: json({
+          type: 'object',
+          required: ['componentes'],
+          properties: {
+            componentes: {
+              type: 'array',
+              minItems: 1,
+              items: ref('ComponenteReceta')
+            }
+          }
+        })
+      },
+      responses: secured({
+        200: { description: 'Receta guardada', content: json(ref('Receta')) },
+        404: { $ref: '#/components/responses/NotFound' },
+        409: error('Ingrediente inexistente o inactivo')
+      })
+    }
+  },
+  '/api/stock/recetas/{id}/estado': {
+    patch: {
+      tags: ['Stock'],
+      summary: 'Activar o desactivar receta',
+      security: auth,
+      parameters: [id],
+      requestBody: {
+        required: true,
+        content: json({
+          type: 'object',
+          required: ['activa'],
+          properties: { activa: { type: 'boolean' } }
+        })
+      },
+      responses: secured({
+        200: { description: 'Receta actualizada', content: json(ref('Receta')) },
+        404: { $ref: '#/components/responses/NotFound' }
+      })
+    }
+  },
   '/api/pedidos': {
     get: { tags: ['Pedidos'], summary: 'Listar pedidos', security: auth, responses: secured({ 200: { description: 'Lista de pedidos', content: json({ type: 'array', items: ref('Pedido') }) }, 500: error('Error interno') }) },
     post: { tags: ['Pedidos'], summary: 'Crear pedido', security: auth, requestBody: { required: true, content: json(ref('PedidoCreate')) }, responses: secured({ 201: { description: 'Pedido creado', content: json(ref('Pedido')) }, 400: error('Datos inválidos'), 404: { $ref: '#/components/responses/NotFound' }, 409: error('Mesa ocupada o producto no disponible'), 500: error('Error interno') }) }
