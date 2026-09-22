@@ -12,6 +12,7 @@ import ProductoManager from "./components/Panel/ProductoManager";
 import UsuarioManager from "./components/Panel/UsuarioManager";
 import Cocina from "./components/Panel/Cocina";
 import Caja from "./components/Panel/Caja";
+import StockManager from "./components/Panel/StockManager";
 
 export default function App() {
   return (
@@ -34,6 +35,7 @@ export default function App() {
           <Route path="pedidos" element={<ListaPedidos />} />
           <Route path="cocina" element={<Cocina />} />
           <Route path="caja" element={<Caja />} />
+          <Route path="stock" element={<StockManager />} />
           <Route path="reportes" element={<Reportes />} />
           <Route path="crear-producto" element={<ProductoManager />} />
           <Route path="usuarios" element={<UsuarioManager />} />
