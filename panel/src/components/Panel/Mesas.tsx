@@ -1,11 +1,37 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import PeopleAltOutlinedIcon from "@mui/icons-material/PeopleAltOutlined";
 import ReceiptLongOutlinedIcon from "@mui/icons-material/ReceiptLongOutlined";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import TableRestaurantIcon from "@mui/icons-material/TableRestaurant";
+import EditLocationAltOutlinedIcon from "@mui/icons-material/EditLocationAltOutlined";
+import SaveOutlinedIcon from "@mui/icons-material/SaveOutlined";
+import CloseOutlinedIcon from "@mui/icons-material/CloseOutlined";
+import RotateRightOutlinedIcon from "@mui/icons-material/RotateRightOutlined";
+import OpenWithOutlinedIcon from "@mui/icons-material/OpenWithOutlined";
 import { getSession } from "../../auth/session";
+import type { Pedido } from "../../types/pedido";
 import "./Mesas.css";
+
+const API_URL = import.meta.env.VITE_API_URL;
+const PLANO_ANCHO = 1200;
+const PLANO_ALTO = 700;
+const ANCHO_MIN = 80;
+const ANCHO_MAX = 280;
+const ALTO_MIN = 80;
+const ALTO_MAX = 220;
+const ESTADOS_FINALIZADOS = new Set(["ENTREGADO", "CANCELADO"]);
+
+type FormaMesa = "RECTANGULAR" | "CUADRADA" | "REDONDA";
+
+interface LayoutMesa {
+  x: number;
+  y: number;
+  ancho: number;
+  alto: number;
+  rotacion: number;
+  forma: FormaMesa;
+}
 
 interface Mesa {
   _id: string;
@@ -13,13 +39,10 @@ interface Mesa {
   nombre?: string | null;
   capacidad?: number;
   estado: "LIBRE" | "OCUPADA";
+  activa?: boolean;
   observaciones?: string;
+  layout?: Partial<LayoutMesa>;
 }
-
-import type { Pedido } from "../../types/pedido";
-
-const API_URL = import.meta.env.VITE_API_URL;
-const ESTADOS_FINALIZADOS = new Set(["ENTREGADO", "CANCELADO"]);
 
 type MesaPedido = Pedido["mesaId"] | { _id: string } | null;
 
@@ -33,9 +56,36 @@ const formatoPesos = (monto: number) =>
     minimumFractionDigits: 0,
   });
 
+const limitar = (valor: number, min: number, max: number) =>
+  Math.min(max, Math.max(min, valor));
+
+const layoutBase = (mesa: Mesa, index: number): LayoutMesa => {
+  const columnas = 5;
+  const ancho = mesa.layout?.ancho ?? 140;
+  const alto = mesa.layout?.alto ?? 110;
+  const xAutomatico = 40 + (index % columnas) * 220;
+  const yAutomatico = 45 + Math.floor(index / columnas) * 170;
+  const tienePosicion =
+    Number.isFinite(mesa.layout?.x) &&
+    Number.isFinite(mesa.layout?.y) &&
+    !(mesa.layout?.x === 0 && mesa.layout?.y === 0 && index > 0);
+
+  return {
+    x: tienePosicion ? Number(mesa.layout?.x) : limitar(xAutomatico, 0, PLANO_ANCHO - ancho),
+    y: tienePosicion ? Number(mesa.layout?.y) : limitar(yAutomatico, 0, PLANO_ALTO - alto),
+    ancho,
+    alto,
+    rotacion: Number(mesa.layout?.rotacion ?? 0),
+    forma: (mesa.layout?.forma as FormaMesa) ?? "RECTANGULAR",
+  };
+};
+
 const Mesas = () => {
   const session = getSession();
   const puedeGestionarMesas = session?.rol === "ADMIN" || session?.rol === "CAJERO";
+  const puedeEditarPlano = session?.rol === "ADMIN";
+  const planoRef = useRef<HTMLDivElement | null>(null);
+
   const [mesas, setMesas] = useState<Mesa[]>([]);
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [mesaSeleccionada, setMesaSeleccionada] = useState<Mesa | null>(null);
@@ -43,9 +93,18 @@ const Mesas = () => {
   const [error, setError] = useState<string | null>(null);
   const [mensaje, setMensaje] = useState<string | null>(null);
   const [cerrandoPedidoId, setCerrandoPedidoId] = useState<string | null>(null);
+  const [editandoPlano, setEditandoPlano] = useState(false);
+  const [guardandoPlano, setGuardandoPlano] = useState(false);
+  const [layoutDraft, setLayoutDraft] = useState<Record<string, LayoutMesa>>({});
+  const [mesaEditadaId, setMesaEditadaId] = useState<string | null>(null);
+  const [arrastre, setArrastre] = useState<{
+    mesaId: string;
+    offsetX: number;
+    offsetY: number;
+  } | null>(null);
 
   const cargarDatos = useCallback(async () => {
-    const token = session?.token;
+    const token = getSession()?.token;
     const headers = { Authorization: `Bearer ${token}` };
 
     try {
@@ -75,9 +134,21 @@ const Mesas = () => {
 
   useEffect(() => {
     void cargarDatos();
-    const intervalo = window.setInterval(() => void cargarDatos(), 30_000);
+    const intervalo = window.setInterval(() => {
+      if (!editandoPlano) void cargarDatos();
+    }, 30_000);
     return () => window.clearInterval(intervalo);
-  }, [cargarDatos]);
+  }, [cargarDatos, editandoPlano]);
+
+  const layoutsVisuales = useMemo(() => {
+    const resultado: Record<string, LayoutMesa> = {};
+    mesas.forEach((mesa, index) => {
+      resultado[mesa._id] = layoutBase(mesa, index);
+    });
+    return resultado;
+  }, [mesas]);
+
+  const layoutsActivos = editandoPlano ? layoutDraft : layoutsVisuales;
 
   const pedidosActivosPorMesa = useMemo(() => {
     const pedidosPorMesa = new Map<string, Pedido>();
@@ -114,6 +185,123 @@ const Mesas = () => {
     ? pedidosActivosPorMesa.get(mesaSeleccionada._id)
     : undefined;
 
+  const comenzarEdicion = () => {
+    setLayoutDraft(layoutsVisuales);
+    setMesaSeleccionada(null);
+    setMesaEditadaId(mesas[0]?._id ?? null);
+    setMensaje(null);
+    setError(null);
+    setEditandoPlano(true);
+  };
+
+  const cancelarEdicion = () => {
+    setLayoutDraft({});
+    setMesaEditadaId(null);
+    setArrastre(null);
+    setEditandoPlano(false);
+  };
+
+  const guardarPlano = async () => {
+    const token = session?.token;
+    if (!token || !puedeEditarPlano) return;
+
+    try {
+      setGuardandoPlano(true);
+      setError(null);
+      setMensaje(null);
+
+      const response = await fetch(`${API_URL}/api/mesas/layout`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          mesas: mesas.map((mesa) => ({
+            id: mesa._id,
+            layout: layoutDraft[mesa._id] ?? layoutsVisuales[mesa._id],
+          })),
+        }),
+      });
+
+      const body = await response.json();
+      if (!response.ok) {
+        throw new Error(body?.error?.message ?? body?.message ?? "No se pudo guardar el plano.");
+      }
+
+      setMesas(Array.isArray(body.mesas) ? body.mesas : mesas);
+      setMensaje("Plano guardado correctamente.");
+      setEditandoPlano(false);
+      setMesaEditadaId(null);
+      setLayoutDraft({});
+      await cargarDatos();
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : "No se pudo guardar el plano.");
+    } finally {
+      setGuardandoPlano(false);
+    }
+  };
+
+  const actualizarLayout = (mesaId: string, cambios: Partial<LayoutMesa>) => {
+    setLayoutDraft((actual) => {
+      const previo = actual[mesaId] ?? layoutsVisuales[mesaId];
+      if (!previo) return actual;
+
+      const siguiente = { ...previo, ...cambios };
+      siguiente.ancho = limitar(siguiente.ancho, ANCHO_MIN, ANCHO_MAX);
+      siguiente.alto = limitar(siguiente.alto, ALTO_MIN, ALTO_MAX);
+      siguiente.x = limitar(siguiente.x, 0, PLANO_ANCHO - siguiente.ancho);
+      siguiente.y = limitar(siguiente.y, 0, PLANO_ALTO - siguiente.alto);
+      siguiente.rotacion = ((siguiente.rotacion % 360) + 360) % 360;
+
+      if (siguiente.forma === "CUADRADA" || siguiente.forma === "REDONDA") {
+        const lado = limitar(Math.max(siguiente.ancho, siguiente.alto), ANCHO_MIN, Math.min(ANCHO_MAX, ALTO_MAX));
+        siguiente.ancho = lado;
+        siguiente.alto = lado;
+        siguiente.x = limitar(siguiente.x, 0, PLANO_ANCHO - lado);
+        siguiente.y = limitar(siguiente.y, 0, PLANO_ALTO - lado);
+      }
+
+      return { ...actual, [mesaId]: siguiente };
+    });
+  };
+
+  const iniciarArrastre = (event: React.PointerEvent, mesa: Mesa) => {
+    if (!editandoPlano || !planoRef.current) return;
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+
+    const rect = planoRef.current.getBoundingClientRect();
+    const escalaX = PLANO_ANCHO / rect.width;
+    const escalaY = PLANO_ALTO / rect.height;
+    const layout = layoutsActivos[mesa._id];
+    if (!layout) return;
+
+    setMesaEditadaId(mesa._id);
+    setArrastre({
+      mesaId: mesa._id,
+      offsetX: (event.clientX - rect.left) * escalaX - layout.x,
+      offsetY: (event.clientY - rect.top) * escalaY - layout.y,
+    });
+  };
+
+  const moverMesa = (event: React.PointerEvent) => {
+    if (!arrastre || !planoRef.current) return;
+
+    const rect = planoRef.current.getBoundingClientRect();
+    const escalaX = PLANO_ANCHO / rect.width;
+    const escalaY = PLANO_ALTO / rect.height;
+    const layout = layoutsActivos[arrastre.mesaId];
+    if (!layout) return;
+
+    actualizarLayout(arrastre.mesaId, {
+      x: limitar((event.clientX - rect.left) * escalaX - arrastre.offsetX, 0, PLANO_ANCHO - layout.ancho),
+      y: limitar((event.clientY - rect.top) * escalaY - arrastre.offsetY, 0, PLANO_ALTO - layout.alto),
+    });
+  };
+
+  const finalizarArrastre = () => setArrastre(null);
+
   const liberarMesaHuerfana = async (mesa: Mesa) => {
     if (!window.confirm(`La mesa ${mesa.numero} figura ocupada pero no tiene un pedido activo asociado. ¿Querés liberarla?`)) return;
 
@@ -139,14 +327,6 @@ const Mesas = () => {
     }
   };
 
-  const finalizarPedidoYLiberarMesa = async (
-    mesa: Mesa,
-    pedido: Pedido,
-    estado: "SERVIDO" | "CANCELADO",
-  ) => {
-    await actualizarEstadoPedido(mesa, pedido, estado);
-  };
-
   const actualizarEstadoPedido = async (
     mesa: Mesa,
     pedido: Pedido,
@@ -163,33 +343,108 @@ const Mesas = () => {
       setError(null);
       setMensaje(null);
 
-      const endpoint = estado === "CANCELADO" ? `${API_URL}/api/pedidos/${pedido._id}/cancelar` : `${API_URL}/api/pedidos/${pedido._id}/estado`;
+      const endpoint = estado === "CANCELADO"
+        ? `${API_URL}/api/pedidos/${pedido._id}/cancelar`
+        : `${API_URL}/api/pedidos/${pedido._id}/estado`;
+
       const pedidoResponse = await fetch(endpoint, {
         method: "PATCH",
         headers,
         body: JSON.stringify({ estadoPedido: estado }),
       });
-      if (!pedidoResponse.ok) throw new Error("No se pudo cerrar el pedido.");
 
-      if (estado === "CANCELADO") {
-        const mesaResponse = await fetch(`${API_URL}/api/mesas/${mesa._id}/estado`, {
-          method: "PATCH",
-          headers,
-          body: JSON.stringify({ estado: "LIBRE" }),
-        });
-        if (!mesaResponse.ok) throw new Error("No se pudo liberar la mesa.");
+      const pedidoBody = await pedidoResponse.json();
+      if (!pedidoResponse.ok) {
+        throw new Error(pedidoBody?.error?.message ?? pedidoBody?.message ?? "No se pudo actualizar el pedido.");
       }
 
       setMesaSeleccionada(null);
-      setMensaje(estado === "SERVIDO" ? `Pedido de mesa ${mesa.numero} marcado como servido.` : `Mesa ${mesa.numero} liberada y pedido cancelado correctamente.`);
+      setMensaje(
+        estado === "SERVIDO"
+          ? `Pedido de mesa ${mesa.numero} marcado como servido.`
+          : `Pedido de mesa ${mesa.numero} cancelado correctamente.`,
+      );
       await cargarDatos();
     } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : "No se pudo cerrar el pedido.");
+      setError(requestError instanceof Error ? requestError.message : "No se pudo actualizar el pedido.");
       await cargarDatos();
     } finally {
       setCerrandoPedidoId(null);
     }
   };
+
+  const renderAccionesMesa = (mesa: Mesa, pedido?: Pedido, modal = false) => {
+    if (!pedido && mesa.estado === "OCUPADA" && puedeGestionarMesas) {
+      return (
+        <button
+          className={modal ? "mesa-modal-cancel-action" : "mesa-cancel-action"}
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation();
+            void liberarMesaHuerfana(mesa);
+          }}
+        >
+          Liberar mesa huérfana
+        </button>
+      );
+    }
+
+    if (!pedido) {
+      return modal ? (
+        <Link to="/panel/nuevo-pedido" onClick={() => setMesaSeleccionada(null)}>
+          Crear pedido
+        </Link>
+      ) : null;
+    }
+
+    return (
+      <>
+        {pedido.estadoPedido === "LISTO" && (
+          <button
+            className={modal ? "mesa-modal-action" : "mesa-action"}
+            type="button"
+            disabled={cerrandoPedidoId === pedido._id}
+            onClick={(event) => {
+              event.stopPropagation();
+              void actualizarEstadoPedido(mesa, pedido, "SERVIDO");
+            }}
+          >
+            {cerrandoPedidoId === pedido._id ? "Actualizando..." : "Marcar como servido"}
+          </button>
+        )}
+
+        {["EN_COCINA", "LISTO"].includes(pedido.estadoPedido) && (
+          <button
+            className={modal ? "mesa-modal-cancel-action" : "mesa-cancel-action"}
+            type="button"
+            disabled={cerrandoPedidoId === pedido._id}
+            onClick={(event) => {
+              event.stopPropagation();
+              void actualizarEstadoPedido(mesa, pedido, "CANCELADO");
+            }}
+          >
+            Cancelar pedido
+          </button>
+        )}
+
+        {pedido.estadoPedido === "SERVIDO" && !pedido.cierre?.cerrado && (
+          <Link
+            className={modal ? "mesa-modal-action" : "mesa-action"}
+            to="/panel/caja"
+            onClick={(event) => {
+              event.stopPropagation();
+              if (modal) setMesaSeleccionada(null);
+            }}
+          >
+            Ir a caja para cobrar/cerrar
+          </Link>
+        )}
+      </>
+    );
+  };
+
+  const mesaEditada = mesaEditadaId ? mesas.find((mesa) => mesa._id === mesaEditadaId) : undefined;
+  const layoutMesaEditada = mesaEditadaId ? layoutDraft[mesaEditadaId] : undefined;
 
   return (
     <section className="mesas-page">
@@ -197,13 +452,39 @@ const Mesas = () => {
         <div>
           <div className="mesas-title">
             <TableRestaurantIcon fontSize="large" />
-            <h1>Mesas</h1>
+            <h1>Plano del salón</h1>
           </div>
-          <p>Estado del salón y pedidos activos en tiempo real.</p>
+          <p>
+            {editandoPlano
+              ? "Arrastrá las mesas y ajustá tamaño, rotación o forma."
+              : "Estado operativo del salón y pedidos activos en tiempo real."}
+          </p>
         </div>
-        <button className="mesas-refresh" type="button" onClick={() => void cargarDatos()}>
-          <RefreshIcon fontSize="small" /> Actualizar
-        </button>
+
+        <div className="mesas-header-actions">
+          {!editandoPlano && (
+            <button className="mesas-refresh" type="button" onClick={() => void cargarDatos()}>
+              <RefreshIcon fontSize="small" /> Actualizar
+            </button>
+          )}
+
+          {puedeEditarPlano && !editandoPlano && (
+            <button className="mesas-edit-layout" type="button" onClick={comenzarEdicion}>
+              <EditLocationAltOutlinedIcon fontSize="small" /> Editar plano
+            </button>
+          )}
+
+          {editandoPlano && (
+            <>
+              <button className="mesas-cancel-layout" type="button" onClick={cancelarEdicion} disabled={guardandoPlano}>
+                <CloseOutlinedIcon fontSize="small" /> Cancelar
+              </button>
+              <button className="mesas-save-layout" type="button" onClick={() => void guardarPlano()} disabled={guardandoPlano}>
+                <SaveOutlinedIcon fontSize="small" /> {guardandoPlano ? "Guardando..." : "Guardar plano"}
+              </button>
+            </>
+          )}
+        </div>
       </header>
 
       <div className="mesas-resumen" aria-label="Resumen de mesas">
@@ -218,6 +499,7 @@ const Mesas = () => {
         <div className="resumen-chip total">
           <strong>{mesas.length}</strong> mesas en total
         </div>
+        {editandoPlano && <div className="resumen-chip editor">Modo edición · solo ADMIN</div>}
       </div>
 
       {error && <p className="mesas-error">{error}</p>}
@@ -225,102 +507,171 @@ const Mesas = () => {
 
       {cargando ? (
         <p className="mesas-loading">Cargando mesas...</p>
-      ) : (
-        <div className="mesas-grid">
-          {mesas.map((mesa) => {
-            const pedido = pedidosActivosPorMesa.get(mesa._id);
-            const ocupada = mesa.estado === "OCUPADA" || Boolean(pedido);
+      ) : mesas.length > 0 ? (
+        <div className={`salon-workspace ${editandoPlano ? "editing" : ""}`}>
+          <div
+            ref={planoRef}
+            className="salon-plano"
+            onPointerMove={moverMesa}
+            onPointerUp={finalizarArrastre}
+            onPointerCancel={finalizarArrastre}
+            onPointerLeave={() => {
+              if (arrastre) finalizarArrastre();
+            }}
+          >
+            {mesas.map((mesa) => {
+              const pedido = pedidosActivosPorMesa.get(mesa._id);
+              const ocupada = mesa.estado === "OCUPADA" || Boolean(pedido);
+              const layout = layoutsActivos[mesa._id] ?? layoutBase(mesa, 0);
+              const formaClase = layout.forma.toLowerCase();
 
-            return (
-              <article
-                key={mesa._id}
-                className={`mesa-card ${ocupada ? "ocupada" : "libre"}`}
-                onClick={() => setMesaSeleccionada(mesa)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter" || event.key === " ") setMesaSeleccionada(mesa);
-                }}
-                role="button"
-                tabIndex={0}
-                aria-label={`Mesa ${mesa.numero}, ${ocupada ? "ocupada" : "libre"}`}
-              >
-                <span className="mesa-estado">{ocupada ? "Ocupada" : "Libre"}</span>
-                <div className="mesa-dibujo" aria-hidden="true">
-                  <span className="silla silla-arriba" />
-                  <span className="silla silla-abajo" />
-                  <span className="silla silla-izquierda" />
-                  <span className="silla silla-derecha" />
-                  <strong>{mesa.numero}</strong>
-                </div>
-                <span className="mesa-nombre">{mesa.nombre || `Mesa ${mesa.numero}`}</span>
-                <span className="mesa-capacidad">
-                  <PeopleAltOutlinedIcon fontSize="small" /> {mesa.capacidad ?? 4} personas
+              return (
+                <article
+                  key={mesa._id}
+                  className={`mesa-plano ${ocupada ? "ocupada" : "libre"} ${formaClase} ${mesaEditadaId === mesa._id ? "seleccionada" : ""}`}
+                  style={{
+                    left: `${(layout.x / PLANO_ANCHO) * 100}%`,
+                    top: `${(layout.y / PLANO_ALTO) * 100}%`,
+                    width: `${(layout.ancho / PLANO_ANCHO) * 100}%`,
+                    height: `${(layout.alto / PLANO_ALTO) * 100}%`,
+                    transform: `rotate(${layout.rotacion}deg)`,
+                  }}
+                  onPointerDown={(event) => iniciarArrastre(event, mesa)}
+                  onClick={() => {
+                    if (editandoPlano) {
+                      setMesaEditadaId(mesa._id);
+                    } else {
+                      setMesaSeleccionada(mesa);
+                    }
+                  }}
+                  onKeyDown={(event) => {
+                    if (!editandoPlano && (event.key === "Enter" || event.key === " ")) {
+                      setMesaSeleccionada(mesa);
+                    }
+                  }}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`Mesa ${mesa.numero}, ${ocupada ? "ocupada" : "libre"}`}
+                >
+                  <div className="mesa-plano-contenido" style={{ transform: `rotate(${-layout.rotacion}deg)` }}>
+                    <span className="mesa-plano-numero">{mesa.numero}</span>
+                    <span className="mesa-plano-estado">{ocupada ? "OCUPADA" : "LIBRE"}</span>
+                    <span className="mesa-plano-capacidad">
+                      <PeopleAltOutlinedIcon fontSize="inherit" />
+                      {mesa.capacidad ?? 4}
+                    </span>
+                    {pedido && (
+                      <span className="mesa-plano-pedido">
+                        <ReceiptLongOutlinedIcon fontSize="inherit" />
+                        {pedido.estadoPedido}
+                      </span>
+                    )}
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+
+          {editandoPlano && mesaEditada && layoutMesaEditada && (
+            <aside className="plano-editor-panel">
+              <div>
+                <span className="editor-eyebrow">Mesa seleccionada</span>
+                <h2>{mesaEditada.nombre || `Mesa ${mesaEditada.numero}`}</h2>
+              </div>
+
+              <label>
+                Forma
+                <select
+                  value={layoutMesaEditada.forma}
+                  onChange={(event) =>
+                    actualizarLayout(mesaEditada._id, { forma: event.target.value as FormaMesa })
+                  }
+                >
+                  <option value="RECTANGULAR">Rectangular</option>
+                  <option value="CUADRADA">Cuadrada</option>
+                  <option value="REDONDA">Redonda</option>
+                </select>
+              </label>
+
+              <label>
+                Ancho
+                <input
+                  type="range"
+                  min={ANCHO_MIN}
+                  max={ANCHO_MAX}
+                  value={layoutMesaEditada.ancho}
+                  disabled={layoutMesaEditada.forma !== "RECTANGULAR"}
+                  onChange={(event) =>
+                    actualizarLayout(mesaEditada._id, { ancho: Number(event.target.value) })
+                  }
+                />
+                <span>{Math.round(layoutMesaEditada.ancho)} px</span>
+              </label>
+
+              <label>
+                Alto
+                <input
+                  type="range"
+                  min={ALTO_MIN}
+                  max={ALTO_MAX}
+                  value={layoutMesaEditada.alto}
+                  disabled={layoutMesaEditada.forma !== "RECTANGULAR"}
+                  onChange={(event) =>
+                    actualizarLayout(mesaEditada._id, { alto: Number(event.target.value) })
+                  }
+                />
+                <span>{Math.round(layoutMesaEditada.alto)} px</span>
+              </label>
+
+              {layoutMesaEditada.forma !== "RECTANGULAR" && (
+                <label>
+                  Tamaño
+                  <input
+                    type="range"
+                    min={ANCHO_MIN}
+                    max={ALTO_MAX}
+                    value={layoutMesaEditada.ancho}
+                    onChange={(event) => {
+                      const lado = Number(event.target.value);
+                      actualizarLayout(mesaEditada._id, { ancho: lado, alto: lado });
+                    }}
+                  />
+                  <span>{Math.round(layoutMesaEditada.ancho)} px</span>
+                </label>
+              )}
+
+              <label>
+                <span><RotateRightOutlinedIcon fontSize="small" /> Rotación</span>
+                <input
+                  type="range"
+                  min={0}
+                  max={359}
+                  value={layoutMesaEditada.rotacion}
+                  onChange={(event) =>
+                    actualizarLayout(mesaEditada._id, { rotacion: Number(event.target.value) })
+                  }
+                />
+                <span>{Math.round(layoutMesaEditada.rotacion)}°</span>
+              </label>
+
+              <div className="editor-position">
+                <OpenWithOutlinedIcon />
+                <span>
+                  x {Math.round(layoutMesaEditada.x)} · y {Math.round(layoutMesaEditada.y)}
                 </span>
-                {pedido ? (
-                  <span className="mesa-pedido">
-                    <ReceiptLongOutlinedIcon fontSize="small" /> Pedido {pedido.estadoPedido}
-                    <strong>{formatoPesos(pedido.totalFinal ?? pedido.total)}</strong>
-                  </span>
-                ) : (
-                  <span className="mesa-disponible">Disponible para un nuevo pedido</span>
-                )}
-                {pedido?.estadoPedido === "LISTO" && (
-                  <button
-                    className="mesa-action"
-                    type="button"
-                    disabled={cerrandoPedidoId === pedido._id}
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      void actualizarEstadoPedido(mesa, pedido, "SERVIDO");
-                    }}
-                  >
-                    {cerrandoPedidoId === pedido._id ? "Actualizando..." : "Marcar como servido"}
-                  </button>
-                )}
-                {pedido && ["EN_COCINA", "LISTO"].includes(pedido.estadoPedido) && (
-                  <button
-                    className="mesa-cancel-action"
-                    type="button"
-                    disabled={cerrandoPedidoId === pedido._id}
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      void finalizarPedidoYLiberarMesa(mesa, pedido, "CANCELADO");
-                    }}
-                  >
-                    Cancelar pedido
-                  </button>
-                )}
-                {pedido?.estadoPedido === "SERVIDO" && !pedido.cierre?.cerrado && (
-                  <Link
-                    className="mesa-action"
-                    to="/panel/caja"
-                    onClick={(event) => event.stopPropagation()}
-                  >
-                    Ir a caja para cobrar/cerrar
-                  </Link>
-                )}
-                {!pedido && mesa.estado === "OCUPADA" && puedeGestionarMesas && (
-                  <button
-                    className="mesa-cancel-action"
-                    type="button"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      void liberarMesaHuerfana(mesa);
-                    }}
-                  >
-                    Liberar mesa
-                  </button>
-                )}
-              </article>
-            );
-          })}
-        </div>
-      )}
+              </div>
 
-      {!cargando && mesas.length === 0 && !error && (
+              <p className="editor-help">
+                Arrastrá la mesa directamente sobre el plano. Los cambios se aplican recién al guardar.
+              </p>
+            </aside>
+          )}
+        </div>
+      ) : (
         <p className="mesas-loading">Todavía no hay mesas creadas.</p>
       )}
 
-      {mesaSeleccionada && (
+      {!editandoPlano && mesaSeleccionada && (
         <div className="mesa-modal-backdrop" role="presentation" onMouseDown={() => setMesaSeleccionada(null)}>
           <article
             className="mesa-modal"
@@ -332,9 +683,11 @@ const Mesas = () => {
             <button className="mesa-modal-close" type="button" onClick={() => setMesaSeleccionada(null)}>
               ×
             </button>
+
             <span className={`mesa-modal-status ${pedidoSeleccionado || mesaSeleccionada.estado === "OCUPADA" ? "ocupada" : "libre"}`}>
               {pedidoSeleccionado || mesaSeleccionada.estado === "OCUPADA" ? "Ocupada" : "Libre"}
             </span>
+
             <h2 id="mesa-modal-title">{mesaSeleccionada.nombre || `Mesa ${mesaSeleccionada.numero}`}</h2>
             <p>Capacidad: {mesaSeleccionada.capacidad ?? 4} personas</p>
 
@@ -343,7 +696,13 @@ const Mesas = () => {
                 <h3>Pedido actual</h3>
                 <p><strong>Estado:</strong> {pedidoSeleccionado.estadoPedido}</p>
                 <p><strong>Pago:</strong> {pedidoSeleccionado.estadoPago}</p>
-                <p><strong>Hora:</strong> {new Date(pedidoSeleccionado.fechaPedido).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })}</p>
+                <p>
+                  <strong>Hora:</strong>{" "}
+                  {new Date(pedidoSeleccionado.fechaPedido).toLocaleTimeString("es-AR", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </p>
                 <ul>
                   {pedidoSeleccionado.productos.map((producto, index) => (
                     <li key={`${producto.nombreSnapshot}-${index}`}>
@@ -351,59 +710,25 @@ const Mesas = () => {
                     </li>
                   ))}
                 </ul>
-                <strong className="mesa-total">Total: {formatoPesos(pedidoSeleccionado.totalFinal ?? pedidoSeleccionado.total)}</strong>
-                {pedidoSeleccionado.comentario && <p className="mesa-comentario">{pedidoSeleccionado.comentario}</p>}
-                {pedidoSeleccionado.estadoPedido === "LISTO" && (
-                  <button
-                    className="mesa-modal-action"
-                    type="button"
-                    disabled={cerrandoPedidoId === pedidoSeleccionado._id}
-                    onClick={() => void finalizarPedidoYLiberarMesa(mesaSeleccionada, pedidoSeleccionado, "SERVIDO")}
-                  >
-                    {cerrandoPedidoId === pedidoSeleccionado._id ? "Actualizando..." : "Marcar como servido"}
-                  </button>
+                <strong className="mesa-total">
+                  Total: {formatoPesos(pedidoSeleccionado.totalFinal ?? pedidoSeleccionado.total)}
+                </strong>
+                {pedidoSeleccionado.comentario && (
+                  <p className="mesa-comentario">{pedidoSeleccionado.comentario}</p>
                 )}
-                {["EN_COCINA", "LISTO"].includes(pedidoSeleccionado.estadoPedido) && (
-                  <button
-                    className="mesa-modal-cancel-action"
-                    type="button"
-                    disabled={cerrandoPedidoId === pedidoSeleccionado._id}
-                    onClick={() => void finalizarPedidoYLiberarMesa(mesaSeleccionada, pedidoSeleccionado, "CANCELADO")}
-                  >
-                    Cancelar pedido y liberar mesa
-                  </button>
-                )}
-                {pedidoSeleccionado.estadoPedido === "SERVIDO" && !pedidoSeleccionado.cierre?.cerrado && (
-                  <Link
-                    className="mesa-modal-action"
-                    to="/panel/caja"
-                    onClick={() => setMesaSeleccionada(null)}
-                  >
-                    Ir a caja para cobrar/cerrar
-                  </Link>
-                )}
+                {renderAccionesMesa(mesaSeleccionada, pedidoSeleccionado, true)}
               </div>
             ) : (
               <div className="mesa-sin-pedido">
                 <p>No hay un pedido activo en esta mesa.</p>
-                {mesaSeleccionada.estado === "OCUPADA" && puedeGestionarMesas ? (
-                  <button
-                    className="mesa-modal-cancel-action"
-                    type="button"
-                    onClick={() => void liberarMesaHuerfana(mesaSeleccionada)}
-                  >
-                    Liberar mesa huérfana
-                  </button>
-                ) : (
-                  <Link to="/panel/nuevo-pedido" onClick={() => setMesaSeleccionada(null)}>
-                    Crear pedido
-                  </Link>
-                )}
+                {renderAccionesMesa(mesaSeleccionada, undefined, true)}
               </div>
             )}
 
             {mesaSeleccionada.observaciones && (
-              <p className="mesa-observaciones"><strong>Observaciones:</strong> {mesaSeleccionada.observaciones}</p>
+              <p className="mesa-observaciones">
+                <strong>Observaciones:</strong> {mesaSeleccionada.observaciones}
+              </p>
             )}
           </article>
         </div>
