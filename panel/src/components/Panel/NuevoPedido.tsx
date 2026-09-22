@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import axios from "axios";
 import Snackbar from "@mui/material/Snackbar";
 import { Box, Grid, Card, CardContent, Typography, Button, Divider, TextField, Alert, MenuItem, IconButton } from "@mui/material";
@@ -14,6 +15,8 @@ interface Mesa { _id: string; numero: number; nombre?: string; estado: string; }
 
 const API_URL = import.meta.env.VITE_API_URL;
 const NuevoPedido = () => {
+  const [searchParams] = useSearchParams();
+  const mesaInicial = searchParams.get("mesaId") ?? "";
   const [productos, setProductos] = useState<Producto[]>([]);
   const [mesas, setMesas] = useState<Mesa[]>([]);
   const [guardandoPedido, setGuardandoPedido] = useState(false);
@@ -22,7 +25,7 @@ const NuevoPedido = () => {
   const [telefono, setTelefono] = useState("");
   const [direccion, setDireccion] = useState("");
   const [comentario, setComentario] = useState("");
-  const [mesaId, setMesaId] = useState<string>("");
+  const [mesaId, setMesaId] = useState<string>(mesaInicial);
   const [productosPedido, setProductosPedido] = useState<ProductoPedido[]>([]);
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: "success" | "error" | "info" | "warning" }>({ open: false, message: "", severity: "info" });
   const token = getSession()?.token || "";
@@ -39,6 +42,13 @@ const NuevoPedido = () => {
   }, [axiosConfig]);
 
   useEffect(() => { void Promise.all([fetchProductos(), fetchMesas()]); }, [fetchMesas, fetchProductos]);
+
+  useEffect(() => {
+    if (mesaInicial) {
+      setTipoPedido("SALON");
+      setMesaId(mesaInicial);
+    }
+  }, [mesaInicial]);
 
   const productosPorCategoria = productos.reduce((acc, producto) => {
     if (!acc[producto.categoria]) acc[producto.categoria] = [];
@@ -152,7 +162,13 @@ const NuevoPedido = () => {
 
                 {tipoPedido === "SALON" && (
                   <TextField select label="Mesa" value={mesaId} onChange={(e) => setMesaId(e.target.value)}>
-                    {mesas.filter(mesa => mesa.estado === "LIBRE").map(mesa => <MenuItem key={mesa._id} value={mesa._id}>{mesa.numero}</MenuItem>)}
+                    {mesas
+                      .filter((mesa) => mesa.estado === "LIBRE" || mesa._id === mesaId)
+                      .map((mesa) => (
+                        <MenuItem key={mesa._id} value={mesa._id}>
+                          Mesa {mesa.numero}{mesa.nombre ? ` · ${mesa.nombre}` : ""}
+                        </MenuItem>
+                      ))}
                   </TextField>
                 )}
 
