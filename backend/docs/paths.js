@@ -255,6 +255,22 @@ export const paths = {
   '/api/pedidos/{id}/cobrar': { post: { tags: ['Pedidos'], summary: 'Registrar cobro completo dividido por medios', security: auth, parameters: [id], requestBody: { required: true, content: json({ type: 'object', required: ['pagos'], properties: { pagos: { type: 'array', minItems: 1, items: ref('PagoPedido') } } }) }, responses: secured({ 200: { description: 'Cobro registrado', content: json(ref('Pedido')) }, 409: error('Caja cerrada o suma de pagos inválida') }) } },
   '/api/pedidos/{id}/anular-cobro': { post: { tags: ['Pedidos'], summary: 'Anular cobro completo conservando historial', security: auth, parameters: [id], responses: secured({ 200: { description: 'Cobro anulado', content: json(ref('Pedido')) }, 409: error('Cobro no anulable') }) } },
   '/api/pedidos/{id}/cerrar': { post: { tags: ['Pedidos'], summary: 'Cerrar pedido pagado, liberar mesa y consumir receta', security: auth, parameters: [id], responses: secured({ 200: { description: 'Pedido cerrado', content: json(ref('Pedido')) }, 409: error('Pedido no está listo para cierre') }) } },
+  '/api/reportes/resumen': {
+    get: {
+      tags: ['Reportes'],
+      summary: 'Obtener resumen consolidado de ventas, caja y stock',
+      security: auth,
+      parameters: [
+        { name: 'desde', in: 'query', required: true, schema: { type: 'string', format: 'date' }, description: 'Fecha inicial YYYY-MM-DD en horario de Argentina' },
+        { name: 'hasta', in: 'query', required: true, schema: { type: 'string', format: 'date' }, description: 'Fecha final inclusiva YYYY-MM-DD en horario de Argentina' }
+      ],
+      responses: secured({
+        200: { description: 'Resumen del período', content: json(ref('ReporteResumen')) },
+        400: error('Rango de fechas inválido'),
+        403: { $ref: '#/components/responses/Forbidden' }
+      })
+    }
+  },
   '/api/caja/actual': { get: { tags: ['Caja'], summary: 'Obtener caja abierta', security: auth, responses: secured({ 200: { description: 'Caja abierta o null', content: json(ref('Caja')) }, 403: { $ref: '#/components/responses/Forbidden' } }) } },
   '/api/caja/abrir': { post: { tags: ['Caja'], summary: 'Abrir caja', security: auth, requestBody: { required: true, content: json({ type: 'object', required: ['montoInicial'], properties: { montoInicial: { type: 'number', minimum: 0 } } }) }, responses: secured({ 201: { description: 'Caja abierta', content: json(ref('Caja')) }, 409: error('Ya existe una caja abierta') }) } },
   '/api/caja/cerrar': { post: { tags: ['Caja'], summary: 'Cerrar caja y calcular arqueo', security: auth, requestBody: { required: true, content: json({ type: 'object', required: ['efectivoDeclarado'], properties: { efectivoDeclarado: { type: 'number', minimum: 0 } } }) }, responses: secured({ 200: { description: 'Caja cerrada', content: json(ref('Caja')) }, 409: error('No hay caja abierta') }) } },
