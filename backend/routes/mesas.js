@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 import { protect, restrictTo } from '../middleware/auth.js';
 import { ROLES } from '../constants/roles.js';
 import Mesa from '../models/Mesa.js';
+import Pedido from '../models/Pedido.js';
 import { FORMAS_MESA, PLANO_MESAS } from '../constants/mesa.js';
 
 const router = express.Router();
@@ -10,7 +11,7 @@ const ROLES_GESTION_MESAS = [ROLES.ADMIN, ROLES.CAJERO];
 
 router.get('/', protect, async (req, res) => {
   try {
-    const mesas = await Mesa.find().sort({ numero: 1 });
+    const mesas = await Mesa.find({ activa: { $ne: false } }).sort({ numero: 1 });
     res.json(mesas);
   } catch (error) {
     console.error(error);
@@ -185,17 +186,54 @@ router.patch('/:id/estado', protect, restrictTo(...ROLES_GESTION_MESAS), async (
   }
 });
 
-// Eliminar mesa: solo ADMIN.
+// Retirar mesa del salón: solo ADMIN.
+// Si posee historial, se archiva en lugar de borrarse para conservar referencias de pedidos.
 router.delete('/:id', protect, restrictTo(ROLES.ADMIN), async (req, res) => {
   try {
-    const mesa = await Mesa.findById(req.params.id);
-    if (!mesa) return res.status(404).json({ message: 'Mesa no encontrada' });
+    if (!mongoose.isValidObjectId(req.params.id)) {
+      return res.status(400).json({ message: 'ID de mesa inválido' });
+    }
 
-    await Mesa.findByIdAndDelete(req.params.id);
-    res.json({ message: 'Mesa eliminada correctamente' });
+    const mesa = await Mesa.findById(req.params.id);
+    if (!mesa || mesa.activa === false) {
+      return res.status(404).json({ message: 'Mesa no encontrada' });
+    }
+
+    if (mesa.estado === 'OCUPADA') {
+      return res.status(409).json({ message: 'No se puede eliminar una mesa ocupada' });
+    }
+
+    const pedidoActivo = await Pedido.exists({
+      mesaId: mesa._id,
+      'cierre.cerrado': { $ne: true },
+      estadoPedido: { $ne: 'CANCELADO' }
+    });
+
+    if (pedidoActivo) {
+      return res.status(409).json({ message: 'No se puede eliminar una mesa con un pedido activo' });
+    }
+
+    const tieneHistorial = await Pedido.exists({ mesaId: mesa._id });
+
+    if (tieneHistorial) {
+      mesa.activa = false;
+      mesa.estado = 'LIBRE';
+      await mesa.save();
+
+      return res.json({
+        message: 'Mesa retirada del salón. Se conservó su historial de pedidos.',
+        modo: 'ARCHIVADA'
+      });
+    }
+
+    await Mesa.findByIdAndDelete(mesa._id);
+    return res.json({
+      message: 'Mesa eliminada correctamente',
+      modo: 'ELIMINADA'
+    });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: 'Error eliminando mesa' });
+    return res.status(500).json({ message: 'Error eliminando mesa' });
   }
 });
 
