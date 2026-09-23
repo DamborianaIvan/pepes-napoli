@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Navigate, Routes, Route } from "react-router-dom";
 import { AuthLogin } from "./components/Login/AuthLogin";
 import { AuthRegister } from "./components/Login/AuthRegister";
 import PanelLayout from "./components/Panel/PanelLayout";
@@ -32,6 +32,14 @@ export default function App() {
             </PrivateRoute>
           }
         >
+          <Route
+            index
+            element={
+              <RoleRoute>
+                <Navigate to="/panel/dashboard" replace />
+              </RoleRoute>
+            }
+          />
           <Route path="mesas" element={<RoleRoute><Mesas /></RoleRoute>} />
           <Route path="nuevo-pedido" element={<RoleRoute><NuevoPedido /></RoleRoute>} />
           <Route path="dashboard" element={<RoleRoute><Dashboard /></RoleRoute>} />
@@ -44,6 +52,14 @@ export default function App() {
           <Route path="usuarios" element={<RoleRoute><UsuarioManager /></RoleRoute>} />
           <Route path="auditoria" element={<RoleRoute><Auditoria /></RoleRoute>} />
           <Route path="delivery" element={<RoleRoute deliveryOnly><DeliveryPedidos /></RoleRoute>} />
+          <Route
+            path="*"
+            element={
+              <RoleRoute>
+                <Navigate to="/panel/dashboard" replace />
+              </RoleRoute>
+            }
+          />
         </Route>
 
         <Route path="*" element={<AuthLogin />} />
