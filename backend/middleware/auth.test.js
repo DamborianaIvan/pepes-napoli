@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import jwt from 'jsonwebtoken';
+import Usuario from '../models/Usuario.js';
 
 // Los tests no deben depender de un .env local para firmar el JWT de prueba.
 process.env.JWT_SECRET = 'test-secret-for-auth-middleware-32-chars-min';
@@ -38,16 +39,23 @@ test('protect rechaza tokens inválidos', async () => {
   assert.equal(result.nextError.details.reason, 'INVALID_TOKEN');
 });
 
-test('protect rechaza un JWT válido cuando el usuario no existe', { skip: !process.env.MONGODB_TEST_URI }, async () => {
-  const token = jwt.sign({ id: '000000000000000000000000', rol: 'ADMIN' }, config.jwtSecret, {
-    expiresIn: '1h'
-  });
-  const req = { headers: { authorization: `Bearer ${token}` } };
-  const result = await executeMiddleware(protect, req);
+test('protect rechaza un JWT válido cuando el usuario no existe', async () => {
+  const findByIdOriginal = Usuario.findById;
+  Usuario.findById = async () => null;
 
-  assert.equal(result.nextCalled, true);
-  assert.equal(result.nextError.statusCode, 401);
-  assert.equal(result.nextError.details.reason, 'INACTIVE_USER');
+  try {
+    const token = jwt.sign({ id: '000000000000000000000000', rol: 'ADMIN' }, config.jwtSecret, {
+      expiresIn: '1h'
+    });
+    const req = { headers: { authorization: `Bearer ${token}` } };
+    const result = await executeMiddleware(protect, req);
+
+    assert.equal(result.nextCalled, true);
+    assert.equal(result.nextError.statusCode, 401);
+    assert.equal(result.nextError.details.reason, 'INACTIVE_USER');
+  } finally {
+    Usuario.findById = findByIdOriginal;
+  }
 });
 
 test('restrictTo rechaza un rol no autorizado', async () => {
