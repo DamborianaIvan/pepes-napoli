@@ -330,7 +330,7 @@ const StockManager = () => {
   );
 
   return (
-    <Box sx={{ p: 3 }}>
+    <Box className="stock-page">
       <Stack direction={{ xs: "column", md: "row" }} justifyContent="space-between" spacing={2} mb={2}>
         <Box>
           <Typography variant="h4"><Inventory2Icon /> STOCK</Typography>

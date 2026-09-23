@@ -331,7 +331,7 @@ const Reportes = () => {
                             type="monotone"
                             dataKey="ingresos"
                             name="Ingresos"
-                            stroke="#344054"
+                            stroke="var(--color-muted)"
                             strokeWidth={3}
                             dot={{ r: 4 }}
                           />
@@ -399,7 +399,7 @@ const Reportes = () => {
                             <XAxis type="number" allowDecimals={false} />
                             <YAxis type="category" dataKey="nombre" width={130} />
                             <Tooltip formatter={(value) => `${numero(Number(value))} unidades`} />
-                            <Bar dataKey="cantidad" name="Unidades" fill="#475467" />
+                            <Bar dataKey="cantidad" name="Unidades" fill="var(--color-primary)" />
                           </BarChart>
                         </ResponsiveContainer>
                       </div>
