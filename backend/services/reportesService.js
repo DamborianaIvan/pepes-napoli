@@ -9,6 +9,7 @@ import { TIPOS_MOVIMIENTO_STOCK } from '../constants/stock.js';
 import { crearTotalesPorMetodoVacios } from '../constants/caja.js';
 import { redondearMoneda } from '../utils/finanzasPedido.js';
 import { prorratearImporteNeto } from '../utils/reportes.js';
+import { REPORTES } from '../constants/reportes.js';
 
 const ordenarDesc = (campo) => (a, b) => b[campo] - a[campo];
 
@@ -16,6 +17,18 @@ const agregar = (mapa, clave, inicial, fn) => {
   const actual = mapa.get(clave) ?? { ...inicial };
   fn(actual);
   mapa.set(clave, actual);
+};
+
+const fechaNegocio = (fecha) => {
+  const partes = new Intl.DateTimeFormat('en-US', {
+    timeZone: REPORTES.ZONA_HORARIA,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).formatToParts(new Date(fecha));
+
+  const values = Object.fromEntries(partes.map((parte) => [parte.type, parte.value]));
+  return `${values.year}-${values.month}-${values.day}`;
 };
 
 export const generarResumenReportes = async ({ inicio, finExclusivo }) => {
@@ -60,6 +73,7 @@ export const generarResumenReportes = async ({ inicio, finExclusivo }) => {
   );
   const productos = new Map();
   const categorias = new Map();
+  const ventasDiarias = new Map();
 
   let ingresos = 0;
   let totalBruto = 0;
@@ -72,6 +86,12 @@ export const generarResumenReportes = async ({ inicio, finExclusivo }) => {
     ingresos = redondearMoneda(ingresos + netoPedido);
     totalBruto = redondearMoneda(totalBruto + brutoPedido);
     descuentos = redondearMoneda(descuentos + Number(pedido.descuento?.monto ?? Math.max(0, brutoPedido - netoPedido)));
+
+    const dia = fechaNegocio(pedido.cierre?.fecha);
+    agregar(ventasDiarias, dia, { fecha: dia, cantidad: 0, ingresos: 0 }, (actual) => {
+      actual.cantidad += 1;
+      actual.ingresos = redondearMoneda(actual.ingresos + netoPedido);
+    });
 
     if (ventasPorTipo[pedido.tipoPedido]) {
       ventasPorTipo[pedido.tipoPedido].cantidad += 1;
@@ -201,6 +221,7 @@ export const generarResumenReportes = async ({ inicio, finExclusivo }) => {
       unidadesVendidas,
       porTipo: ventasPorTipo,
       porMetodoPago: pagosPorMetodo,
+      serieDiaria: Array.from(ventasDiarias.values()).sort((a, b) => a.fecha.localeCompare(b.fecha)),
       productos: Array.from(productos.values()).sort(ordenarDesc('cantidad')),
       categorias: Array.from(categorias.values()).sort(ordenarDesc('importe'))
     },
