@@ -380,6 +380,176 @@ describe('integración: gestión de pedidos', { skip: !INTEGRATION_ENABLED }, ()
     assert.equal(eliminar.response.status, 200);
     assert.equal(await Pedido.findById(pedido._id), null);
   });
+  test('DELIVERY solo consulta pedidos disponibles para reparto', async () => {
+    await crearUsuario();
+    await Usuario.create({
+      nombre: 'Delivery Test',
+      nombreUsuario: 'delivery-test',
+      email: 'delivery-test@example.com',
+      password: 'password-delivery-123',
+      rol: 'DELIVERY'
+    });
+
+    const delivery = await loginComo('delivery-test', 'password-delivery-123');
+    const producto = await crearProducto();
+
+    const disponible = await Pedido.create({
+      tipoPedido: 'DELIVERY',
+      nombreCliente: 'Cliente Delivery',
+      telefono: '123456',
+      direccion: 'Calle 123',
+      productos: [{
+        productoId: producto._id,
+        nombreSnapshot: producto.nombre,
+        cantidad: 1,
+        precioUnitario: producto.precio,
+        subtotal: producto.precio
+      }],
+      total: producto.precio,
+      totalFinal: producto.precio,
+      estadoPedido: 'LISTO',
+      estadoPago: 'PENDIENTE'
+    });
+
+    await Pedido.create({
+      tipoPedido: 'DELIVERY',
+      nombreCliente: 'Todavia Cocina',
+      telefono: '123456',
+      direccion: 'Calle 456',
+      productos: [{
+        productoId: producto._id,
+        nombreSnapshot: producto.nombre,
+        cantidad: 1,
+        precioUnitario: producto.precio,
+        subtotal: producto.precio
+      }],
+      total: producto.precio,
+      totalFinal: producto.precio,
+      estadoPedido: 'EN_COCINA',
+      estadoPago: 'PENDIENTE'
+    });
+
+    await Pedido.create({
+      tipoPedido: 'TAKEAWAY',
+      nombreCliente: 'Takeaway',
+      productos: [{
+        productoId: producto._id,
+        nombreSnapshot: producto.nombre,
+        cantidad: 1,
+        precioUnitario: producto.precio,
+        subtotal: producto.precio
+      }],
+      total: producto.precio,
+      totalFinal: producto.precio,
+      estadoPedido: 'LISTO',
+      estadoPago: 'PENDIENTE'
+    });
+
+    const lista = await requestJson('/api/pedidos/delivery', {
+      headers: authorization(delivery.token)
+    });
+
+    assert.equal(lista.response.status, 200);
+    assert.deepEqual(lista.body.map((pedido) => pedido._id), [disponible._id.toString()]);
+  });
+
+  test('DELIVERY puede marcar como entregado un pedido disponible', async () => {
+    await crearUsuario();
+    await Usuario.create({
+      nombre: 'Delivery Test',
+      nombreUsuario: 'delivery-test',
+      email: 'delivery-test@example.com',
+      password: 'password-delivery-123',
+      rol: 'DELIVERY'
+    });
+
+    const delivery = await loginComo('delivery-test', 'password-delivery-123');
+    const producto = await crearProducto();
+
+    const pedido = await Pedido.create({
+      tipoPedido: 'DELIVERY',
+      nombreCliente: 'Cliente Delivery',
+      telefono: '123456',
+      direccion: 'Calle 123',
+      productos: [{
+        productoId: producto._id,
+        nombreSnapshot: producto.nombre,
+        cantidad: 1,
+        precioUnitario: producto.precio,
+        subtotal: producto.precio
+      }],
+      total: producto.precio,
+      totalFinal: producto.precio,
+      estadoPedido: 'LISTO',
+      estadoPago: 'PENDIENTE'
+    });
+
+    const entrega = await requestJson(`/api/pedidos/delivery/${pedido._id}/entregado`, {
+      method: 'PATCH',
+      headers: authorization(delivery.token)
+    });
+
+    assert.equal(entrega.response.status, 200);
+    assert.equal(entrega.body.estadoPedido, 'ENTREGADO');
+
+    const persistido = await Pedido.findById(pedido._id);
+    assert.equal(persistido.estadoPedido, 'ENTREGADO');
+  });
+
+  test('DELIVERY no puede consultar ni cambiar pedidos por los endpoints genericos', async () => {
+    await crearUsuario();
+    await Usuario.create({
+      nombre: 'Delivery Test',
+      nombreUsuario: 'delivery-test',
+      email: 'delivery-test@example.com',
+      password: 'password-delivery-123',
+      rol: 'DELIVERY'
+    });
+
+    const delivery = await loginComo('delivery-test', 'password-delivery-123');
+    const producto = await crearProducto();
+    const pedido = await Pedido.create({
+      tipoPedido: 'DELIVERY',
+      nombreCliente: 'Cliente Delivery',
+      direccion: 'Calle 123',
+      productos: [{
+        productoId: producto._id,
+        nombreSnapshot: producto.nombre,
+        cantidad: 1,
+        precioUnitario: producto.precio,
+        subtotal: producto.precio
+      }],
+      total: producto.precio,
+      totalFinal: producto.precio,
+      estadoPedido: 'LISTO',
+      estadoPago: 'PENDIENTE'
+    });
+
+    const listado = await requestJson('/api/pedidos', {
+      headers: authorization(delivery.token)
+    });
+    assert.equal(listado.response.status, 403);
+
+    const cambio = await requestJson(`/api/pedidos/${pedido._id}/estado`, {
+      method: 'PATCH',
+      headers: authorization(delivery.token),
+      body: JSON.stringify({ estadoPedido: 'EN_CAMINO' })
+    });
+    assert.equal(cambio.response.status, 403);
+  });
+
+  test('otros roles no pueden usar el contrato exclusivo de DELIVERY', async () => {
+    await crearUsuario();
+    const admin = await loginComo('admin-test', 'password-admin-123');
+
+    const lista = await requestJson('/api/pedidos/delivery', {
+      headers: authorization(admin.token)
+    });
+
+    assert.equal(lista.response.status, 403);
+  });
+
+
 });
 
 async function ProductoUpdatePrecio(id, precio) {

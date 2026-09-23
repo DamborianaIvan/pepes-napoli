@@ -16,6 +16,7 @@ import RestaurantMenuIcon from "@mui/icons-material/RestaurantMenu";
 import PointOfSaleIcon from "@mui/icons-material/PointOfSale";
 import Inventory2Icon from "@mui/icons-material/Inventory2";
 import HistoryOutlinedIcon from "@mui/icons-material/HistoryOutlined";
+import LocalShippingOutlinedIcon from "@mui/icons-material/LocalShippingOutlined";
 import { clearSession, getSession } from "../../auth/session";
 import { hasPermission, PERMISSIONS } from "../../types/auth";
 
@@ -51,6 +52,7 @@ const Sidebar = () => {
       hasPermission(rol, PERMISSIONS.CASH_CHARGE)
     : false;
   const canViewKitchen = rol === "ADMIN" || rol === "CAJERO" || rol === "CHEF";
+  const isDelivery = rol === "DELIVERY";
 
   const logout = () => {
     clearSession();
@@ -60,7 +62,7 @@ const Sidebar = () => {
   return (
     <aside className={`sidebar ${open ? "open" : ""}`}>
       <div className="sidebar-top">
-        <Link to="/panel/dashboard" onClick={() => setOpen(false)}>
+        <Link to={isDelivery ? "/panel/delivery" : "/panel/dashboard"} onClick={() => setOpen(false)}>
           <img src={logo} alt="FRESCO" className="sidebar-logo" />
         </Link>
         <button className="menu-toggle" onClick={() => setOpen(!open)}>
@@ -75,77 +77,86 @@ const Sidebar = () => {
         </p>
 
         <nav className="sidebar-nav">
-          <Link to="/panel/dashboard" onClick={() => setOpen(false)}>
-            <HomeIcon className="sidebar-icon" />
-            HOME
-          </Link>
-
-          <Link to="/panel/mesas" onClick={() => setOpen(false)}>
-            <TableRestaurantIcon className="sidebar-icon" />
-            MESAS
-          </Link>
-
-          {canCreateOrders && (
-            <Link to="/panel/nuevo-pedido" onClick={() => setOpen(false)}>
-              <AddCircleIcon className="sidebar-icon" />
-              NUEVO PEDIDO
-            </Link>
-          )}
-
-          {canViewOrders && (
-            <Link to="/panel/pedidos" onClick={() => setOpen(false)}>
-              <InventoryIcon className="sidebar-icon" />
+          {isDelivery ? (
+            <Link to="/panel/delivery" onClick={() => setOpen(false)}>
+              <LocalShippingOutlinedIcon className="sidebar-icon" />
               PEDIDOS
             </Link>
-          )}
+          ) : (
+            <>
+              <Link to="/panel/dashboard" onClick={() => setOpen(false)}>
+                <HomeIcon className="sidebar-icon" />
+                HOME
+              </Link>
 
-          {canViewKitchen && (
-            <Link to="/panel/cocina" onClick={() => setOpen(false)}>
-              <RestaurantMenuIcon className="sidebar-icon" />
-              COCINA
-            </Link>
-          )}
+              <Link to="/panel/mesas" onClick={() => setOpen(false)}>
+                <TableRestaurantIcon className="sidebar-icon" />
+                MESAS
+              </Link>
 
-          {canViewCaja && (
-            <Link to="/panel/caja" onClick={() => setOpen(false)}>
-              <PointOfSaleIcon className="sidebar-icon" />
-              CAJA
-            </Link>
-          )}
+              {canCreateOrders && (
+                <Link to="/panel/nuevo-pedido" onClick={() => setOpen(false)}>
+                  <AddCircleIcon className="sidebar-icon" />
+                  NUEVO PEDIDO
+                </Link>
+              )}
 
-          {canManageProducts && (
-            <Link to="/panel/crear-producto" onClick={() => setOpen(false)}>
-              <ReceiptLongIcon className="sidebar-icon" />
-              MENÚ
-            </Link>
-          )}
+              {canViewOrders && (
+                <Link to="/panel/pedidos" onClick={() => setOpen(false)}>
+                  <InventoryIcon className="sidebar-icon" />
+                  PEDIDOS
+                </Link>
+              )}
 
-          {canAdjustStock && (
-            <Link to="/panel/stock" onClick={() => setOpen(false)}>
-              <Inventory2Icon className="sidebar-icon" />
-              STOCK
-            </Link>
-          )}
+              {canViewKitchen && (
+                <Link to="/panel/cocina" onClick={() => setOpen(false)}>
+                  <RestaurantMenuIcon className="sidebar-icon" />
+                  COCINA
+                </Link>
+              )}
 
-          {canManageUsers && (
-            <Link to="/panel/usuarios" onClick={() => setOpen(false)}>
-              <ManageAccountsIcon className="sidebar-icon" />
-              USUARIOS
-            </Link>
-          )}
+              {canViewCaja && (
+                <Link to="/panel/caja" onClick={() => setOpen(false)}>
+                  <PointOfSaleIcon className="sidebar-icon" />
+                  CAJA
+                </Link>
+              )}
 
-          {canViewReports && (
-            <Link to="/panel/reportes" onClick={() => setOpen(false)}>
-              <AssessmentIcon className="sidebar-icon" />
-              REPORTES
-            </Link>
-          )}
+              {canManageProducts && (
+                <Link to="/panel/crear-producto" onClick={() => setOpen(false)}>
+                  <ReceiptLongIcon className="sidebar-icon" />
+                  MENÚ
+                </Link>
+              )}
 
-          {rol === "ADMIN" && (
-            <Link to="/panel/auditoria" onClick={() => setOpen(false)}>
-              <HistoryOutlinedIcon className="sidebar-icon" />
-              AUDITORÍA
-            </Link>
+              {canAdjustStock && (
+                <Link to="/panel/stock" onClick={() => setOpen(false)}>
+                  <Inventory2Icon className="sidebar-icon" />
+                  STOCK
+                </Link>
+              )}
+
+              {canManageUsers && (
+                <Link to="/panel/usuarios" onClick={() => setOpen(false)}>
+                  <ManageAccountsIcon className="sidebar-icon" />
+                  USUARIOS
+                </Link>
+              )}
+
+              {canViewReports && (
+                <Link to="/panel/reportes" onClick={() => setOpen(false)}>
+                  <AssessmentIcon className="sidebar-icon" />
+                  REPORTES
+                </Link>
+              )}
+
+              {rol === "ADMIN" && (
+                <Link to="/panel/auditoria" onClick={() => setOpen(false)}>
+                  <HistoryOutlinedIcon className="sidebar-icon" />
+                  AUDITORÍA
+                </Link>
+              )}
+            </>
           )}
         </nav>
 

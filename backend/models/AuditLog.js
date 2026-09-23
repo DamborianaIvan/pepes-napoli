@@ -53,6 +53,8 @@ const AuditLogSchema = new mongoose.Schema({
 });
 
 AuditLogSchema.index({ fecha: -1, accion: 1 });
+AuditLogSchema.index({ entidad: 1, fecha: -1 });
+AuditLogSchema.index({ accion: 1, fecha: -1 });
 AuditLogSchema.index({ entidad: 1, entidadId: 1, fecha: -1 });
 
 export default mongoose.model('AuditLog', AuditLogSchema);

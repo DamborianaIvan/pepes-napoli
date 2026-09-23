@@ -7,6 +7,8 @@ import { config, validateConfig } from './config.js';
 import { openapiDefinition } from './docs/openapi.js';
 import { paths } from './docs/paths.js';
 import { errorHandler, notFound } from './middleware/errorHandler.js';
+import { securityHeaders } from './middleware/securityHeaders.js';
+import { requestLogger } from './middleware/requestLogger.js';
 import authRoutes from './routes/auth.js';
 import healthRoutes from './routes/health.js';
 import productosRoutes from './routes/productos.js';
@@ -22,6 +24,9 @@ const swaggerDocs = { ...openapiDefinition, paths };
 const app = express();
 
 app.disable('x-powered-by');
+
+app.use(securityHeaders);
+app.use(requestLogger);
 
 app.use(cors({
   origin: config.corsOrigins

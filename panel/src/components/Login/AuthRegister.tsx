@@ -5,10 +5,6 @@ import logo from "../../assets/pepes.png";
 import {
   TextField,
   InputAdornment,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
   Snackbar,
 } from "@mui/material";
 import MuiAlert, { type AlertColor } from "@mui/material/Alert";
@@ -16,7 +12,6 @@ import PersonIcon from "@mui/icons-material/Person";
 import EmailIcon from "@mui/icons-material/Email";
 import LockIcon from "@mui/icons-material/Lock";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
-import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
 const Alert = MuiAlert as typeof MuiAlert;
 
 export const AuthRegister = () => {
@@ -24,7 +19,6 @@ export const AuthRegister = () => {
   const [nombreUsuario, setNombreUsuario] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [rol, setRol] = useState("delivery");
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMsg, setSnackbarMsg] = useState("");
   const [snackbarType, setSnackbarType] = useState<AlertColor>("success");
@@ -37,7 +31,7 @@ export const AuthRegister = () => {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!nombre || !nombreUsuario || !email || !password || !rol) {
+    if (!nombre || !nombreUsuario || !email || !password) {
       setSnackbarType("warning");
       setSnackbarMsg("Completá todos los campos.");
       setSnackbarOpen(true);
@@ -62,7 +56,6 @@ export const AuthRegister = () => {
             nombreUsuario,
             email,
             password,
-            rol,
           }),
         }
       );
@@ -77,7 +70,7 @@ export const AuthRegister = () => {
       }
 
       setSnackbarType("success");
-      setSnackbarMsg("Usuario creado correctamente.");
+      setSnackbarMsg("Administrador inicial creado correctamente.");
       setSnackbarOpen(true);
 
       setTimeout(() => {
@@ -94,7 +87,10 @@ export const AuthRegister = () => {
   return (
     <div className="auth-container">
       <img src={logo} alt="Logo" className="auth-logo" />
-      <h2 className="h2title">Crear nuevo usuario</h2>
+      <h2 className="h2title">Configuración inicial</h2>
+      <p className="auth-bootstrap-help">
+        Creá el primer administrador del sistema. Después, los demás usuarios se gestionan desde el panel.
+      </p>
 
       <form className="auth-form" onSubmit={handleRegister}>
         <TextField
@@ -154,22 +150,6 @@ export const AuthRegister = () => {
             ),
           }}
         />
-
-        <FormControl fullWidth>
-          <InputLabel id="rol-label">
-            <AdminPanelSettingsIcon style={{ marginRight: 4 }} />
-            Rol
-          </InputLabel>
-          <Select
-            labelId="rol-label"
-            value={rol}
-            onChange={(e) => setRol(e.target.value)}
-            label="Rol"
-          >
-            <MenuItem value="admin">admin</MenuItem>
-            <MenuItem value="delivery">Delivery</MenuItem>
-          </Select>
-        </FormControl>
 
         <button type="submit" className="login-button">
           Registrarme

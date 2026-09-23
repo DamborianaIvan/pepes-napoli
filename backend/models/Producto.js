@@ -41,10 +41,18 @@ const ProductoSchema = new mongoose.Schema({
     default: true
   },
 
+  activo: {
+    type: Boolean,
+    default: true,
+    index: true
+  },
+
   fechaCreacion: {
     type: Date,
     default: Date.now
   }
 });
+
+ProductoSchema.index({ categoria: 1, nombre: 1 });
 
 export default mongoose.model('Producto', ProductoSchema);

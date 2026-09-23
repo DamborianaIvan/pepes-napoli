@@ -33,6 +33,7 @@ dayjs.locale("es");
 
 const ListaPedidos = () => {
   const session = getSession();
+  const token = session?.token;
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [mesas, setMesas] = useState<{ _id: string; numero: number }[]>([]);
   const [filtros, setFiltros] = useState({
@@ -62,7 +63,6 @@ const ListaPedidos = () => {
   useEffect(() => {
     const fetchPedidos = async () => {
       try {
-        const token = session?.token;
         const res = await fetch(`${import.meta.env.VITE_API_URL}/api/pedidos`, {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -77,7 +77,7 @@ const ListaPedidos = () => {
     const fetchMesas = async () => {
       try {
         const res = await fetch(`${import.meta.env.VITE_API_URL}/api/mesas`, {
-          headers: { Authorization: `Bearer ${session?.token}` },
+          headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok) throw new Error();
         const data: { _id: string; numero: number }[] = await res.json();
@@ -91,7 +91,7 @@ const ListaPedidos = () => {
     void fetchMesas();
     const interval = setInterval(() => void fetchPedidos(), 10000);
     return () => clearInterval(interval);
-  }, []);
+  }, [token]);
 
   useEffect(() => {
     const handleClickFuera = (e: MouseEvent) => {

@@ -31,4 +31,6 @@ const IngredienteSchema = new mongoose.Schema({
   timestamps: true
 });
 
+IngredienteSchema.index({ activo: -1, nombre: 1 });
+
 export default mongoose.model('Ingrediente', IngredienteSchema);

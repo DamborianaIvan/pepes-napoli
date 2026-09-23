@@ -27,13 +27,19 @@ test('CAJERO tiene permisos operativos de pedidos, caja y reportes', () => {
   assert.equal(hasPermission(ROLES.CAJERO, PERMISSIONS.PRODUCTS_MANAGE), false);
 });
 
-test('CHEF y DELIVERY solo tienen cambio de estado de pedidos', () => {
-  for (const role of [ROLES.CHEF, ROLES.DELIVERY]) {
-    assert.equal(hasPermission(role, PERMISSIONS.ORDERS_CHANGE_STATUS), true);
-    assert.equal(hasPermission(role, PERMISSIONS.ORDERS_CREATE), false);
-    assert.equal(hasPermission(role, PERMISSIONS.CASH_OPEN), false);
-    assert.equal(hasPermission(role, PERMISSIONS.REPORTS_VIEW), false);
-  }
+test('CHEF solo tiene cambio de estado de pedidos', () => {
+  assert.equal(hasPermission(ROLES.CHEF, PERMISSIONS.ORDERS_CHANGE_STATUS), true);
+  assert.equal(hasPermission(ROLES.CHEF, PERMISSIONS.ORDERS_CREATE), false);
+  assert.equal(hasPermission(ROLES.CHEF, PERMISSIONS.CASH_OPEN), false);
+  assert.equal(hasPermission(ROLES.CHEF, PERMISSIONS.REPORTS_VIEW), false);
+});
+
+test('DELIVERY no recibe permisos genericos del panel', () => {
+  assert.deepEqual(PERMISSIONS_BY_ROLE[ROLES.DELIVERY], []);
+  assert.equal(hasPermission(ROLES.DELIVERY, PERMISSIONS.ORDERS_CHANGE_STATUS), false);
+  assert.equal(hasPermission(ROLES.DELIVERY, PERMISSIONS.ORDERS_CREATE), false);
+  assert.equal(hasPermission(ROLES.DELIVERY, PERMISSIONS.CASH_OPEN), false);
+  assert.equal(hasPermission(ROLES.DELIVERY, PERMISSIONS.REPORTS_VIEW), false);
 });
 
 test('isValidPermission distingue permisos configurados de valores desconocidos', () => {

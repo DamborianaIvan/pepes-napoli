@@ -2,8 +2,11 @@ import express from 'express';
 import { protect, requirePermission } from '../middleware/auth.js';
 import { PERMISSIONS } from '../constants/permissions.js';
 import Producto from '../models/Producto.js';
+import Pedido from '../models/Pedido.js';
+import Receta from '../models/Receta.js';
 import { registrarAuditoria } from '../services/auditoriaService.js';
 import { ACCIONES_AUDITORIA, ENTIDADES_AUDITORIA } from '../constants/auditoria.js';
+import { productoRequiereArchivo } from '../utils/producto.js';
 
 const router = express.Router();
 
@@ -82,7 +85,7 @@ router.post('/', protect, requirePermission(PERMISSIONS.PRODUCTS_MANAGE), async 
 // Obtener productos: público para el catálogo.
 router.get('/', async (req, res) => {
   try {
-    const productos = await Producto.find().sort({ categoria: 1, nombre: 1 });
+    const productos = await Producto.find({ activo: { $ne: false } }).sort({ categoria: 1, nombre: 1 });
     res.json(productos);
   } catch (error) {
     res.status(500).json({ message: 'Error al obtener productos' });
@@ -92,7 +95,10 @@ router.get('/', async (req, res) => {
 // Obtener producto por ID: público para el catálogo.
 router.get('/:id', async (req, res) => {
   try {
-    const producto = await Producto.findById(req.params.id);
+    const producto = await Producto.findOne({
+      _id: req.params.id,
+      activo: { $ne: false }
+    });
     if (!producto) return res.status(404).json({ message: 'Producto no encontrado' });
     res.json(producto);
   } catch (error) {
@@ -143,18 +149,56 @@ router.put('/:id', protect, requirePermission(PERMISSIONS.PRODUCTS_MANAGE), asyn
 // Eliminar producto: requiere products:manage.
 router.delete('/:id', protect, requirePermission(PERMISSIONS.PRODUCTS_MANAGE), async (req, res) => {
   try {
-    const productoEliminado = await Producto.findByIdAndDelete(req.params.id);
-    if (!productoEliminado) return res.status(404).json({ message: 'Producto no encontrado' });
+    const producto = await Producto.findOne({
+      _id: req.params.id,
+      activo: { $ne: false }
+    });
+    if (!producto) return res.status(404).json({ message: 'Producto no encontrado' });
+
+    const [tienePedidos, tieneReceta] = await Promise.all([
+      Pedido.exists({ 'productos.productoId': producto._id }),
+      Receta.exists({ productoId: producto._id })
+    ]);
+
+    const requiereHistorial = productoRequiereArchivo({ tienePedidos, tieneReceta });
+    const snapshotAnterior = snapshotProducto(producto);
+
+    if (requiereHistorial) {
+      producto.activo = false;
+      producto.disponible = false;
+      await producto.save();
+
+      await registrarAuditoria({
+        accion: ACCIONES_AUDITORIA.PRODUCTO_ELIMINADO,
+        entidad: ENTIDADES_AUDITORIA.PRODUCTO,
+        entidadId: producto._id,
+        usuario: req.usuario,
+        antes: snapshotAnterior,
+        despues: { activo: false, disponible: false },
+        metadata: { modo: 'ARCHIVADO' }
+      });
+
+      return res.json({
+        message: 'Producto retirado del catálogo. Se conservó su historial.',
+        modo: 'ARCHIVADO'
+      });
+    }
+
+    await Producto.findByIdAndDelete(producto._id);
 
     await registrarAuditoria({
       accion: ACCIONES_AUDITORIA.PRODUCTO_ELIMINADO,
       entidad: ENTIDADES_AUDITORIA.PRODUCTO,
-      entidadId: productoEliminado._id,
+      entidadId: producto._id,
       usuario: req.usuario,
-      antes: snapshotProducto(productoEliminado)
+      antes: snapshotAnterior,
+      metadata: { modo: 'ELIMINADO' }
     });
 
-    res.json({ message: 'Producto eliminado correctamente' });
+    return res.json({
+      message: 'Producto eliminado correctamente',
+      modo: 'ELIMINADO'
+    });
   } catch (error) {
     res.status(500).json({ message: 'Error al eliminar el producto' });
   }
