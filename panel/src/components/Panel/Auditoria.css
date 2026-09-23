@@ -9,14 +9,30 @@
 .auditoria-item-header strong { color: #101828; }
 .auditoria-item-header span, .auditoria-item-header time { color: #667085; font-size: .82rem; }
 .auditoria-meta { display: flex; flex-wrap: wrap; gap: .9rem; margin-top: .7rem; color: #475467; font-size: .82rem; }
-.auditoria-detalle { margin-top: .9rem; }
-.auditoria-detalle summary { cursor: pointer; color: #344054; font-weight: 700; }
-.auditoria-detalle-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: .8rem; margin-top: .8rem; }
-.auditoria-detalle-grid > div { min-width: 0; }
-.auditoria-detalle-grid span { display: block; margin-bottom: .3rem; color: #667085; font-size: .76rem; text-transform: uppercase; }
-.auditoria-detalle pre { margin: 0; max-height: 260px; overflow: auto; padding: .7rem; border-radius: 8px; background: #f9fafb; color: #344054; font-size: .75rem; white-space: pre-wrap; word-break: break-word; }
+
+.auditoria-detalle { margin-top: .9rem; border-top: 1px solid #eaecf0; padding-top: .8rem; }
+.auditoria-detalle summary { width: fit-content; cursor: pointer; color: #344054; font-weight: 700; }
+.auditoria-detalle[open] summary { margin-bottom: .9rem; }
+
+.auditoria-detalle-seccion { margin-top: .8rem; }
+.auditoria-detalle-seccion:first-of-type { margin-top: 0; }
+.auditoria-detalle-seccion h4 { margin: 0 0 .55rem; color: #475467; font-size: .78rem; text-transform: uppercase; letter-spacing: .04em; }
+
+.auditoria-detalle-filas { display: grid; gap: .45rem; }
+.auditoria-detalle-fila { display: grid; grid-template-columns: minmax(130px, .8fr) minmax(0, 2fr); gap: 1rem; align-items: start; padding: .65rem .75rem; border-radius: 8px; background: #f9fafb; }
+.auditoria-detalle-fila > span { color: #667085; font-size: .82rem; }
+.auditoria-detalle-fila > strong { color: #101828; font-size: .86rem; font-weight: 700; word-break: break-word; }
+
+.auditoria-cambios { display: grid; gap: .55rem; }
+.auditoria-cambio { padding: .75rem; border: 1px solid #eaecf0; border-radius: 9px; background: #fcfcfd; }
+.auditoria-cambio-etiqueta { display: block; margin-bottom: .4rem; color: #667085; font-size: .8rem; font-weight: 700; }
+.auditoria-cambio-valores { display: flex; align-items: center; flex-wrap: wrap; gap: .55rem; color: #475467; }
+.auditoria-cambio-valores svg { color: #98a2b3; }
+.auditoria-cambio-valores strong { color: #101828; }
+.auditoria-valor-anterior { color: #667085; text-decoration: line-through; text-decoration-color: #d0d5dd; }
 
 @media (max-width: 700px) {
   .auditoria-page { padding: 1rem; }
   .auditoria-item-header { flex-direction: column; }
+  .auditoria-detalle-fila { grid-template-columns: 1fr; gap: .2rem; }
 }
