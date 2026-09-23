@@ -180,10 +180,11 @@ Pedido
 Pedido
 → EN_COCINA
 → LISTO
-→ EN_CAMINO
-→ ENTREGADO
+→ DELIVERY marca ENTREGADO
 → cobro/cierre
 ```
+
+El rol `DELIVERY` utiliza una vista operativa exclusiva. Solo recibe pedidos de delivery disponibles para reparto y su única acción de dominio es marcarlos como entregados. No accede al Dashboard, Mesas ni al historial general de pedidos.
 
 ## API y monitoreo
 
