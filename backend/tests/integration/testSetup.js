@@ -10,6 +10,7 @@ import MovimientoCaja from '../../models/MovimientoCaja.js';
 import Ingrediente from '../../models/Ingrediente.js';
 import Receta from '../../models/Receta.js';
 import MovimientoStock from '../../models/MovimientoStock.js';
+import AuditLog from '../../models/AuditLog.js';
 
 export const TEST_MONGODB_URI = process.env.MONGODB_TEST_URI;
 export const INTEGRATION_ENABLED = Boolean(TEST_MONGODB_URI);
@@ -94,6 +95,7 @@ export const limpiarPedidos = async () => {
     MovimientoCaja.deleteMany({}),
     Caja.deleteMany({}),
     MovimientoStock.deleteMany({}),
+    AuditLog.deleteMany({}),
     Receta.deleteMany({}),
     Ingrediente.deleteMany({})
   ]);

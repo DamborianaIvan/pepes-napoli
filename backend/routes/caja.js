@@ -8,6 +8,8 @@ import Caja from '../models/Caja.js';
 import MovimientoCaja from '../models/MovimientoCaja.js';
 import { ApiError } from '../utils/apiError.js';
 import { redondearMoneda } from '../utils/finanzasPedido.js';
+import { registrarAuditoria } from '../services/auditoriaService.js';
+import { ACCIONES_AUDITORIA, ENTIDADES_AUDITORIA } from '../constants/auditoria.js';
 
 const router = express.Router();
 
@@ -43,6 +45,18 @@ router.post('/abrir', protect, requirePermission(PERMISSIONS.CASH_OPEN), asyncHa
     await Caja.findByIdAndDelete(caja._id);
     throw error;
   }
+
+  await registrarAuditoria({
+    accion: ACCIONES_AUDITORIA.CAJA_ABIERTA,
+    entidad: ENTIDADES_AUDITORIA.CAJA,
+    entidadId: caja._id,
+    usuario: req.usuario,
+    despues: {
+      estado: caja.estado,
+      montoInicial: caja.montoInicial,
+      fechaApertura: caja.fechaApertura
+    }
+  });
 
   return res.status(201).json(caja);
 }));
@@ -92,6 +106,21 @@ router.post('/cerrar', protect, requirePermission(PERMISSIONS.CASH_CLOSE), async
   caja.efectivoDeclarado = declarado;
   caja.diferencia = redondearMoneda(declarado - efectivoEsperado);
   await caja.save();
+
+  await registrarAuditoria({
+    accion: ACCIONES_AUDITORIA.CAJA_CERRADA,
+    entidad: ENTIDADES_AUDITORIA.CAJA,
+    entidadId: caja._id,
+    usuario: req.usuario,
+    despues: {
+      estado: caja.estado,
+      fechaCierre: caja.fechaCierre,
+      totalesPorMetodo: caja.totalesPorMetodo,
+      efectivoEsperado: caja.efectivoEsperado,
+      efectivoDeclarado: caja.efectivoDeclarado,
+      diferencia: caja.diferencia
+    }
+  });
 
   return res.json(caja);
 }));

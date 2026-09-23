@@ -280,6 +280,9 @@ const ListaPedidos = () => {
     setPaginaActual(1);
   };
 
+  const etiquetaEstadoVisual = (pedido: Pedido) =>
+    pedido.cierre?.cerrado ? "Cerrado" : ETIQUETAS_ESTADO_PEDIDO[pedido.estadoPedido];
+
   const obtenerNombrePedido = (pedido: Pedido) => {
     if (pedido.nombreCliente) return pedido.nombreCliente;
     if (pedido.tipoPedido === "SALON" && pedido.mesaId) {
@@ -332,7 +335,7 @@ const ListaPedidos = () => {
           <h3 className="fecha-header">{dia}</h3>
           {pedidosDia.map((pedido) => <div key={pedido._id} className={`pedido-item ${expandedId === pedido._id ? "expandido" : ""}`} onClick={() => setExpandedId((prev) => prev === pedido._id ? null : pedido._id)}>
             <div className="resumen">
-              <strong>{obtenerNombrePedido(pedido)}</strong> - {ETIQUETAS_ESTADO_PEDIDO[pedido.estadoPedido]} - ${(pedido.totalFinal ?? pedido.total).toLocaleString("es-AR")}
+              <strong>{obtenerNombrePedido(pedido)}</strong> - {etiquetaEstadoVisual(pedido)} - ${(pedido.totalFinal ?? pedido.total).toLocaleString("es-AR")}
               <br /><small>{dayjs(pedido.fechaPedido).format("HH:mm")} hs</small>
             </div>
             {expandedId === pedido._id && <div className="detalle">
@@ -350,8 +353,8 @@ const ListaPedidos = () => {
                   Ticket
                 </Button>
               )}
-              {canEditOrders && pedido.estadoPedido === "ABIERTO" && <Button size="small" variant="outlined" onClick={(event) => { event.stopPropagation(); void abrirDetalle(pedido._id); }}>Editar</Button>}
-              {canCancelOrders && !["ENTREGADO", "CANCELADO"].includes(pedido.estadoPedido) && <Button size="small" color="error" variant="outlined" onClick={(event) => { event.stopPropagation(); void abrirDetalle(pedido._id); }}>Cancelar</Button>}
+              {canEditOrders && !pedido.cierre?.cerrado && pedido.estadoPedido === "ABIERTO" && <Button size="small" variant="outlined" onClick={(event) => { event.stopPropagation(); void abrirDetalle(pedido._id); }}>Editar</Button>}
+              {canCancelOrders && !pedido.cierre?.cerrado && !["ENTREGADO", "CANCELADO"].includes(pedido.estadoPedido) && <Button size="small" color="error" variant="outlined" onClick={(event) => { event.stopPropagation(); void abrirDetalle(pedido._id); }}>Cancelar</Button>}
               <p>📞 Teléfono: {pedido.telefono || "-"}</p>
               <p>🚚 Tipo de pedido: {ETIQUETAS_TIPO_PEDIDO[pedido.tipoPedido]}</p>
               <p>💳 Estado de pago: {pedido.estadoPago}</p>
@@ -373,11 +376,11 @@ const ListaPedidos = () => {
           {pedidoSeleccionado && (
             <>
               <div className="pedido-meta">
-                <div><span>Estado</span><strong>{ETIQUETAS_ESTADO_PEDIDO[pedidoSeleccionado.estadoPedido]}</strong></div>
+                <div><span>Estado</span><strong>{etiquetaEstadoVisual(pedidoSeleccionado)}</strong></div>
                 <div><span>Tipo</span><strong>{ETIQUETAS_TIPO_PEDIDO[pedidoSeleccionado.tipoPedido]}</strong></div>
                 <div><span>{pedidoSeleccionado.tipoPedido === "SALON" && pedidoSeleccionado.mesaId ? "Mesa" : "Cliente"}</span><strong>{obtenerNombrePedido(pedidoSeleccionado)}</strong></div>
               </div>
-              {canChangeStatus && !modoEdicion && obtenerEstadosPermitidos(pedidoSeleccionado).length > 0 && (
+              {canChangeStatus && !pedidoSeleccionado.cierre?.cerrado && !modoEdicion && obtenerEstadosPermitidos(pedidoSeleccionado).length > 0 && (
                 <div className="pedido-estado-accion">
                   <TextField
                     select
@@ -451,10 +454,10 @@ const ListaPedidos = () => {
               Ticket
             </Button>
           )}
-          {pedidoSeleccionado && canEditOrders && pedidoSeleccionado.estadoPedido === "ABIERTO" && !modoEdicion && <Button onClick={() => { setModoEdicion(true); void cargarProductosDisponibles(); }}>Editar</Button>}
+          {pedidoSeleccionado && canEditOrders && !pedidoSeleccionado.cierre?.cerrado && pedidoSeleccionado.estadoPedido === "ABIERTO" && !modoEdicion && <Button onClick={() => { setModoEdicion(true); void cargarProductosDisponibles(); }}>Editar</Button>}
           {pedidoSeleccionado && modoEdicion && <Button onClick={() => setModoEdicion(false)}>Cancelar edición</Button>}
           {pedidoSeleccionado && modoEdicion && <Button variant="contained" disabled={guardando || productosEdicion.length === 0} onClick={() => void guardarEdicion()}>Guardar cambios</Button>}
-          {pedidoSeleccionado && canCancelOrders && !["ENTREGADO", "CANCELADO"].includes(pedidoSeleccionado.estadoPedido) && !modoEdicion && <Button color="error" onClick={() => void cancelarPedido()}>Cancelar pedido</Button>}
+          {pedidoSeleccionado && canCancelOrders && !pedidoSeleccionado.cierre?.cerrado && !["ENTREGADO", "CANCELADO"].includes(pedidoSeleccionado.estadoPedido) && !modoEdicion && <Button color="error" onClick={() => void cancelarPedido()}>Cancelar pedido</Button>}
           <Button onClick={() => setPedidoSeleccionado(null)}>Cerrar</Button>
         </DialogActions>
       </Dialog>

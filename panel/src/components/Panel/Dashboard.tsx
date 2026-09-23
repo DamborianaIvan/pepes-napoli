@@ -64,22 +64,21 @@ export const Dashboard = () => {
           return fecha.toDateString() === hoyStr;
         });
 
-        const entregadosHoy = pedidosDelDia.filter((p) => {
+        const pedidosCompletadosHoy = pedidosDelDia.filter((p) => {
           if (rolGuardado === "DELIVERY") {
-            return (
-              p.estadoPedido.toLowerCase() === "entregado" &&
-              p.tipoPedido.toLowerCase() === "delivery"
-            );
+            return p.tipoPedido === "DELIVERY" && p.estadoPedido === "ENTREGADO";
           }
-          return p.estadoPedido.toLowerCase() === "entregado";
+          return Boolean(p.cierre?.cerrado) && p.estadoPago === "PAGADO" && p.estadoPedido !== "CANCELADO";
         });
 
-        const entregadosMes = data.filter((p: Pedido) => {
+        const pedidosCompletadosMes = data.filter((p: Pedido) => {
           const fecha = new Date(p.fechaPedido);
           return (
             fecha.getMonth() === mesActual &&
             fecha.getFullYear() === añoActual &&
-            p.estadoPedido.toLowerCase() === "entregado"
+            Boolean(p.cierre?.cerrado) &&
+            p.estadoPago === "PAGADO" &&
+            p.estadoPedido !== "CANCELADO"
           );
         });
 
@@ -106,45 +105,25 @@ export const Dashboard = () => {
             ].includes(p.estadoPedido)
         ).length;
 
+        const esActivo = (pedido: Pedido) =>
+          !pedido.cierre?.cerrado && pedido.estadoPedido !== "CANCELADO";
+
         const salonActivos = visibles.filter(
-          p =>
-            p.tipoPedido === "SALON" &&
-            [
-              "ABIERTO",
-              "CONFIRMADO",
-              "EN_COCINA",
-              "LISTO",
-              "SERVIDO"
-            ].includes(p.estadoPedido)
+          (p) => p.tipoPedido === "SALON" && esActivo(p)
         ).length;
+
         const deliveryActivos = visibles.filter(
-          p =>
-            p.tipoPedido === "DELIVERY" &&
-            [
-              "ABIERTO",
-              "CONFIRMADO",
-              "EN_COCINA",
-              "LISTO",
-              "EN_CAMINO"
-            ].includes(p.estadoPedido)
+          (p) => p.tipoPedido === "DELIVERY" && esActivo(p)
         ).length;
 
         const takeawayActivos = visibles.filter(
-          p =>
-            p.tipoPedido === "TAKEAWAY" &&
-            [
-              "ABIERTO",
-              "CONFIRMADO",
-              "EN_COCINA",
-              "LISTO",
-              "SERVIDO"
-            ].includes(p.estadoPedido)
+          (p) => p.tipoPedido === "TAKEAWAY" && esActivo(p)
         ).length;
 
         setResumen({
-          totalMes: entregadosMes.length,
+          totalMes: pedidosCompletadosMes.length,
           pedidosAbiertos,
-          pedidosDia: entregadosHoy.length,
+          pedidosDia: pedidosCompletadosHoy.length,
           salonActivos,
           deliveryActivos,
           takeawayActivos

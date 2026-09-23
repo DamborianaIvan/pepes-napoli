@@ -33,6 +33,8 @@ import {
 } from '../utils/finanzasPedido.js';
 import { crearTicketVenta } from '../utils/ticket.js';
 import { consumirStockPedido } from '../services/stockService.js';
+import { registrarAuditoria } from '../services/auditoriaService.js';
+import { ACCIONES_AUDITORIA, ENTIDADES_AUDITORIA } from '../constants/auditoria.js';
 
 const router = express.Router();
 
@@ -178,8 +180,18 @@ router.patch('/:id/listo', protect, restrictTo(ROLES.ADMIN, ROLES.CAJERO, ROLES.
     });
   }
 
+  const estadoAnterior = pedido.estadoPedido;
   pedido.estadoPedido = ESTADOS_PEDIDO.LISTO;
   await pedido.save();
+
+  await registrarAuditoria({
+    accion: ACCIONES_AUDITORIA.PEDIDO_ESTADO_CAMBIADO,
+    entidad: ENTIDADES_AUDITORIA.PEDIDO,
+    entidadId: pedido._id,
+    usuario: req.usuario,
+    antes: { estadoPedido: estadoAnterior },
+    despues: { estadoPedido: pedido.estadoPedido }
+  });
 
   return res.json(pedido);
 }));
@@ -210,6 +222,18 @@ router.patch('/:id/descuento', protect, requirePermission(PERMISSIONS.CASH_CHARG
   pedido.totalFinal = totalFinal;
   pedido.estadoPago = totalFinal === 0 ? ESTADOS_PAGO.PAGADO : ESTADOS_PAGO.PENDIENTE;
   await pedido.save();
+
+  await registrarAuditoria({
+    accion: ACCIONES_AUDITORIA.PEDIDO_DESCUENTO_APLICADO,
+    entidad: ENTIDADES_AUDITORIA.PEDIDO,
+    entidadId: pedido._id,
+    usuario: req.usuario,
+    despues: {
+      porcentaje,
+      monto,
+      totalFinal
+    }
+  });
 
   return res.json(pedido);
 }));
@@ -280,6 +304,19 @@ router.post('/:id/cobrar', protect, requirePermission(PERMISSIONS.CASH_CHARGE), 
     throw error;
   }
 
+  await registrarAuditoria({
+    accion: ACCIONES_AUDITORIA.PEDIDO_COBRADO,
+    entidad: ENTIDADES_AUDITORIA.PEDIDO,
+    entidadId: pedido._id,
+    usuario: req.usuario,
+    despues: {
+      estadoPago: pedido.estadoPago,
+      totalFinal: pedido.totalFinal,
+      pagos: pagos.map((pago) => ({ metodo: pago.metodo, monto: pago.monto })),
+      cajaId: caja._id
+    }
+  });
+
   return res.json(pedido);
 }));
 
@@ -349,6 +386,21 @@ router.post('/:id/anular-cobro', protect, requirePermission(PERMISSIONS.CASH_CHA
     throw error;
   }
 
+  await registrarAuditoria({
+    accion: ACCIONES_AUDITORIA.PEDIDO_COBRO_ANULADO,
+    entidad: ENTIDADES_AUDITORIA.PEDIDO,
+    entidadId: pedido._id,
+    usuario: req.usuario,
+    despues: {
+      estadoPago: pedido.estadoPago,
+      pagosAnulados: pagosActivos.map((pago) => ({
+        metodo: pago.metodo,
+        monto: pago.monto
+      })),
+      cajaId: caja._id
+    }
+  });
+
   return res.json(pedido);
 }));
 
@@ -415,6 +467,20 @@ router.post('/:id/cerrar', protect, requirePermission(PERMISSIONS.CASH_CHARGE), 
     await pedido.save().catch(() => {});
     throw error;
   }
+
+  await registrarAuditoria({
+    accion: ACCIONES_AUDITORIA.PEDIDO_CERRADO,
+    entidad: ENTIDADES_AUDITORIA.PEDIDO,
+    entidadId: pedido._id,
+    usuario: req.usuario,
+    despues: {
+      tipoPedido: pedido.tipoPedido,
+      estadoPedido: pedido.estadoPedido,
+      estadoPago: pedido.estadoPago,
+      cerrado: true,
+      fecha: pedido.cierre?.fecha
+    }
+  });
 
   return res.json(pedido);
 }));
@@ -505,6 +571,8 @@ router.patch('/:id/estado', protect, requirePermission(PERMISSIONS.ORDERS_CHANGE
 
   if (pedido.estadoPedido === estadoPedido) return res.json(pedido);
 
+  const estadoAnterior = pedido.estadoPedido;
+
   if (!puedeTransicionarPedido(pedido.estadoPedido, estadoPedido, pedido.tipoPedido)) {
     throw new ApiError(409, 'Transición de estado de pedido no permitida', {
       from: pedido.estadoPedido,
@@ -515,6 +583,15 @@ router.patch('/:id/estado', protect, requirePermission(PERMISSIONS.ORDERS_CHANGE
 
   pedido.estadoPedido = estadoPedido;
   await pedido.save();
+
+  await registrarAuditoria({
+    accion: ACCIONES_AUDITORIA.PEDIDO_ESTADO_CAMBIADO,
+    entidad: ENTIDADES_AUDITORIA.PEDIDO,
+    entidadId: pedido._id,
+    usuario: req.usuario,
+    antes: { estadoPedido: estadoAnterior },
+    despues: { estadoPedido }
+  });
 
   return res.json(pedido);
 }));
@@ -544,12 +621,22 @@ router.patch('/:id/cancelar', protect, requirePermission(PERMISSIONS.ORDERS_CANC
     });
   }
 
+  const estadoAnterior = pedido.estadoPedido;
   pedido.estadoPedido = ESTADOS_PEDIDO.CANCELADO;
   await pedido.save();
 
   if (pedido.tipoPedido === TIPOS_PEDIDO.SALON && pedido.mesaId) {
     await Mesa.findByIdAndUpdate(pedido.mesaId, { estado: 'LIBRE' });
   }
+
+  await registrarAuditoria({
+    accion: ACCIONES_AUDITORIA.PEDIDO_CANCELADO,
+    entidad: ENTIDADES_AUDITORIA.PEDIDO,
+    entidadId: pedido._id,
+    usuario: req.usuario,
+    antes: { estadoPedido: estadoAnterior },
+    despues: { estadoPedido: pedido.estadoPedido }
+  });
 
   return res.json(pedido);
 }));

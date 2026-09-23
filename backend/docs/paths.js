@@ -255,6 +255,24 @@ export const paths = {
   '/api/pedidos/{id}/cobrar': { post: { tags: ['Pedidos'], summary: 'Registrar cobro completo dividido por medios', security: auth, parameters: [id], requestBody: { required: true, content: json({ type: 'object', required: ['pagos'], properties: { pagos: { type: 'array', minItems: 1, items: ref('PagoPedido') } } }) }, responses: secured({ 200: { description: 'Cobro registrado', content: json(ref('Pedido')) }, 409: error('Caja cerrada o suma de pagos inválida') }) } },
   '/api/pedidos/{id}/anular-cobro': { post: { tags: ['Pedidos'], summary: 'Anular cobro completo conservando historial', security: auth, parameters: [id], responses: secured({ 200: { description: 'Cobro anulado', content: json(ref('Pedido')) }, 409: error('Cobro no anulable') }) } },
   '/api/pedidos/{id}/cerrar': { post: { tags: ['Pedidos'], summary: 'Cerrar pedido pagado, liberar mesa y consumir receta', security: auth, parameters: [id], responses: secured({ 200: { description: 'Pedido cerrado', content: json(ref('Pedido')) }, 409: error('Pedido no está listo para cierre') }) } },
+  '/api/auditoria': {
+    get: {
+      tags: ['Auditoría'],
+      summary: 'Listar eventos de auditoría',
+      security: auth,
+      parameters: [
+        { name: 'entidad', in: 'query', required: false, schema: { type: 'string', enum: ['PEDIDO', 'CAJA', 'STOCK', 'USUARIO', 'PRODUCTO'] } },
+        { name: 'accion', in: 'query', required: false, schema: { type: 'string' } },
+        { name: 'entidadId', in: 'query', required: false, schema: { type: 'string' } },
+        { name: 'limit', in: 'query', required: false, schema: { type: 'integer', minimum: 1, maximum: 200, default: 100 } }
+      ],
+      responses: secured({
+        200: { description: 'Eventos más recientes', content: json({ type: 'array', items: ref('AuditLog') }) },
+        400: error('Filtro inválido'),
+        403: { $ref: '#/components/responses/Forbidden' }
+      })
+    }
+  },
   '/api/reportes/resumen': {
     get: {
       tags: ['Reportes'],

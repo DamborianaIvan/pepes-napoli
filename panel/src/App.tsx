@@ -13,6 +13,7 @@ import UsuarioManager from "./components/Panel/UsuarioManager";
 import Cocina from "./components/Panel/Cocina";
 import Caja from "./components/Panel/Caja";
 import StockManager from "./components/Panel/StockManager";
+import Auditoria from "./components/Panel/Auditoria";
 
 export default function App() {
   return (
@@ -39,6 +40,7 @@ export default function App() {
           <Route path="reportes" element={<Reportes />} />
           <Route path="crear-producto" element={<ProductoManager />} />
           <Route path="usuarios" element={<UsuarioManager />} />
+          <Route path="auditoria" element={<Auditoria />} />
         </Route>
 
         <Route path="*" element={<AuthLogin />} />

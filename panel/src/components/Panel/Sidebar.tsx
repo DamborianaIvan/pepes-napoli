@@ -15,6 +15,7 @@ import ManageAccountsIcon from "@mui/icons-material/ManageAccounts";
 import RestaurantMenuIcon from "@mui/icons-material/RestaurantMenu";
 import PointOfSaleIcon from "@mui/icons-material/PointOfSale";
 import Inventory2Icon from "@mui/icons-material/Inventory2";
+import HistoryOutlinedIcon from "@mui/icons-material/HistoryOutlined";
 import { clearSession, getSession } from "../../auth/session";
 import { hasPermission, PERMISSIONS } from "../../types/auth";
 
@@ -137,6 +138,13 @@ const Sidebar = () => {
             <Link to="/panel/reportes" onClick={() => setOpen(false)}>
               <AssessmentIcon className="sidebar-icon" />
               REPORTES
+            </Link>
+          )}
+
+          {rol === "ADMIN" && (
+            <Link to="/panel/auditoria" onClick={() => setOpen(false)}>
+              <HistoryOutlinedIcon className="sidebar-icon" />
+              AUDITORÍA
             </Link>
           )}
         </nav>
