@@ -212,6 +212,11 @@ describe('integración: reportes', { skip: !INTEGRATION_ENABLED }, () => {
     assert.equal(body.ventas.unidadesVendidas, 2);
     assert.equal(body.ventas.porMetodoPago.EFECTIVO, 6000);
     assert.equal(body.ventas.porMetodoPago.TRANSFERENCIA, 4000);
+    assert.deepEqual(body.ventas.serieDiaria, [{
+      fecha: '2026-09-10',
+      cantidad: 1,
+      ingresos: 10000
+    }]);
     assert.equal(body.ventas.productos[0].cantidad, 1);
     assert.equal(
       body.ventas.productos.reduce((sum, item) => sum + item.importe, 0),
