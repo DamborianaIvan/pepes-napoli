@@ -3,7 +3,7 @@ export const openapiDefinition = {
   info: {
     title: 'API Pepes Pizza',
     version: '1.0.0',
-    description: 'API para autenticación, productos, pedidos, mesas, caja, pagos, tickets y stock.'
+    description: 'API para autenticación, productos, pedidos, mesas, caja, pagos, tickets, stock y reportes.'
   },
   servers: [{ url: process.env.BASE_URL || 'http://localhost:5000', description: 'Servidor configurado' }],
   tags: [
@@ -13,7 +13,8 @@ export const openapiDefinition = {
     { name: 'Mesas', description: 'Gestión de mesas del salón' },
     { name: 'Caja', description: 'Apertura, cobros, movimientos y cierre de caja' },
     { name: 'Tickets', description: 'Comprobantes de venta imprimibles' },
-    { name: 'Stock', description: 'Ingredientes, recetas, movimientos y alertas de inventario' }
+    { name: 'Stock', description: 'Ingredientes, recetas, movimientos y alertas de inventario' },
+    { name: 'Reportes', description: 'Ventas, caja y stock por período' }
   ],
   components: {
     securitySchemes: { bearerAuth: { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' } },
@@ -69,6 +70,7 @@ export const openapiDefinition = {
         properties: {
           productoId: { type: 'string', nullable: true, readOnly: true },
           nombreSnapshot: { type: 'string', example: 'Pizza Muzzarella', readOnly: true },
+          categoriaSnapshot: { type: 'string', nullable: true, readOnly: true, example: 'PIZZAS' },
           cantidad: { type: 'integer', minimum: 1, example: 2 },
           precioUnitario: { type: 'number', minimum: 0, example: 12000, readOnly: true },
           subtotal: { type: 'number', minimum: 0, example: 24000, readOnly: true }
@@ -199,6 +201,63 @@ export const openapiDefinition = {
           pedidoId: { type: 'string', nullable: true },
           usuarioId: { type: 'string', nullable: true },
           fecha: { type: 'string', format: 'date-time' }
+        }
+      },
+      ReporteResumen: {
+        type: 'object',
+        properties: {
+          periodo: {
+            type: 'object',
+            properties: {
+              desde: { type: 'string', format: 'date', example: '2026-09-01' },
+              hasta: { type: 'string', format: 'date', example: '2026-09-30' },
+              dias: { type: 'integer', example: 30 },
+              zonaHoraria: { type: 'string', example: 'America/Argentina/Buenos_Aires' }
+            }
+          },
+          ventas: {
+            type: 'object',
+            properties: {
+              cantidad: { type: 'integer' },
+              ingresos: { type: 'number' },
+              totalBruto: { type: 'number' },
+              descuentos: { type: 'number' },
+              ticketPromedio: { type: 'number' },
+              unidadesVendidas: { type: 'number' },
+              porTipo: { type: 'object' },
+              porMetodoPago: { type: 'object' },
+              serieDiaria: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    fecha: { type: 'string', format: 'date' },
+                    cantidad: { type: 'integer' },
+                    ingresos: { type: 'number' }
+                  }
+                }
+              },
+              productos: { type: 'array', items: { type: 'object' } },
+              categorias: { type: 'array', items: { type: 'object' } }
+            }
+          },
+          caja: {
+            type: 'object',
+            properties: {
+              cantidadCierres: { type: 'integer' },
+              totalesPorMetodo: { type: 'object' },
+              diferenciaAcumulada: { type: 'number' },
+              sesiones: { type: 'array', items: { type: 'object' } }
+            }
+          },
+          stock: {
+            type: 'object',
+            properties: {
+              movimientos: { type: 'integer' },
+              porIngrediente: { type: 'array', items: { type: 'object' } },
+              alertas: { type: 'array', items: { type: 'object' } }
+            }
+          }
         }
       },
       Caja: {
