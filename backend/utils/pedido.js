@@ -112,10 +112,11 @@ export const normalizarProductosEdicionPedido = (productos, pedido, productosDB)
 
     const existente = productosExistentes.get(productoId);
     if (existente) {
+      const productoActual = productosMap.get(productoId);
       return {
         productoId: existente.productoId,
         nombreSnapshot: existente.nombreSnapshot,
-        categoriaSnapshot: existente.categoriaSnapshot ?? producto?.categoria ?? null,
+        categoriaSnapshot: existente.categoriaSnapshot ?? productoActual?.categoria ?? null,
         cantidad,
         precioUnitario: existente.precioUnitario,
         subtotal: existente.precioUnitario * cantidad
