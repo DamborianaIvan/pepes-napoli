@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import "./Sidebar.css";
 import logo from "../../assets/pepes.png";
 import HomeIcon from "@mui/icons-material/Home";
@@ -51,6 +51,7 @@ const Sidebar = () => {
       hasPermission(rol, PERMISSIONS.CASH_CHARGE)
     : false;
   const canViewKitchen = rol === "ADMIN" || rol === "CAJERO" || rol === "CHEF";
+  const navClass = ({ isActive }: { isActive: boolean }) => `sidebar-link${isActive ? " active" : ""}`;
 
   const logout = () => {
     clearSession();
@@ -60,10 +61,11 @@ const Sidebar = () => {
   return (
     <aside className={`sidebar ${open ? "open" : ""}`}>
       <div className="sidebar-top">
-        <Link to="/panel/dashboard" onClick={() => setOpen(false)}>
-          <img src={logo} alt="FRESCO" className="sidebar-logo" />
-        </Link>
-        <button className="menu-toggle" onClick={() => setOpen(!open)}>
+        <NavLink to="/panel/dashboard" className="sidebar-brand" onClick={() => setOpen(false)}>
+          <img src={logo} alt="Pepe's Napoletana" className="sidebar-logo" />
+          <span className="sidebar-brand-name">Pepe's <small>Napoletana</small></span>
+        </NavLink>
+        <button className="menu-toggle" type="button" aria-label={open ? "Cerrar menú" : "Abrir menú"} aria-expanded={open} onClick={() => setOpen(!open)}>
           <MenuIcon />
         </button>
       </div>
@@ -71,81 +73,81 @@ const Sidebar = () => {
       <div className={`sidebar-content ${open ? "show" : ""}`}>
         <p className="sidebar-user">
           <PersonIcon className="sidebar-icon" />
-          {user?.nombre || "Usuario"}
+          <span><strong>{user?.nombre || "Usuario"}</strong><small>{rol || "Panel"}</small></span>
         </p>
 
         <nav className="sidebar-nav">
-          <Link to="/panel/dashboard" onClick={() => setOpen(false)}>
+          <NavLink className={navClass} to="/panel/dashboard" onClick={() => setOpen(false)}>
             <HomeIcon className="sidebar-icon" />
             HOME
-          </Link>
+          </NavLink>
 
-          <Link to="/panel/mesas" onClick={() => setOpen(false)}>
+          <NavLink className={navClass} to="/panel/mesas" onClick={() => setOpen(false)}>
             <TableRestaurantIcon className="sidebar-icon" />
             MESAS
-          </Link>
+          </NavLink>
 
           {canCreateOrders && (
-            <Link to="/panel/nuevo-pedido" onClick={() => setOpen(false)}>
+            <NavLink className={navClass} to="/panel/nuevo-pedido" onClick={() => setOpen(false)}>
               <AddCircleIcon className="sidebar-icon" />
               NUEVO PEDIDO
-            </Link>
+            </NavLink>
           )}
 
           {canViewOrders && (
-            <Link to="/panel/pedidos" onClick={() => setOpen(false)}>
+            <NavLink className={navClass} to="/panel/pedidos" onClick={() => setOpen(false)}>
               <InventoryIcon className="sidebar-icon" />
               PEDIDOS
-            </Link>
+            </NavLink>
           )}
 
           {canViewKitchen && (
-            <Link to="/panel/cocina" onClick={() => setOpen(false)}>
+            <NavLink className={navClass} to="/panel/cocina" onClick={() => setOpen(false)}>
               <RestaurantMenuIcon className="sidebar-icon" />
               COCINA
-            </Link>
+            </NavLink>
           )}
 
           {canViewCaja && (
-            <Link to="/panel/caja" onClick={() => setOpen(false)}>
+            <NavLink className={navClass} to="/panel/caja" onClick={() => setOpen(false)}>
               <PointOfSaleIcon className="sidebar-icon" />
               CAJA
-            </Link>
+            </NavLink>
           )}
 
           {canManageProducts && (
-            <Link to="/panel/crear-producto" onClick={() => setOpen(false)}>
+            <NavLink className={navClass} to="/panel/crear-producto" onClick={() => setOpen(false)}>
               <ReceiptLongIcon className="sidebar-icon" />
               MENÚ
-            </Link>
+            </NavLink>
           )}
 
           {canAdjustStock && (
-            <Link to="/panel/stock" onClick={() => setOpen(false)}>
+            <NavLink className={navClass} to="/panel/stock" onClick={() => setOpen(false)}>
               <Inventory2Icon className="sidebar-icon" />
               STOCK
-            </Link>
+            </NavLink>
           )}
 
           {canManageUsers && (
-            <Link to="/panel/usuarios" onClick={() => setOpen(false)}>
+            <NavLink className={navClass} to="/panel/usuarios" onClick={() => setOpen(false)}>
               <ManageAccountsIcon className="sidebar-icon" />
               USUARIOS
-            </Link>
+            </NavLink>
           )}
 
           {canViewReports && (
-            <Link to="/panel/reportes" onClick={() => setOpen(false)}>
+            <NavLink className={navClass} to="/panel/reportes" onClick={() => setOpen(false)}>
               <AssessmentIcon className="sidebar-icon" />
               REPORTES
-            </Link>
+            </NavLink>
           )}
 
           {rol === "ADMIN" && (
-            <Link to="/panel/auditoria" onClick={() => setOpen(false)}>
+            <NavLink className={navClass} to="/panel/auditoria" onClick={() => setOpen(false)}>
               <HistoryOutlinedIcon className="sidebar-icon" />
               AUDITORÍA
-            </Link>
+            </NavLink>
           )}
         </nav>
 
