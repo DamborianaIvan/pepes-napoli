@@ -558,11 +558,15 @@ router.patch('/:id', protect, requirePermission(PERMISSIONS.ORDERS_EDIT), asyncH
     });
   }
 
+  const nombreClienteFinal = nombreCliente ?? pedido.nombreCliente;
+  const telefonoFinal = telefono ?? pedido.telefono;
+  const direccionFinal = direccion ?? pedido.direccion;
+
   validarDatosClientePedido({
     tipoPedido: pedido.tipoPedido,
-    nombreCliente,
-    telefono,
-    direccion
+    nombreCliente: nombreClienteFinal,
+    telefono: telefonoFinal,
+    direccion: direccionFinal
   });
 
   const productoIds = productos.map((item) => item?.productoId);
@@ -575,10 +579,10 @@ router.patch('/:id', protect, requirePermission(PERMISSIONS.ORDERS_EDIT), asyncH
   const productosDB = await Producto.find({ _id: { $in: productoIds } });
   const productosNormalizados = normalizarProductosEdicionPedido(productos, pedido, productosDB);
 
-  pedido.nombreCliente = nombreCliente;
-  pedido.telefono = telefono;
-  pedido.direccion = direccion;
-  pedido.comentario = comentario ?? '';
+  pedido.nombreCliente = nombreClienteFinal;
+  pedido.telefono = telefonoFinal;
+  pedido.direccion = direccionFinal;
+  if (comentario !== undefined) pedido.comentario = comentario;
   pedido.productos = productosNormalizados;
   pedido.total = calcularTotalPedido(productosNormalizados);
 
