@@ -42,7 +42,6 @@ import {
   METODOS_PAGO,
   TIPOS_PEDIDO,
   type MetodoPago,
-  type TipoPedido,
 } from "../../types/pedido";
 import type { ResumenReportes } from "../../types/reportes";
 import "./Reportes.css";
@@ -100,7 +99,6 @@ const etiquetaCategoria = (categoria: string) =>
     : categoria.charAt(0) + categoria.slice(1).toLowerCase();
 
 const Reportes = () => {
-  const session = getSession();
   const inicial = resolverPreset("MES");
 
   const [preset, setPreset] = useState<Preset>("MES");
