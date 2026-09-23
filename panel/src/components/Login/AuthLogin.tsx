@@ -50,7 +50,8 @@ export const AuthLogin = () => {
       }
       saveSession({ token: data.token, rol: data.rol, user: { nombre: data.nombre, id: data.id } });
       setSnackbarType("success"); setSnackbarMsg("Inicio de sesión exitoso."); setSnackbarOpen(true);
-      setTimeout(() => navigate("/panel/dashboard"), 1000);
+      const destino = data.rol === "DELIVERY" ? "/panel/delivery" : "/panel/dashboard";
+      setTimeout(() => navigate(destino), 1000);
     } catch (err) {
       console.error(err); setSnackbarType("error"); setSnackbarMsg("Error al conectar con el servidor."); setSnackbarOpen(true);
     }
