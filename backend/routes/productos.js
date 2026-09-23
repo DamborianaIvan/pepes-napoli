@@ -2,8 +2,19 @@ import express from 'express';
 import { protect, requirePermission } from '../middleware/auth.js';
 import { PERMISSIONS } from '../constants/permissions.js';
 import Producto from '../models/Producto.js';
+import { registrarAuditoria } from '../services/auditoriaService.js';
+import { ACCIONES_AUDITORIA, ENTIDADES_AUDITORIA } from '../constants/auditoria.js';
 
 const router = express.Router();
+
+const snapshotProducto = (producto) => ({
+  nombre: producto.nombre,
+  categoria: producto.categoria,
+  descripcion: producto.descripcion ?? '',
+  precio: producto.precio,
+  imagen: producto.imagen ?? '',
+  disponible: producto.disponible
+});
 
 // Crear producto: requiere products:manage.
 router.post('/', protect, requirePermission(PERMISSIONS.PRODUCTS_MANAGE), async (req, res) => {
@@ -53,6 +64,14 @@ router.post('/', protect, requirePermission(PERMISSIONS.PRODUCTS_MANAGE), async 
 
     await nuevoProducto.save();
 
+    await registrarAuditoria({
+      accion: ACCIONES_AUDITORIA.PRODUCTO_CREADO,
+      entidad: ENTIDADES_AUDITORIA.PRODUCTO,
+      entidadId: nuevoProducto._id,
+      usuario: req.usuario,
+      despues: snapshotProducto(nuevoProducto)
+    });
+
     res.status(201).json({ message: 'Producto creado correctamente', producto: nuevoProducto });
   } catch (error) {
     console.error(error);
@@ -86,6 +105,12 @@ router.put('/:id', protect, requirePermission(PERMISSIONS.PRODUCTS_MANAGE), asyn
   try {
     const { categoria, nombre, descripcion, precio, imagen, disponible } = req.body;
 
+    const productoAnterior = await Producto.findById(req.params.id);
+    if (!productoAnterior) {
+      return res.status(404).json({ message: 'Producto no encontrado' });
+    }
+    const antes = snapshotProducto(productoAnterior);
+
     const productoActualizado = await Producto.findByIdAndUpdate(
       req.params.id,
       {
@@ -99,9 +124,14 @@ router.put('/:id', protect, requirePermission(PERMISSIONS.PRODUCTS_MANAGE), asyn
       { new: true, runValidators: true }
     );
 
-    if (!productoActualizado) {
-      return res.status(404).json({ message: 'Producto no encontrado' });
-    }
+    await registrarAuditoria({
+      accion: ACCIONES_AUDITORIA.PRODUCTO_ACTUALIZADO,
+      entidad: ENTIDADES_AUDITORIA.PRODUCTO,
+      entidadId: productoActualizado._id,
+      usuario: req.usuario,
+      antes,
+      despues: snapshotProducto(productoActualizado)
+    });
 
     res.json({ message: 'Producto actualizado correctamente', producto: productoActualizado });
   } catch (error) {
@@ -115,6 +145,15 @@ router.delete('/:id', protect, requirePermission(PERMISSIONS.PRODUCTS_MANAGE), a
   try {
     const productoEliminado = await Producto.findByIdAndDelete(req.params.id);
     if (!productoEliminado) return res.status(404).json({ message: 'Producto no encontrado' });
+
+    await registrarAuditoria({
+      accion: ACCIONES_AUDITORIA.PRODUCTO_ELIMINADO,
+      entidad: ENTIDADES_AUDITORIA.PRODUCTO,
+      entidadId: productoEliminado._id,
+      usuario: req.usuario,
+      antes: snapshotProducto(productoEliminado)
+    });
+
     res.json({ message: 'Producto eliminado correctamente' });
   } catch (error) {
     res.status(500).json({ message: 'Error al eliminar el producto' });
@@ -129,14 +168,24 @@ router.patch('/:id/disponible', protect, requirePermission(PERMISSIONS.PRODUCTS_
       return res.status(400).json({ message: 'Se espera el campo "disponible" como booleano' });
     }
 
-    const producto = await Producto.findByIdAndUpdate(
-      req.params.id,
-      { disponible },
-      { new: true, runValidators: true }
-    );
+    const productoAnterior = await Producto.findById(req.params.id);
+    if (!productoAnterior) return res.status(404).json({ message: 'Producto no encontrado' });
+    const disponibleAnterior = productoAnterior.disponible;
 
-    if (!producto) return res.status(404).json({ message: 'Producto no encontrado' });
-    res.json({ message: 'Disponibilidad actualizada', producto });
+    productoAnterior.disponible = disponible;
+    await productoAnterior.save();
+
+    await registrarAuditoria({
+      accion: ACCIONES_AUDITORIA.PRODUCTO_DISPONIBILIDAD_CAMBIADA,
+      entidad: ENTIDADES_AUDITORIA.PRODUCTO,
+      entidadId: productoAnterior._id,
+      usuario: req.usuario,
+      antes: { disponible: disponibleAnterior },
+      despues: { disponible: productoAnterior.disponible },
+      metadata: { nombre: productoAnterior.nombre }
+    });
+
+    res.json({ message: 'Disponibilidad actualizada', producto: productoAnterior });
   } catch (error) {
     res.status(500).json({ message: 'Error al actualizar disponibilidad' });
   }
