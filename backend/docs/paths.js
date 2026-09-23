@@ -231,6 +231,31 @@ export const paths = {
     get: { tags: ['Pedidos'], summary: 'Listar pedidos', security: auth, responses: secured({ 200: { description: 'Lista de pedidos', content: json({ type: 'array', items: ref('Pedido') }) }, 500: error('Error interno') }) },
     post: { tags: ['Pedidos'], summary: 'Crear pedido', security: auth, requestBody: { required: true, content: json(ref('PedidoCreate')) }, responses: secured({ 201: { description: 'Pedido creado', content: json(ref('Pedido')) }, 400: error('Datos inválidos'), 404: { $ref: '#/components/responses/NotFound' }, 409: error('Mesa ocupada o producto no disponible'), 500: error('Error interno') }) }
   },
+  '/api/pedidos/delivery': {
+    get: {
+      tags: ['Pedidos'],
+      summary: 'Listar entregas disponibles para DELIVERY',
+      security: auth,
+      responses: secured({
+        200: { description: 'Pedidos delivery listos para reparto', content: json({ type: 'array', items: ref('Pedido') }) },
+        403: { $ref: '#/components/responses/Forbidden' }
+      })
+    }
+  },
+  '/api/pedidos/delivery/{id}/entregado': {
+    patch: {
+      tags: ['Pedidos'],
+      summary: 'Marcar una entrega disponible como entregada',
+      security: auth,
+      parameters: [id],
+      responses: secured({
+        200: { description: 'Pedido marcado como entregado', content: json(ref('Pedido')) },
+        403: { $ref: '#/components/responses/Forbidden' },
+        404: { $ref: '#/components/responses/NotFound' },
+        409: error('Pedido no disponible para entrega')
+      })
+    }
+  },
   '/api/pedidos/cocina': {
     get: {
       tags: ['Pedidos'],
