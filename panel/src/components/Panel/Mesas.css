@@ -4,11 +4,12 @@
 .mesas-title h1 { margin: 0; font-size: 2rem; }
 .mesas-header p { margin: .35rem 0 0; color: #667085; }
 .mesas-header-actions { display: flex; flex-wrap: wrap; gap: .6rem; justify-content: flex-end; }
-.mesas-refresh, .mesas-edit-layout, .mesas-save-layout, .mesas-cancel-layout { display: inline-flex; align-items: center; gap: .4rem; border-radius: 8px; padding: .65rem .9rem; cursor: pointer; font-weight: 700; }
+.mesas-refresh, .mesas-edit-layout, .mesas-save-layout, .mesas-cancel-layout, .mesas-new-table { display: inline-flex; align-items: center; gap: .4rem; border-radius: 8px; padding: .65rem .9rem; cursor: pointer; font-weight: 700; }
 .mesas-refresh, .mesas-cancel-layout { border: 1px solid #d0d5dd; background: #fff; color: #344054; }
 .mesas-edit-layout { border: 1px solid #344054; background: #344054; color: #fff; }
+.mesas-new-table { border: 1px solid #175cd3; background: #eff8ff; color: #175cd3; }
 .mesas-save-layout { border: 1px solid #067647; background: #067647; color: #fff; }
-.mesas-save-layout:disabled, .mesas-cancel-layout:disabled { opacity: .6; cursor: wait; }
+.mesas-save-layout:disabled, .mesas-cancel-layout:disabled, .mesas-new-table:disabled { opacity: .6; cursor: wait; }
 
 .mesas-resumen { display: flex; flex-wrap: wrap; gap: .75rem; margin-bottom: 1.25rem; }
 .resumen-chip { display: inline-flex; align-items: center; gap: .45rem; border-radius: 999px; padding: .45rem .8rem; font-size: .9rem; background: #f2f4f7; }
@@ -88,4 +89,18 @@
   .mesas-header-actions { width: 100%; justify-content: flex-start; }
   .salon-plano { min-height: 420px; aspect-ratio: auto; }
   .mesa-plano-capacidad, .mesa-plano-pedido { display: none; }
+}
+
+.nueva-mesa-modal { width: min(560px, 100%); }
+.nueva-mesa-help { margin-top: -.25rem; color: #667085; line-height: 1.45; }
+.nueva-mesa-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; margin-top: 1rem; }
+.nueva-mesa-form label { display: grid; gap: .4rem; color: #344054; font-size: .85rem; font-weight: 700; }
+.nueva-mesa-form label:last-child { grid-column: 1 / -1; }
+.nueva-mesa-form input, .nueva-mesa-form textarea { width: 100%; box-sizing: border-box; border: 1px solid #d0d5dd; border-radius: 8px; padding: .65rem .75rem; font: inherit; background: #fff; }
+.nueva-mesa-form input:focus, .nueva-mesa-form textarea:focus { outline: 2px solid #84adff; outline-offset: 1px; border-color: #2e90fa; }
+.nueva-mesa-actions { display: flex; justify-content: flex-end; gap: .6rem; margin-top: 1.25rem; }
+
+@media (max-width: 560px) {
+  .nueva-mesa-form { grid-template-columns: 1fr; }
+  .nueva-mesa-form label:last-child { grid-column: auto; }
 }
