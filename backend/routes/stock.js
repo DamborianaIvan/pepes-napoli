@@ -14,6 +14,8 @@ import Producto from '../models/Producto.js';
 import Receta from '../models/Receta.js';
 import { registrarMovimientoManual } from '../services/stockService.js';
 import { ApiError } from '../utils/apiError.js';
+import { registrarAuditoria } from '../services/auditoriaService.js';
+import { ACCIONES_AUDITORIA, ENTIDADES_AUDITORIA } from '../constants/auditoria.js';
 
 const router = express.Router();
 
@@ -197,6 +199,26 @@ router.post('/ingredientes/:id/movimientos', asyncHandler(async (req, res) => {
     stockObjetivo,
     motivo,
     usuarioId: req.usuario.id
+  });
+
+  await registrarAuditoria({
+    accion: ACCIONES_AUDITORIA.STOCK_MOVIMIENTO_MANUAL,
+    entidad: ENTIDADES_AUDITORIA.STOCK,
+    entidadId: ingrediente._id,
+    usuario: req.usuario,
+    antes: {
+      stock: movimiento.stockAnterior
+    },
+    despues: {
+      stock: movimiento.stockPosterior
+    },
+    metadata: {
+      ingrediente: ingrediente.nombre,
+      unidad: ingrediente.unidad,
+      tipo: movimiento.tipo,
+      cantidad: movimiento.cantidad,
+      motivo: movimiento.motivo
+    }
   });
 
   return res.status(201).json({ movimiento, ingrediente });
