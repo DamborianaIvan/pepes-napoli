@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Alert, CircularProgress, TextField, MenuItem, Box, Typography, Button } from "@mui/material";
+import { TextField, MenuItem, Box, Typography, Button } from "@mui/material";
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import InventoryIcon from "@mui/icons-material/Inventory";
 import { Link } from "react-router-dom";
@@ -31,7 +31,6 @@ export const Dashboard = () => {
   const canChangeStatus = rol ? hasPermission(rol, PERMISSIONS.ORDERS_CHANGE_STATUS) : false;
   const canCancelOrders = rol ? hasPermission(rol, PERMISSIONS.ORDERS_CANCEL) : false;
   const [snackbar, setSnackbar] = useState<{ mensaje: string; tipo: "ok" | "error" } | null>(null);
-  const [cargandoInicial, setCargandoInicial] = useState(true);
   const [mostrarDashboardCards, setMostrarDashboardCards] = useState(true);
 
   useEffect(() => {
@@ -53,11 +52,7 @@ export const Dashboard = () => {
     })
       .then((res) => res.json())
       .then((data) => {
-        if (!Array.isArray(data)) {
-          setSnackbar({ mensaje: "No se pudieron cargar los pedidos.", tipo: "error" });
-          setCargandoInicial(false);
-          return;
-        }
+        if (!Array.isArray(data)) return;
 
         const hoy = new Date();
         const hoyStr = hoy.toDateString();
@@ -135,7 +130,6 @@ export const Dashboard = () => {
         });
         
         setPedidos(visibles);
-        setCargandoInicial(false);
 
         fetch(`${import.meta.env.VITE_API_URL}/api/mesas`, {
           headers: { Authorization: `Bearer ${token}` },
@@ -146,8 +140,7 @@ export const Dashboard = () => {
 
       })
       .catch(() => {
-        setCargandoInicial(false);
-        setSnackbar({ mensaje: "No se pudieron cargar los pedidos.", tipo: "error" });
+        setSnackbar({ mensaje: "❌ Error cargando pedidos", tipo: "error" });
       });
   };
   const actualizarEstado = async (id: string, nuevoEstado: EstadoPedido) => {
@@ -313,9 +306,9 @@ export const Dashboard = () => {
       )}
 
       {snackbar && (
-        <Alert severity={snackbar.tipo === "ok" ? "success" : "error"} sx={{ mb: 2 }}>
+        <div className={`snackbar ${snackbar.tipo === "ok" ? "snackbar-ok" : "snackbar-error"}`}>
           {snackbar.mensaje}
-        </Alert>
+        </div>
       )}
 
 
@@ -326,13 +319,6 @@ export const Dashboard = () => {
       </div>
       
    
-      {cargandoInicial ? (
-        <Box sx={{ display: "grid", placeItems: "center", minHeight: 180 }}>
-          <CircularProgress />
-        </Box>
-      ) : pedidos.length === 0 ? (
-        <Typography color="text.secondary">No hay pedidos para mostrar hoy.</Typography>
-      ) : (
       <div className="pedidos-cards">
         {pedidos.map((pedido) => (
           <div className="pedido-card" key={pedido._id} data-estado={pedido.estadoPedido}>
@@ -432,7 +418,6 @@ export const Dashboard = () => {
           </div>
         ))}
       </div>
-      )}
     </div>
   );
 };
