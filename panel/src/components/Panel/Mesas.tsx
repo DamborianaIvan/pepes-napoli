@@ -9,6 +9,7 @@ import SaveOutlinedIcon from "@mui/icons-material/SaveOutlined";
 import CloseOutlinedIcon from "@mui/icons-material/CloseOutlined";
 import RotateRightOutlinedIcon from "@mui/icons-material/RotateRightOutlined";
 import OpenWithOutlinedIcon from "@mui/icons-material/OpenWithOutlined";
+import AddOutlinedIcon from "@mui/icons-material/AddOutlined";
 import { getSession } from "../../auth/session";
 import type { Pedido } from "../../types/pedido";
 import "./Mesas.css";
@@ -104,6 +105,14 @@ const Mesas = () => {
     offsetX: number;
     offsetY: number;
   } | null>(null);
+  const [nuevaMesaAbierta, setNuevaMesaAbierta] = useState(false);
+  const [creandoMesa, setCreandoMesa] = useState(false);
+  const [nuevaMesa, setNuevaMesa] = useState({
+    numero: "",
+    nombre: "",
+    capacidad: "4",
+    observaciones: "",
+  });
 
   const cargarDatos = useCallback(async () => {
     const token = getSession()?.token;
@@ -194,6 +203,77 @@ const Mesas = () => {
     setMensaje(null);
     setError(null);
     setEditandoPlano(true);
+  };
+
+  const abrirNuevaMesa = () => {
+    const siguienteNumero = mesas.reduce((max, mesa) => Math.max(max, mesa.numero), 0) + 1;
+    setNuevaMesa({
+      numero: String(siguienteNumero),
+      nombre: "",
+      capacidad: "4",
+      observaciones: "",
+    });
+    setError(null);
+    setNuevaMesaAbierta(true);
+  };
+
+  const crearNuevaMesa = async () => {
+    const token = session?.token;
+    if (!token || !puedeEditarPlano) return;
+
+    const numero = Number(nuevaMesa.numero);
+    const capacidad = Number(nuevaMesa.capacidad);
+
+    if (!Number.isInteger(numero) || numero <= 0) {
+      setError("El número de mesa debe ser un entero mayor a cero.");
+      return;
+    }
+
+    if (!Number.isInteger(capacidad) || capacidad <= 0) {
+      setError("La capacidad debe ser un entero mayor a cero.");
+      return;
+    }
+
+    try {
+      setCreandoMesa(true);
+      setError(null);
+      setMensaje(null);
+
+      const response = await fetch(`${API_URL}/api/mesas`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          numero,
+          nombre: nuevaMesa.nombre,
+          capacidad,
+          observaciones: nuevaMesa.observaciones,
+        }),
+      });
+
+      const body = await response.json();
+      if (!response.ok) {
+        throw new Error(body?.error?.message ?? body?.message ?? "No se pudo crear la mesa.");
+      }
+
+      const mesaCreada = body as Mesa;
+      const layoutInicial = layoutBase(mesaCreada, mesas.length);
+
+      setMesas((actuales) => [...actuales, mesaCreada].sort((a, b) => a.numero - b.numero));
+      setLayoutDraft((actual) => ({
+        ...actual,
+        [mesaCreada._id]: layoutInicial,
+      }));
+      setMesaEditadaId(mesaCreada._id);
+      setNuevaMesaAbierta(false);
+      setMensaje(`Mesa ${mesaCreada.numero} creada. Ubicala en el plano y guardá los cambios.`);
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : "No se pudo crear la mesa.");
+    } finally {
+      setCreandoMesa(false);
+    }
   };
 
   const cancelarEdicion = () => {
@@ -481,6 +561,9 @@ const Mesas = () => {
 
           {editandoPlano && (
             <>
+              <button className="mesas-new-table" type="button" onClick={abrirNuevaMesa} disabled={guardandoPlano}>
+                <AddOutlinedIcon fontSize="small" /> Nueva mesa
+              </button>
               <button className="mesas-cancel-layout" type="button" onClick={cancelarEdicion} disabled={guardandoPlano}>
                 <CloseOutlinedIcon fontSize="small" /> Cancelar
               </button>
@@ -674,6 +757,88 @@ const Mesas = () => {
         </div>
       ) : (
         <p className="mesas-loading">Todavía no hay mesas creadas.</p>
+      )}
+
+
+      {nuevaMesaAbierta && (
+        <div className="mesa-modal-backdrop" role="presentation" onMouseDown={() => !creandoMesa && setNuevaMesaAbierta(false)}>
+          <article
+            className="mesa-modal nueva-mesa-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="nueva-mesa-title"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <button
+              className="mesa-modal-close"
+              type="button"
+              disabled={creandoMesa}
+              onClick={() => setNuevaMesaAbierta(false)}
+            >
+              ×
+            </button>
+
+            <span className="editor-eyebrow">Administración del salón</span>
+            <h2 id="nueva-mesa-title">Nueva mesa</h2>
+            <p className="nueva-mesa-help">
+              La mesa se crea al confirmar. Después podés ubicarla, redimensionarla y cambiar su forma antes de guardar el plano.
+            </p>
+
+            <div className="nueva-mesa-form">
+              <label>
+                Número
+                <input
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={nuevaMesa.numero}
+                  onChange={(event) => setNuevaMesa((actual) => ({ ...actual, numero: event.target.value }))}
+                />
+              </label>
+
+              <label>
+                Nombre opcional
+                <input
+                  type="text"
+                  maxLength={80}
+                  placeholder="Ej: Ventana"
+                  value={nuevaMesa.nombre}
+                  onChange={(event) => setNuevaMesa((actual) => ({ ...actual, nombre: event.target.value }))}
+                />
+              </label>
+
+              <label>
+                Capacidad
+                <input
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={nuevaMesa.capacidad}
+                  onChange={(event) => setNuevaMesa((actual) => ({ ...actual, capacidad: event.target.value }))}
+                />
+              </label>
+
+              <label>
+                Observaciones
+                <textarea
+                  rows={3}
+                  placeholder="Ej: Cerca de la ventana"
+                  value={nuevaMesa.observaciones}
+                  onChange={(event) => setNuevaMesa((actual) => ({ ...actual, observaciones: event.target.value }))}
+                />
+              </label>
+            </div>
+
+            <div className="nueva-mesa-actions">
+              <button type="button" className="mesas-cancel-layout" disabled={creandoMesa} onClick={() => setNuevaMesaAbierta(false)}>
+                Cancelar
+              </button>
+              <button type="button" className="mesas-save-layout" disabled={creandoMesa} onClick={() => void crearNuevaMesa()}>
+                {creandoMesa ? "Creando..." : "Crear mesa"}
+              </button>
+            </div>
+          </article>
+        </div>
       )}
 
       {!editandoPlano && mesaSeleccionada && (
