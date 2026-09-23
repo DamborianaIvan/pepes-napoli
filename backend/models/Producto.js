@@ -41,6 +41,12 @@ const ProductoSchema = new mongoose.Schema({
     default: true
   },
 
+  activo: {
+    type: Boolean,
+    default: true,
+    index: true
+  },
+
   fechaCreacion: {
     type: Date,
     default: Date.now
