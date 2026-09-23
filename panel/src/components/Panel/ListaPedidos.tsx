@@ -4,7 +4,7 @@ import type { Range } from "react-date-range";
 import dayjs from "dayjs";
 import isBetween from "dayjs/plugin/isBetween";
 import { es } from "date-fns/locale";
-import { TextField, MenuItem, Typography, Button, Dialog, DialogTitle, DialogContent, DialogActions, Alert } from "@mui/material";
+import { CircularProgress, TextField, MenuItem, Typography, Button, Dialog, DialogTitle, DialogContent, DialogActions, Alert } from "@mui/material";
 import "dayjs/locale/es";
 import "react-date-range/dist/styles.css";
 import "react-date-range/dist/theme/default.css";
@@ -34,6 +34,8 @@ dayjs.locale("es");
 const ListaPedidos = () => {
   const session = getSession();
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
+  const [cargandoInicial, setCargandoInicial] = useState(true);
+  const [errorCarga, setErrorCarga] = useState<string | null>(null);
   const [mesas, setMesas] = useState<{ _id: string; numero: number }[]>([]);
   const [filtros, setFiltros] = useState({
     usuario: "",
@@ -62,6 +64,7 @@ const ListaPedidos = () => {
   useEffect(() => {
     const fetchPedidos = async () => {
       try {
+        setErrorCarga(null);
         const token = session?.token;
         const res = await fetch(`${import.meta.env.VITE_API_URL}/api/pedidos`, {
           headers: { Authorization: `Bearer ${token}` },
@@ -69,8 +72,10 @@ const ListaPedidos = () => {
         if (!res.ok) throw new Error("Error al obtener pedidos");
         const data: Pedido[] = await res.json();
         setPedidos(data);
-      } catch (err) {
-        console.error("Error obteniendo pedidos:", err);
+      } catch {
+        setErrorCarga("No se pudieron cargar los pedidos. Intentá actualizar nuevamente.");
+      } finally {
+        setCargandoInicial(false);
       }
     };
 
@@ -302,6 +307,12 @@ const ListaPedidos = () => {
   return (
     <div className="contenedor-lista">
       <Typography variant="h4" mb={2}><InventoryIcon />HISTORIAL DE PEDIDOS</Typography>
+      {errorCarga && <Alert severity="error" sx={{ mb: 2 }}>{errorCarga}</Alert>}
+      {cargandoInicial && (
+        <div style={{ display: "grid", placeItems: "center", minHeight: 160 }}>
+          <CircularProgress />
+        </div>
+      )}
       <div className="filtros">
         <TextField label="Buscar por cliente" variant="outlined" value={filtros.usuario} onChange={(e) => { setPaginaActual(1); setFiltros({ ...filtros, usuario: e.target.value }); }} size="small" />
         <TextField label="Método de pago" variant="outlined" select value={filtros.metodoPago} onChange={(e) => { setPaginaActual(1); setFiltros({ ...filtros, metodoPago: e.target.value as MetodoPago | "" }); }} size="small">
@@ -330,8 +341,14 @@ const ListaPedidos = () => {
         {filtros.fechas.startDate && filtros.fechas.endDate && <span className="filtro-aplicado" onClick={() => quitarFiltro("fechas")}>Fechas: {dayjs(filtros.fechas.startDate).format("DD/MM/YYYY")} - {dayjs(filtros.fechas.endDate).format("DD/MM/YYYY")} ×</span>}
       </div>
 
+      {!cargandoInicial && pedidosFiltrados.length === 0 && (
+        <Typography color="text.secondary" sx={{ my: 3 }}>
+          No hay pedidos que coincidan con los filtros seleccionados.
+        </Typography>
+      )}
+
       <div className="lista-pedidos">
-        {Object.entries(pedidosPorDia).map(([dia, pedidosDia]) => <div key={dia}>
+        {!cargandoInicial && Object.entries(pedidosPorDia).map(([dia, pedidosDia]) => <div key={dia}>
           <h3 className="fecha-header">{dia}</h3>
           {pedidosDia.map((pedido) => <div key={pedido._id} className={`pedido-item ${expandedId === pedido._id ? "expandido" : ""}`} onClick={() => setExpandedId((prev) => prev === pedido._id ? null : pedido._id)}>
             <div className="resumen">
