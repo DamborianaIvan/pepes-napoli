@@ -65,7 +65,7 @@ export const AuthLogin = () => {
         <TextField label="Contraseña" type="password" value={password} onChange={(e) => setPassword(e.target.value)} fullWidth required margin="normal" InputProps={{ startAdornment: <InputAdornment position="start"><LockIcon /></InputAdornment> }} />
         <button type="submit" className="login-button">Iniciar sesión</button>
       </form>
-      <p className="auth-link">¿No tenés cuenta? <a href="/register">Crear usuario</a></p>
+      <p className="auth-link">¿Es la primera instalación? <a href="/register">Configurar administrador inicial</a></p>
       <Snackbar open={snackbarOpen} autoHideDuration={4000} onClose={() => setSnackbarOpen(false)} anchorOrigin={{ vertical: "bottom", horizontal: "center" }}>
         <Alert severity={snackbarType} onClose={() => setSnackbarOpen(false)} sx={{ width: "100%" }}>{snackbarMsg}</Alert>
       </Snackbar>
