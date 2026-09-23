@@ -1,214 +1,249 @@
-# Pepes Napoletana- Sistema Fullstack de Gestión y Pedidos
+# Pepe's Napoletana
 
-Proyecto desarrollado con **React + Vite + MUI** en el frontend, y **Express.js + MongoDB** en el backend. Cuenta con dos interfaces principales:
+Backoffice operativo para gestión de restaurante, desarrollado con **React + TypeScript + Vite + MUI** en el panel y **Node.js + Express + MongoDB + Mongoose** en el backend.
 
-- `frontend/`: Menú web para clientes (visualización y pedidos)
-- `panel/`: Panel administrativo para gestionar productos, pedidos, métricas y ajustes
-- `backend/`: API REST para manejo de datos y lógica del sistema
+La versión v1 cubre el circuito completo de operación interna: pedidos, salón, cocina, caja, pagos, tickets, stock, recetas, reportes y auditoría.
 
----
+## Alcance
 
-## 🧱 Tech Stack
+Incluido en v1:
 
-| Parte      | Tecnologías                             |
-|------------|------------------------------------------|
-| Frontend   | React, Vite, TypeScript, MUI             |
-| Panel      | React, Vite, MUI, Context API            |
-| Backend    | Node.js, Express.js, MongoDB, Mongoose   |
-| API Docs   | Swagger (`/api-docs`)                    |
+- usuarios, roles y permisos
+- pedidos de Salón, Takeaway y Delivery
+- cocina / KDS
+- caja, pagos múltiples, descuentos y arqueo
+- tickets de venta
+- ingredientes, recetas y movimientos de stock
+- plano visual de mesas
+- reportes de ventas, caja y stock
+- auditoría y trazabilidad
 
----
+Fuera de alcance actual:
 
-## 🚀 Instalación local
+- frontend público para clientes
+- pedidos web
+- reservas
+- integraciones externas de delivery
+- WebSockets como requisito
+- microservicios
 
-1. Clonar el repositorio:
+El directorio `frontend/` queda reservado para una evolución futura y no forma parte del release operativo actual.
 
-```bash
-git clone https://github.com/tuusuario/fresco-sushi.git
-cd fresco-sushi
-````
+## Estructura
 
-2. Instalar y correr cada parte:
-
-### ➤ Frontend (menú cliente)
-
-```bash
-cd frontend
-npm install
-npm run dev
+```text
+backend/   API REST y lógica de negocio
+panel/     Backoffice administrativo
+frontend/  Futuro frontend público, fuera de alcance v1
 ```
 
-### ➤ Panel (admin)
+## Stack
 
-```bash
-cd panel
-npm install
-npm run dev
-```
+### Backend
 
-### ➤ Backend
+- Node.js
+- Express 5
+- MongoDB
+- Mongoose
+- JWT
+- bcryptjs
+- CORS
+- Swagger
+- Node ESM
+
+### Panel
+
+- React 19
+- TypeScript
+- Vite
+- Material UI
+- Recharts
+- Day.js
+
+## Configuración local
+
+### Backend
 
 ```bash
 cd backend
 npm install
+cp .env.example .env
+npm start
+```
+
+Variables principales:
+
+```env
+NODE_ENV=development
+PORT=5000
+BASE_URL=http://localhost:5000
+MONGODB_URI=mongodb://localhost:27017/pepes-napoli
+JWT_SECRET=replace-with-a-random-secret-of-at-least-32-characters
+JWT_EXPIRES_IN=1d
+CORS_ORIGINS=http://localhost:5173
+```
+
+### Panel
+
+```bash
+cd panel
+npm install
+cp .env.example .env
 npm run dev
 ```
 
-> Asegurate de tener tu archivo `.env` con la conexión a MongoDB.
-
----
-
-## 📂 Estructura del proyecto
-
-```
-fresco-sushi/
-│
-├── frontend/           # Sitio de pedidos online
-│   └── components/     # Componentes reutilizables (ProductCard, MenuSection, etc.)
-│
-├── panel/              # Panel administrativo
-│   ├── components/     # Reutilizables (Modal, Table, Button, Snackbar, etc.)
-│   ├── modules/        # Vistas: Productos, Pedidos, Reportes, Ajustes
-│   └── context/        # Contextos (auth, notificaciones, productos, etc.)
-│
-├── backend/
-│   ├── routes/         # Endpoints de API (productos, pedidos, ajustes, etc.)
-│   ├── models/         # Esquemas de Mongoose
-│   ├── controllers/    # Lógica de cada recurso
-│   ├── middleware/     # Validaciones y control de errores
-│   └── swagger/        # Documentación Swagger
+```env
+VITE_API_URL=http://localhost:5000
 ```
 
----
+## Primera instalación
 
-## 📚 Documentación de la API
+El endpoint público de registro se utiliza **solo para crear el primer ADMIN**.
 
-Disponible en:
+1. iniciar backend y panel;
+2. abrir `/register`;
+3. crear el administrador inicial;
+4. a partir de ese momento el registro público queda cerrado;
+5. los usuarios posteriores se crean desde **USUARIOS** por un ADMIN.
 
-```
-http://localhost:5000/api-docs
-```
+## Roles
 
-> La documentación incluye: autenticación, pedidos, productos, reportes y estados.
+- `ADMIN`
+- `CAJERO`
+- `CHEF`
+- `DELIVERY`
 
----
+La autorización real se valida en backend mediante roles y permisos. El panel solo adapta navegación y acciones visibles.
 
-## 🧾 Objetos del sistema (resumen JSON)
+## Pedidos
 
-### `Producto`
+Estados operativos:
 
-```ts
-{
-  _id: string,
-  nombre: string,
-  descripcion: string,
-  precio: number,
-  categoria: string,
-  disponible: boolean,
-  imagen: string,
-  stockGeneral: boolean
-}
-```
-
-### `Pedido`
-
-```ts
-{
-  _id: string,
-  productos: [ { productId, cantidad } ],
-  total: number,
-  metodoPago: 'efectivo' | 'transferencia',
-  tipoEntrega: 'delivery' | 'takeaway',
-  estado: 'pending' | 'en_preparación' | 'en_reparto' | 'entregado' | 'cancelado',
-  comentario: string,
-  fecha: Date
-}
+```text
+ABIERTO
+CONFIRMADO
+EN_COCINA
+LISTO
+SERVIDO
+EN_CAMINO
+ENTREGADO
+CANCELADO
 ```
 
----
+Estados de pago:
 
-## 🎨 Componentes reutilizables (panel)
+```text
+PENDIENTE
+PAGADO
+ANULADO
+```
 
-* `ReusableModal`: Para crear/editar productos.
-* `ConfirmDeleteDialog`: Confirmación antes de eliminar.
-* `SnackbarAlert`: Muestra confirmaciones según acción.
-* `StatusBadge`: Colores según estado del pedido.
-* `ProductCard`: Muestra producto con disponibilidad.
-* `CustomTable`: Tablas reutilizables con headers dinámicos.
+Tipos:
 
----
+```text
+SALON
+DELIVERY
+TAKEAWAY
+```
 
-## 🧪 Testing
+Para pedidos de salón, `SERVIDO` es el último estado operativo. El cierre comercial se representa por separado mediante `cierre.cerrado = true`.
 
-### Manual
+## Flujos principales
 
-* Flujo completo: agregar productos, hacer pedido, cambio de estado.
+### Salón
 
-### Automatizado
+```text
+Mesa libre
+→ pedido
+→ EN_COCINA
+→ LISTO
+→ SERVIDO
+→ cobro
+→ PAGADO
+→ cierre
+→ mesa libre
+```
 
-* Planificado con:
+### Takeaway
 
-  * `React Testing Library` para frontend/panel.
-  * `Jest + Supertest` para endpoints backend.
+```text
+Pedido
+→ EN_COCINA
+→ LISTO
+→ ENTREGADO
+→ cobro/cierre
+```
 
----
+### Delivery
 
-## 🚦 Nomenclatura de estados de pedido
+```text
+Pedido
+→ EN_COCINA
+→ LISTO
+→ EN_CAMINO
+→ ENTREGADO
+→ cobro/cierre
+```
 
-| Estado           | Descripción                             | Color UI |
-| ---------------- | --------------------------------------- | -------- |
-| `pending`      | Pedido recibido, esperando confirmación | Amarillo |
-| `en_preparación` | En cocina / preparando                  | Azul     |
-| `en_reparto`     | En camino (solo delivery)               | Celeste  |
-| `entregado`      | Completado y entregado                  | Verde    |
-| `cancelado`      | Cancelado por cliente o admin           | Rojo     |
+## API y monitoreo
 
----
+Swagger:
 
-## 🧩 Nomenclatura para tareas (Jira, ClickUp, etc.)
+```text
+GET /api-docs
+```
 
-Usamos **prefijos** y convención `[TIPO]-[MÓDULO]-[DESCRIPCIÓN]`:
+Healthcheck:
 
-| Prefijo | Uso                           | Ejemplo                                      |
-| ------- | ----------------------------- | -------------------------------------------- |
-| `FE`    | Tarea del frontend cliente    | `FE-MENU-Agregar sección de promos`          |
-| `PA`    | Tarea del panel admin         | `PA-REPORTES-Filtrar métricas por mes`       |
-| `BE`    | Backend (API, DB, lógica)     | `BE-PEDIDOS-Agregar endpoint de cancelar`    |
-| `BUG`   | Corrección de error           | `BUG-PANEL-Snackbar no muestra confirmación` |
-| `TEST`  | Testing manual o automatizado | `TEST-FE-Checkout con método de pago`        |
-| `DOC`   | Documentación o diagramas     | `DOC-BE-Actualizar Swagger de pedidos`       |
+```text
+GET /api/health
+```
 
----
+El healthcheck devuelve estado del servicio, conexión MongoDB, uptime y timestamp.
 
-## 🧠 Ajustes y configuración (desde el panel)
+## Testing
 
-* Cambiar stock general (`true/false`)
-* Activar o desactivar producto individual
-* Editar precios, categorías o nombres
-* Agregar productos con imagen (base64 o file)
+Backend:
 
----
+```bash
+cd backend
+npm test
+```
 
-## 📦 Funcionalidades destacadas
+Los tests de integración que requieren MongoDB se habilitan con:
 
-* 🛒 Pedido online desde el menú (cliente)
-* 📈 Métricas por mes, tipo de pedido y método de pago
-* 🧾 Historial de pedidos agrupados por fecha
-* 🔄 Estados de pedido actualizables en tiempo real
-* 📷 Gestión de productos con imágenes y disponibilidad
+```env
+MONGODB_TEST_URI=mongodb://localhost:27017/pepes-napoli-test
+```
 
----
+Panel:
 
-## 🧑‍💻 Desarrollado por
+```bash
+cd panel
+npm run build
+npm run lint
+```
 
-* Agustina Di Natale e Ivan Damboriana 
+## Seguridad
 
----
+- JWT con secreto obligatorio de al menos 32 caracteres
+- CORS configurable por entorno
+- usuario recargado desde DB en cada request autenticado
+- registro público limitado al bootstrap inicial
+- contraseñas hasheadas con bcrypt
+- password excluido por defecto en consultas de usuario
+- respuestas de error 5xx sin detalles internos
+- headers básicos de seguridad
+- límites de JSON request
+- auditoría de operaciones sensibles
+- archivos `.env` excluidos del repositorio
 
-## 📬 Contacto y soporte
+## Release v1
 
-* WhatsApp: \[tu número]
-* Email: \[tu email]
-* IG: @frescosushi
+La checklist de validación y despliegue se encuentra en:
 
----
+`RELEASE_V1.md`
+
+## Autores
+
+Agustina Di Natale e Ivan Damboriana
