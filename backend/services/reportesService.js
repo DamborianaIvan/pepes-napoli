@@ -88,10 +88,20 @@ export const generarResumenReportes = async ({ inicio, finExclusivo }) => {
       );
     }
 
-    for (const item of pedido.productos ?? []) {
+    const itemsPedido = pedido.productos ?? [];
+    let netoAsignado = 0;
+
+    for (const [index, item] of itemsPedido.entries()) {
       const cantidad = Number(item.cantidad ?? 0);
       unidadesVendidas += cantidad;
-      const importeNeto = prorratearImporteNeto(item.subtotal, brutoPedido, netoPedido);
+
+      const esUltimo = index === itemsPedido.length - 1;
+      const importeNeto = esUltimo
+        ? redondearMoneda(netoPedido - netoAsignado)
+        : prorratearImporteNeto(item.subtotal, brutoPedido, netoPedido);
+
+      netoAsignado = redondearMoneda(netoAsignado + importeNeto);
+
       const productoKey = item.productoId ? String(item.productoId) : `snapshot:${item.nombreSnapshot}`;
       const categoria = item.categoriaSnapshot
         ?? (item.productoId ? categoriaPorProducto.get(String(item.productoId)) : null)
