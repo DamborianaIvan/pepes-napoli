@@ -6,6 +6,28 @@ const error = (description) => ({ description, content: json(ref('Error')) });
 const secured = (responses) => ({ 401: { $ref: '#/components/responses/Unauthorized' }, ...responses });
 
 export const paths = {
+  '/api/health': {
+    get: {
+      tags: ['Health'],
+      summary: 'Consultar estado del servicio',
+      responses: {
+        200: {
+          description: 'Servicio operativo y base conectada',
+          content: json({
+            type: 'object',
+            properties: {
+              status: { type: 'string', example: 'ok' },
+              service: { type: 'string', example: 'backend' },
+              database: { type: 'string', example: 'connected' },
+              uptimeSeconds: { type: 'integer', example: 120 },
+              timestamp: { type: 'string', format: 'date-time' }
+            }
+          })
+        },
+        503: error('Servicio degradado o base desconectada')
+      }
+    }
+  },
   '/api/usuarios': {
     get: { tags: ['Usuarios'], summary: 'Listar usuarios', security: auth, responses: secured({ 200: { description: 'Lista de usuarios', content: json({ type: 'array', items: { type: 'object' } }) }, 403: { $ref: '#/components/responses/Forbidden' } }) },
     post: { tags: ['Usuarios'], summary: 'Crear usuario', security: auth, requestBody: { required: true, content: json({ type: 'object', required: ['nombre', 'nombreUsuario', 'email', 'password', 'rol'], properties: { nombre: { type: 'string' }, nombreUsuario: { type: 'string' }, email: { type: 'string', format: 'email' }, password: { type: 'string', format: 'password' }, rol: { type: 'string', enum: ['ADMIN', 'CAJERO', 'CHEF', 'DELIVERY'] } } }) }, responses: secured({ 201: { description: 'Usuario creado' }, 400: error('Datos inválidos'), 409: error('Usuario duplicado') }) }
