@@ -110,22 +110,42 @@ router.get('/:id', protect, async (req, res) => {
   }
 });
 
-// Crear mesa: ADMIN o CAJERO.
+// Crear mesa: ADMIN o CAJERO. El panel de layout expone esta acción solo a ADMIN.
 router.post('/', protect, restrictTo(...ROLES_GESTION_MESAS), async (req, res) => {
   try {
-    const { numero, nombre, capacidad, observaciones } = req.body;
-    const existeMesa = await Mesa.findOne({ numero });
+    const { numero, nombre, capacidad = 4, observaciones } = req.body;
+    const numeroNormalizado = Number(numero);
+    const capacidadNormalizada = Number(capacidad);
 
-    if (existeMesa) {
-      return res.status(400).json({ message: 'Ya existe una mesa con ese número' });
+    if (!Number.isInteger(numeroNormalizado) || numeroNormalizado <= 0) {
+      return res.status(400).json({ message: 'El número de mesa debe ser un entero mayor a cero' });
     }
 
-    const mesa = new Mesa({ numero, nombre, capacidad, observaciones });
+    if (!Number.isInteger(capacidadNormalizada) || capacidadNormalizada <= 0) {
+      return res.status(400).json({ message: 'La capacidad debe ser un entero mayor a cero' });
+    }
+
+    const existeMesa = await Mesa.findOne({ numero: numeroNormalizado });
+    if (existeMesa) {
+      return res.status(409).json({ message: 'Ya existe una mesa con ese número' });
+    }
+
+    const mesa = new Mesa({
+      numero: numeroNormalizado,
+      nombre: typeof nombre === 'string' && nombre.trim() ? nombre.trim() : null,
+      capacidad: capacidadNormalizada,
+      observaciones: typeof observaciones === 'string' ? observaciones.trim() : ''
+    });
+
     await mesa.save();
-    res.status(201).json(mesa);
+    return res.status(201).json(mesa);
   } catch (error) {
+    if (error?.code === 11000) {
+      return res.status(409).json({ message: 'Ya existe una mesa con ese número' });
+    }
+
     console.error(error);
-    res.status(500).json({ message: 'Error creando mesa' });
+    return res.status(500).json({ message: 'Error creando mesa' });
   }
 });
 
