@@ -47,4 +47,6 @@ const ProductoSchema = new mongoose.Schema({
   }
 });
 
+ProductoSchema.index({ categoria: 1, nombre: 1 });
+
 export default mongoose.model('Producto', ProductoSchema);

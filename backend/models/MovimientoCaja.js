@@ -46,4 +46,6 @@ const MovimientoCajaSchema = new mongoose.Schema({
   timestamps: true
 });
 
+MovimientoCajaSchema.index({ cajaId: 1, fecha: 1 });
+
 export default mongoose.model('MovimientoCaja', MovimientoCajaSchema);
