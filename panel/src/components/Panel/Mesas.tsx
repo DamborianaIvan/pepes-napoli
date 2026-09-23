@@ -10,6 +10,7 @@ import CloseOutlinedIcon from "@mui/icons-material/CloseOutlined";
 import RotateRightOutlinedIcon from "@mui/icons-material/RotateRightOutlined";
 import OpenWithOutlinedIcon from "@mui/icons-material/OpenWithOutlined";
 import AddOutlinedIcon from "@mui/icons-material/AddOutlined";
+import DeleteOutlineOutlinedIcon from "@mui/icons-material/DeleteOutlineOutlined";
 import { getSession } from "../../auth/session";
 import type { Pedido } from "../../types/pedido";
 import "./Mesas.css";
@@ -215,6 +216,50 @@ const Mesas = () => {
     });
     setError(null);
     setNuevaMesaAbierta(true);
+  };
+
+  const eliminarMesa = async (mesa: Mesa) => {
+    const token = session?.token;
+    if (!token || !puedeEditarPlano) return;
+
+    if (mesa.estado === "OCUPADA" || pedidosActivosPorMesa.has(mesa._id)) {
+      setError("No se puede eliminar una mesa ocupada o con un pedido activo.");
+      return;
+    }
+
+    const confirmar = window.confirm(
+      `¿Eliminar la mesa ${mesa.numero}? Si tiene pedidos históricos, se retirará del salón conservando ese historial.`,
+    );
+    if (!confirmar) return;
+
+    try {
+      setError(null);
+      setMensaje(null);
+
+      const response = await fetch(`${API_URL}/api/mesas/${mesa._id}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const body = await response.json();
+      if (!response.ok) {
+        throw new Error(body?.error?.message ?? body?.message ?? "No se pudo eliminar la mesa.");
+      }
+
+      setMesas((actuales) => actuales.filter((item) => item._id !== mesa._id));
+      setLayoutDraft((actual) => {
+        const siguiente = { ...actual };
+        delete siguiente[mesa._id];
+        return siguiente;
+      });
+      setMesaEditadaId(null);
+      setMensaje(body?.message ?? `Mesa ${mesa.numero} eliminada correctamente.`);
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : "No se pudo eliminar la mesa.");
+      await cargarDatos();
+    }
   };
 
   const crearNuevaMesa = async () => {
@@ -752,6 +797,22 @@ const Mesas = () => {
               <p className="editor-help">
                 Arrastrá la mesa directamente sobre el plano. Los cambios se aplican recién al guardar.
               </p>
+
+              <button
+                type="button"
+                className="editor-delete-table"
+                disabled={mesaEditada.estado === "OCUPADA" || pedidosActivosPorMesa.has(mesaEditada._id)}
+                onClick={() => void eliminarMesa(mesaEditada)}
+              >
+                <DeleteOutlineOutlinedIcon fontSize="small" />
+                Eliminar mesa
+              </button>
+
+              {(mesaEditada.estado === "OCUPADA" || pedidosActivosPorMesa.has(mesaEditada._id)) && (
+                <p className="editor-delete-help">
+                  Para eliminarla primero debe quedar libre y sin pedidos activos.
+                </p>
+              )}
             </aside>
           )}
         </div>
