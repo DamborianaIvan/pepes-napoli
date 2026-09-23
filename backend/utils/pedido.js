@@ -67,6 +67,7 @@ export const normalizarProductosPedido = (productos, productosDB) => {
     return {
       productoId: producto._id,
       nombreSnapshot: producto.nombre,
+      categoriaSnapshot: producto.categoria,
       cantidad,
       precioUnitario,
       subtotal
@@ -114,6 +115,7 @@ export const normalizarProductosEdicionPedido = (productos, pedido, productosDB)
       return {
         productoId: existente.productoId,
         nombreSnapshot: existente.nombreSnapshot,
+        categoriaSnapshot: existente.categoriaSnapshot ?? producto?.categoria ?? null,
         cantidad,
         precioUnitario: existente.precioUnitario,
         subtotal: existente.precioUnitario * cantidad
@@ -145,6 +147,7 @@ export const normalizarProductosEdicionPedido = (productos, pedido, productosDB)
     return {
       productoId: producto._id,
       nombreSnapshot: producto.nombre,
+      categoriaSnapshot: producto.categoria,
       cantidad,
       precioUnitario,
       subtotal: precioUnitario * cantidad

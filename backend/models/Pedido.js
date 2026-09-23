@@ -140,6 +140,11 @@ const PedidoSchema = new mongoose.Schema({
         required: true,
         trim: true
       },
+      categoriaSnapshot: {
+        type: String,
+        default: null,
+        trim: true
+      },
       cantidad: {
         type: Number,
         required: true,

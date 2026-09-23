@@ -22,6 +22,7 @@ export type MetodoPago = (typeof METODOS_PAGO)[number];
 export interface ProductoPedido {
   productoId: string | null;
   nombreSnapshot: string;
+  categoriaSnapshot?: string | null;
   cantidad: number;
   precioUnitario: number;
   subtotal: number;

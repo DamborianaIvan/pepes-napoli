@@ -15,6 +15,7 @@ const productoId = new mongoose.Types.ObjectId();
 const productoDisponible = {
   _id: productoId,
   nombre: 'Pizza Margherita',
+  categoria: 'PIZZAS',
   precio: 8500,
   disponible: true
 };
@@ -70,6 +71,7 @@ test('normaliza productos usando precio y nombre del producto persistido', () =>
   assert.deepEqual(resultado[0], {
     productoId,
     nombreSnapshot: 'Pizza Margherita',
+    categoriaSnapshot: 'PIZZAS',
     cantidad: 2,
     precioUnitario: 8500,
     subtotal: 17000
@@ -121,6 +123,7 @@ test('edición conserva snapshot y precio histórico de productos existentes', (
     productos: [{
       productoId,
       nombreSnapshot: 'Pizza Margherita',
+      categoriaSnapshot: 'PIZZAS',
       cantidad: 1,
       precioUnitario: 8000,
       subtotal: 8000
@@ -136,6 +139,7 @@ test('edición conserva snapshot y precio histórico de productos existentes', (
   assert.deepEqual(resultado[0], {
     productoId,
     nombreSnapshot: 'Pizza Margherita',
+    categoriaSnapshot: 'PIZZAS',
     cantidad: 3,
     precioUnitario: 8000,
     subtotal: 24000
@@ -147,6 +151,7 @@ test('edición toma snapshot y precio actuales al agregar un producto nuevo', ()
   const nuevoProducto = {
     _id: nuevoProductoId,
     nombre: 'Empanada',
+    categoria: 'EMPANADAS',
     precio: 2200,
     disponible: true
   };
@@ -160,6 +165,7 @@ test('edición toma snapshot y precio actuales al agregar un producto nuevo', ()
   assert.deepEqual(resultado[0], {
     productoId: nuevoProductoId,
     nombreSnapshot: 'Empanada',
+    categoriaSnapshot: 'EMPANADAS',
     cantidad: 2,
     precioUnitario: 2200,
     subtotal: 4400
