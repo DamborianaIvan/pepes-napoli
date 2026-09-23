@@ -64,6 +64,7 @@ export interface ResumenReportes {
     unidadesVendidas: number;
     porTipo: Record<TipoPedido, ReporteTipoPedido>;
     porMetodoPago: Record<MetodoPago, number>;
+    serieDiaria: Array<{ fecha: string; cantidad: number; ingresos: number }>;
     productos: ReporteProducto[];
     categorias: ReporteCategoria[];
   };
