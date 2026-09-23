@@ -6,6 +6,8 @@ import { ROLES_VALUES, ROLES } from '../constants/roles.js';
 import Usuario from '../models/Usuario.js';
 import { ApiError } from '../utils/apiError.js';
 import { asyncHandler } from '../middleware/asyncHandler.js';
+import { registrarAuditoria } from '../services/auditoriaService.js';
+import { ACCIONES_AUDITORIA, ENTIDADES_AUDITORIA } from '../constants/auditoria.js';
 
 const router = express.Router();
 
@@ -64,6 +66,14 @@ router.post('/', asyncHandler(async (req, res) => {
     activo: true
   });
 
+  await registrarAuditoria({
+    accion: ACCIONES_AUDITORIA.USUARIO_CREADO,
+    entidad: ENTIDADES_AUDITORIA.USUARIO,
+    entidadId: usuario._id,
+    usuario: req.usuario,
+    despues: usuarioPublico(usuario)
+  });
+
   return res.status(201).json(usuarioPublico(usuario));
 }));
 
@@ -75,6 +85,7 @@ router.patch('/:id', asyncHandler(async (req, res) => {
   const usuario = await Usuario.findById(req.params.id);
   if (!usuario) throw new ApiError(404, 'Usuario no encontrado');
 
+  const antes = usuarioPublico(usuario);
   const { nombre, nombreUsuario, email, rol } = req.body;
 
   if (rol !== undefined) {
@@ -104,6 +115,16 @@ router.patch('/:id', asyncHandler(async (req, res) => {
   if (email !== undefined) usuario.email = email;
 
   await usuario.save();
+
+  await registrarAuditoria({
+    accion: ACCIONES_AUDITORIA.USUARIO_ACTUALIZADO,
+    entidad: ENTIDADES_AUDITORIA.USUARIO,
+    entidadId: usuario._id,
+    usuario: req.usuario,
+    antes,
+    despues: usuarioPublico(usuario)
+  });
+
   return res.json(usuarioPublico(usuario));
 }));
 
@@ -119,6 +140,8 @@ router.patch('/:id/estado', asyncHandler(async (req, res) => {
 
   const usuario = await Usuario.findById(req.params.id);
   if (!usuario) throw new ApiError(404, 'Usuario no encontrado');
+
+  const estadoAnterior = usuario.activo;
 
   if (usuario._id.toString() === req.usuario.id && !activo) {
     throw new ApiError(403, 'No puede desactivar su propio usuario');
@@ -139,6 +162,15 @@ router.patch('/:id/estado', asyncHandler(async (req, res) => {
   usuario.activo = activo;
   await usuario.save();
 
+  await registrarAuditoria({
+    accion: ACCIONES_AUDITORIA.USUARIO_ESTADO_CAMBIADO,
+    entidad: ENTIDADES_AUDITORIA.USUARIO,
+    entidadId: usuario._id,
+    usuario: req.usuario,
+    antes: { activo: estadoAnterior },
+    despues: { activo: usuario.activo }
+  });
+
   return res.json(usuarioPublico(usuario));
 }));
 
@@ -155,6 +187,16 @@ router.patch('/:id/password', asyncHandler(async (req, res) => {
 
   usuario.password = password;
   await usuario.save();
+
+  await registrarAuditoria({
+    accion: ACCIONES_AUDITORIA.USUARIO_PASSWORD_CAMBIADO,
+    entidad: ENTIDADES_AUDITORIA.USUARIO,
+    entidadId: usuario._id,
+    usuario: req.usuario,
+    metadata: {
+      usuarioAfectado: usuario.nombreUsuario
+    }
+  });
 
   return res.json({ message: 'Contraseña actualizada correctamente' });
 }));
