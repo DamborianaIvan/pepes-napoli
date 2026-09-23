@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   Alert,
   Box,
@@ -28,8 +28,8 @@ import {
   BarChart,
   CartesianGrid,
   Legend,
-  Pie,
-  PieChart,
+  Line,
+  LineChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -93,6 +93,11 @@ const moneda = (valor: number) =>
 const numero = (valor: number) =>
   Number(valor ?? 0).toLocaleString("es-AR", { maximumFractionDigits: 3 });
 
+const fechaCorta = (fecha: string) => {
+  const [year, month, day] = fecha.split("-");
+  return `${day}/${month}${year ? "" : ""}`;
+};
+
 const etiquetaCategoria = (categoria: string) =>
   categoria === "SIN_CATEGORIA"
     ? "Sin categoría"
@@ -116,17 +121,21 @@ const Reportes = () => {
     try {
       setCargando(true);
       setError(null);
+
       const params = new URLSearchParams({
         desde: rangoDesde,
         hasta: rangoHasta,
       });
+
       const response = await fetch(`${API_URL}/api/reportes/resumen?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
+
       const body = await response.json();
       if (!response.ok) {
         throw new Error(body?.error?.message ?? body?.message ?? "No se pudieron cargar los reportes.");
       }
+
       setData(body);
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "No se pudieron cargar los reportes.");
@@ -156,35 +165,12 @@ const Reportes = () => {
     void cargar(desde, hasta);
   };
 
-  const pagosData = useMemo(
-    () =>
-      METODOS_PAGO.map((metodo) => ({
-        metodo: ETIQUETAS_METODO_PAGO[metodo],
-        importe: data?.ventas.porMetodoPago[metodo] ?? 0,
-      })),
-    [data],
-  );
+  const serieDiaria = (data?.ventas.serieDiaria ?? []).map((item) => ({
+    ...item,
+    fechaLabel: fechaCorta(item.fecha),
+  }));
 
-  const tiposData = useMemo(
-    () =>
-      TIPOS_PEDIDO.map((tipo) => ({
-        tipo: ETIQUETAS_TIPO_PEDIDO[tipo],
-        cantidad: data?.ventas.porTipo[tipo]?.cantidad ?? 0,
-        importe: data?.ventas.porTipo[tipo]?.importe ?? 0,
-      })),
-    [data],
-  );
-
-  const categoriasData = useMemo(
-    () =>
-      (data?.ventas.categorias ?? []).map((item) => ({
-        ...item,
-        categoriaLabel: etiquetaCategoria(item.categoria),
-      })),
-    [data],
-  );
-
-  const topProductos = data?.ventas.productos.slice(0, 8) ?? [];
+  const topProductos = data?.ventas.productos.slice(0, 6) ?? [];
 
   return (
     <Box className="reportes-page">
@@ -194,7 +180,7 @@ const Reportes = () => {
             <AssessmentIcon /> REPORTES
           </Typography>
           <Typography color="text.secondary">
-            Ventas, caja y stock consolidados desde el backend.
+            Un resumen simple de cómo viene funcionando el negocio.
           </Typography>
         </Box>
 
@@ -236,6 +222,7 @@ const Reportes = () => {
               }}
               slotProps={{ inputLabel: { shrink: true } }}
             />
+
             <TextField
               size="small"
               label="Hasta"
@@ -248,13 +235,17 @@ const Reportes = () => {
               slotProps={{ inputLabel: { shrink: true } }}
             />
 
-            <Button variant="contained" onClick={aplicarPersonalizado} disabled={cargando || !desde || !hasta}>
+            <Button
+              variant="contained"
+              onClick={aplicarPersonalizado}
+              disabled={cargando || !desde || !hasta}
+            >
               Aplicar
             </Button>
 
             {data && (
               <Typography variant="body2" color="text.secondary" sx={{ ml: { lg: "auto" } }}>
-                {data.periodo.desde} al {data.periodo.hasta} · {data.periodo.zonaHoraria}
+                {data.periodo.desde} al {data.periodo.hasta}
               </Typography>
             )}
           </Stack>
@@ -267,13 +258,48 @@ const Reportes = () => {
         <Box className="reportes-loading"><CircularProgress /></Box>
       ) : data ? (
         <>
-          <Box className="reportes-kpis">
-            <Card><CardContent><span>Ingresos</span><strong>{moneda(data.ventas.ingresos)}</strong></CardContent></Card>
-            <Card><CardContent><span>Ventas</span><strong>{data.ventas.cantidad}</strong></CardContent></Card>
-            <Card><CardContent><span>Ticket promedio</span><strong>{moneda(data.ventas.ticketPromedio)}</strong></CardContent></Card>
-            <Card><CardContent><span>Unidades vendidas</span><strong>{numero(data.ventas.unidadesVendidas)}</strong></CardContent></Card>
-            <Card><CardContent><span>Descuentos</span><strong>{moneda(data.ventas.descuentos)}</strong></CardContent></Card>
-          </Box>
+          <section className="reportes-resumen">
+            <Typography variant="h6" mb={1}>Resumen del período</Typography>
+            <Box className="reportes-kpis">
+              <Card>
+                <CardContent>
+                  <span>Ingresos</span>
+                  <strong>{moneda(data.ventas.ingresos)}</strong>
+                  <small>Total efectivamente vendido</small>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent>
+                  <span>Ventas</span>
+                  <strong>{data.ventas.cantidad}</strong>
+                  <small>Pedidos cobrados y cerrados</small>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent>
+                  <span>Venta promedio</span>
+                  <strong>{moneda(data.ventas.ticketPromedio)}</strong>
+                  <small>Importe promedio por pedido cobrado</small>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent>
+                  <span>Unidades vendidas</span>
+                  <strong>{numero(data.ventas.unidadesVendidas)}</strong>
+                  <small>Productos entregados en el período</small>
+                </CardContent>
+              </Card>
+            </Box>
+
+            {data.ventas.descuentos > 0 && (
+              <Typography className="reportes-descuentos" variant="body2">
+                Descuentos aplicados en el período: <strong>{moneda(data.ventas.descuentos)}</strong>
+              </Typography>
+            )}
+          </section>
 
           <Tabs value={tab} onChange={(_, value: TabReporte) => setTab(value)} sx={{ mt: 3, mb: 2 }}>
             <Tab value="ventas" icon={<TrendingUpIcon />} iconPosition="start" label="Ventas" />
@@ -285,120 +311,145 @@ const Reportes = () => {
             <Stack spacing={2}>
               <Card variant="outlined">
                 <CardContent>
-                  <Typography variant="h6" mb={2}>Evolución diaria</Typography>
-                  {data.ventas.serieDiaria.length ? (
-                    <div className="reportes-chart">
+                  <div className="reportes-section-heading">
+                    <div>
+                      <Typography variant="h6">Cómo vienen las ventas</Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        Ingresos por día dentro del período seleccionado.
+                      </Typography>
+                    </div>
+                  </div>
+
+                  {serieDiaria.length ? (
+                    <div className="reportes-chart reportes-chart-principal">
                       <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={data.ventas.serieDiaria}>
+                        <LineChart data={serieDiaria}>
                           <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="fecha" />
-                          <YAxis yAxisId="importe" />
-                          <YAxis yAxisId="cantidad" orientation="right" allowDecimals={false} />
-                          <Tooltip
-                            formatter={(value, name) =>
-                              name === "Ingresos" ? moneda(Number(value)) : numero(Number(value))
-                            }
+                          <XAxis dataKey="fechaLabel" />
+                          <YAxis />
+                          <Tooltip formatter={(value) => moneda(Number(value))} />
+                          <Line
+                            type="monotone"
+                            dataKey="ingresos"
+                            name="Ingresos"
+                            stroke="#344054"
+                            strokeWidth={3}
+                            dot={{ r: 4 }}
                           />
-                          <Legend />
-                          <Bar yAxisId="importe" dataKey="ingresos" name="Ingresos" fill="#344054" />
-                          <Bar yAxisId="cantidad" dataKey="cantidad" name="Ventas" fill="#98a2b3" />
-                        </BarChart>
+                        </LineChart>
                       </ResponsiveContainer>
                     </div>
                   ) : (
-                    <Typography color="text.secondary">Sin ventas en el período.</Typography>
+                    <Typography color="text.secondary" mt={2}>Sin ventas en el período.</Typography>
                   )}
                 </CardContent>
               </Card>
 
-              <Box className="reportes-chart-grid">
+              <Box className="reportes-info-grid">
                 <Card variant="outlined">
                   <CardContent>
-                    <Typography variant="h6" mb={2}>Importes por medio de pago</Typography>
-                    <div className="reportes-chart">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={pagosData}>
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="metodo" />
-                          <YAxis />
-                          <Tooltip formatter={(value) => moneda(Number(value))} />
-                          <Bar dataKey="importe" name="Importe" fill="#344054" />
-                        </BarChart>
-                      </ResponsiveContainer>
+                    <Typography variant="h6" mb={0.5}>Cómo pagaron</Typography>
+                    <Typography variant="body2" color="text.secondary" mb={2}>
+                      Importes cobrados por medio de pago.
+                    </Typography>
+
+                    <div className="reportes-simple-list">
+                      {METODOS_PAGO.map((metodo: MetodoPago) => (
+                        <div className="reportes-simple-row" key={metodo}>
+                          <span>{ETIQUETAS_METODO_PAGO[metodo]}</span>
+                          <strong>{moneda(data.ventas.porMetodoPago[metodo])}</strong>
+                        </div>
+                      ))}
                     </div>
                   </CardContent>
                 </Card>
 
                 <Card variant="outlined">
                   <CardContent>
-                    <Typography variant="h6" mb={2}>Ventas por tipo de pedido</Typography>
-                    <div className="reportes-chart">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <Pie
-                            data={tiposData}
-                            dataKey="cantidad"
-                            nameKey="tipo"
-                            outerRadius={95}
-                            label
-                            fill="#667085"
-                          />
-                          <Legend />
-                          <Tooltip />
-                        </PieChart>
-                      </ResponsiveContainer>
+                    <Typography variant="h6" mb={0.5}>De dónde vinieron las ventas</Typography>
+                    <Typography variant="body2" color="text.secondary" mb={2}>
+                      Cantidad e importe por tipo de pedido.
+                    </Typography>
+
+                    <div className="reportes-simple-list">
+                      {TIPOS_PEDIDO.map((tipo) => (
+                        <div className="reportes-simple-row reportes-simple-row-two" key={tipo}>
+                          <span>{ETIQUETAS_TIPO_PEDIDO[tipo]}</span>
+                          <span>{data.ventas.porTipo[tipo]?.cantidad ?? 0} ventas</span>
+                          <strong>{moneda(data.ventas.porTipo[tipo]?.importe ?? 0)}</strong>
+                        </div>
+                      ))}
                     </div>
                   </CardContent>
                 </Card>
               </Box>
 
-              <Box className="reportes-chart-grid">
+              <Box className="reportes-info-grid">
                 <Card variant="outlined">
                   <CardContent>
-                    <Typography variant="h6" mb={2}>Top productos</Typography>
+                    <Typography variant="h6" mb={0.5}>Productos más vendidos</Typography>
+                    <Typography variant="body2" color="text.secondary" mb={2}>
+                      Los productos con mayor cantidad de unidades vendidas.
+                    </Typography>
+
                     {topProductos.length ? (
-                      <div className="reportes-chart reportes-chart-tall">
+                      <div className="reportes-chart reportes-chart-top">
                         <ResponsiveContainer width="100%" height="100%">
-                          <BarChart data={topProductos} layout="vertical" margin={{ left: 25 }}>
+                          <BarChart data={topProductos} layout="vertical" margin={{ left: 20 }}>
                             <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis type="number" />
+                            <XAxis type="number" allowDecimals={false} />
                             <YAxis type="category" dataKey="nombre" width={130} />
-                            <Tooltip formatter={(value, name) => name === "importe" ? moneda(Number(value)) : numero(Number(value))} />
-                            <Legend />
+                            <Tooltip formatter={(value) => `${numero(Number(value))} unidades`} />
                             <Bar dataKey="cantidad" name="Unidades" fill="#475467" />
                           </BarChart>
                         </ResponsiveContainer>
                       </div>
-                    ) : <Typography color="text.secondary">Sin ventas en el período.</Typography>}
+                    ) : (
+                      <Typography color="text.secondary">Sin productos vendidos en el período.</Typography>
+                    )}
                   </CardContent>
                 </Card>
 
                 <Card variant="outlined">
                   <CardContent>
-                    <Typography variant="h6" mb={2}>Ventas por categoría</Typography>
-                    {categoriasData.length ? (
-                      <div className="reportes-chart reportes-chart-tall">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <BarChart data={categoriasData}>
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="categoriaLabel" />
-                            <YAxis />
-                            <Tooltip formatter={(value) => moneda(Number(value))} />
-                            <Bar dataKey="importe" name="Importe neto" fill="#667085" />
-                          </BarChart>
-                        </ResponsiveContainer>
-                      </div>
-                    ) : <Typography color="text.secondary">Sin categorías vendidas en el período.</Typography>}
+                    <Typography variant="h6" mb={0.5}>Ventas por categoría</Typography>
+                    <Typography variant="body2" color="text.secondary" mb={2}>
+                      Resumen simple por familia de productos.
+                    </Typography>
+
+                    <div className="reportes-simple-list">
+                      {data.ventas.categorias.map((categoria) => (
+                        <div className="reportes-simple-row reportes-simple-row-two" key={categoria.categoria}>
+                          <span>{etiquetaCategoria(categoria.categoria)}</span>
+                          <span>{numero(categoria.cantidad)} un.</span>
+                          <strong>{moneda(categoria.importe)}</strong>
+                        </div>
+                      ))}
+                    </div>
+
+                    {data.ventas.categorias.length === 0 && (
+                      <Typography color="text.secondary">Sin categorías vendidas en el período.</Typography>
+                    )}
                   </CardContent>
                 </Card>
               </Box>
 
               <Card variant="outlined">
                 <CardContent>
-                  <Typography variant="h6" mb={2}>Detalle por producto</Typography>
+                  <Typography variant="h6" mb={0.5}>Detalle de productos</Typography>
+                  <Typography variant="body2" color="text.secondary" mb={2}>
+                    Para revisar cantidades e importes sin llenar la pantalla de gráficos.
+                  </Typography>
+
                   <div className="reportes-table-wrap">
                     <table className="reportes-table">
-                      <thead><tr><th>Producto</th><th>Unidades</th><th>Importe neto</th></tr></thead>
+                      <thead>
+                        <tr>
+                          <th>Producto</th>
+                          <th>Unidades</th>
+                          <th>Importe neto</th>
+                        </tr>
+                      </thead>
                       <tbody>
                         {data.ventas.productos.map((producto) => (
                           <tr key={producto.productoId ?? producto.nombre}>
@@ -417,17 +468,41 @@ const Reportes = () => {
 
           {tab === "caja" && (
             <Stack spacing={2}>
-              <Box className="reportes-kpis secundarios">
-                <Card><CardContent><span>Cierres de caja</span><strong>{data.caja.cantidadCierres}</strong></CardContent></Card>
-                <Card><CardContent><span>Diferencia acumulada</span><strong>{moneda(data.caja.diferenciaAcumulada)}</strong></CardContent></Card>
-                {METODOS_PAGO.map((metodo: MetodoPago) => (
-                  <Card key={metodo}><CardContent><span>{ETIQUETAS_METODO_PAGO[metodo]}</span><strong>{moneda(data.caja.totalesPorMetodo[metodo])}</strong></CardContent></Card>
-                ))}
-              </Box>
+              <Card variant="outlined">
+                <CardContent>
+                  <Typography variant="h6" mb={0.5}>Resumen de caja</Typography>
+                  <Typography variant="body2" color="text.secondary" mb={2}>
+                    Qué pasó en los cierres de caja del período.
+                  </Typography>
+
+                  <Box className="reportes-caja-resumen">
+                    <div>
+                      <span>Cierres</span>
+                      <strong>{data.caja.cantidadCierres}</strong>
+                    </div>
+                    <div>
+                      <span>Diferencia acumulada</span>
+                      <strong className={data.caja.diferenciaAcumulada === 0 ? "" : "reportes-diferencia"}>
+                        {moneda(data.caja.diferenciaAcumulada)}
+                      </strong>
+                    </div>
+                  </Box>
+
+                  <div className="reportes-simple-list reportes-simple-list-caja">
+                    {METODOS_PAGO.map((metodo: MetodoPago) => (
+                      <div className="reportes-simple-row" key={metodo}>
+                        <span>{ETIQUETAS_METODO_PAGO[metodo]}</span>
+                        <strong>{moneda(data.caja.totalesPorMetodo[metodo])}</strong>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
 
               <Card variant="outlined">
                 <CardContent>
                   <Typography variant="h6" mb={2}>Cierres del período</Typography>
+
                   <div className="reportes-table-wrap">
                     <table className="reportes-table">
                       <thead>
@@ -454,6 +529,7 @@ const Reportes = () => {
                       </tbody>
                     </table>
                   </div>
+
                   {data.caja.sesiones.length === 0 && (
                     <Typography color="text.secondary">No hubo cierres de caja en el período.</Typography>
                   )}
@@ -487,10 +563,11 @@ const Reportes = () => {
 
               <Card variant="outlined">
                 <CardContent>
-                  <Typography variant="h6">Movimientos del período</Typography>
+                  <Typography variant="h6">Movimientos de stock</Typography>
                   <Typography color="text.secondary" mb={2}>
-                    {data.stock.movimientos} movimiento(s) registrados.
+                    {data.stock.movimientos} movimiento(s) registrados en el período.
                   </Typography>
+
                   <div className="reportes-table-wrap">
                     <table className="reportes-table">
                       <thead>
@@ -517,6 +594,7 @@ const Reportes = () => {
                       </tbody>
                     </table>
                   </div>
+
                   {data.stock.porIngrediente.length === 0 && (
                     <Typography color="text.secondary">No hubo movimientos de stock en el período.</Typography>
                   )}
