@@ -77,8 +77,13 @@ Debe responder HTTP 200 con:
 ### Delivery
 
 - [ ] crear pedido con cliente/dirección
-- [ ] EN_COCINA → LISTO → EN_CAMINO → ENTREGADO
-- [ ] cobrar y cerrar
+- [ ] cocina lo lleva de EN_COCINA → LISTO
+- [ ] DELIVERY inicia sesión y entra directo a su pantalla PEDIDOS
+- [ ] DELIVERY no ve Home, Mesas ni historial general
+- [ ] DELIVERY ve solo pedidos disponibles para reparto
+- [ ] DELIVERY marca el pedido como ENTREGADO
+- [ ] el pedido desaparece de su cola
+- [ ] cobrar y cerrar desde Caja
 
 ### Caja
 
