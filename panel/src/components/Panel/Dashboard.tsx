@@ -219,9 +219,10 @@ export const Dashboard = () => {
   };
 
   return (
-    <div className="panel-content">
+    <div className="dashboard-page">
            
       <Box
+        className="dashboard-header"
         onClick={() => setMostrarDashboardCards(!mostrarDashboardCards)}
         sx={{
           display: "flex",
