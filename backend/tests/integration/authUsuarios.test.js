@@ -239,14 +239,14 @@ describe('integración: autenticación y gestión de usuarios', { skip: !INTEGRA
     const admin = await loginComo('admin-test', 'password-admin-123');
     const segundoAdmin = await loginComo('admin-dos', 'password-admin-456');
 
-    const primera = await requestJson(`/api/usuarios/${adminUsuario._id}/estado`, {
+    const primera = await requestJson(`/api/usuarios/${otroAdmin._id}/estado`, {
       method: 'PATCH',
       headers: authorization(admin.token),
       body: JSON.stringify({ activo: false })
     });
     assert.equal(primera.response.status, 200);
 
-    const segunda = await requestJson(`/api/usuarios/${otroAdmin._id}/estado`, {
+    const segunda = await requestJson(`/api/usuarios/${adminUsuario._id}/estado`, {
       method: 'PATCH',
       headers: authorization(segundoAdmin.token),
       body: JSON.stringify({ activo: false })
