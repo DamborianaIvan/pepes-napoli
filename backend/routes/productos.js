@@ -6,6 +6,7 @@ import Pedido from '../models/Pedido.js';
 import Receta from '../models/Receta.js';
 import { registrarAuditoria } from '../services/auditoriaService.js';
 import { ACCIONES_AUDITORIA, ENTIDADES_AUDITORIA } from '../constants/auditoria.js';
+import { productoRequiereArchivo } from '../utils/producto.js';
 
 const router = express.Router();
 
@@ -159,7 +160,7 @@ router.delete('/:id', protect, requirePermission(PERMISSIONS.PRODUCTS_MANAGE), a
       Receta.exists({ productoId: producto._id })
     ]);
 
-    const requiereHistorial = Boolean(tienePedidos || tieneReceta);
+    const requiereHistorial = productoRequiereArchivo({ tienePedidos, tieneReceta });
     const snapshotAnterior = snapshotProducto(producto);
 
     if (requiereHistorial) {
