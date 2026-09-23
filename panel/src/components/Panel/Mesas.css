@@ -69,12 +69,14 @@
 .mesa-comentario, .mesa-observaciones { margin-top: 1rem; border-radius: 8px; padding: .75rem; background: var(--color-surface-secondary); }
 .mesa-sin-pedido { margin-top: 1rem; }
 
-.mesa-action, .mesa-modal-action { display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; border: 0; border-radius: 8px; background: var(--color-error); color: #fff; cursor: pointer; font-weight: 700; text-decoration: none; }
+.mesa-action, .mesa-modal-action { display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; border: 0; border-radius: 8px; background: var(--color-primary); color: #fff; cursor: pointer; font-weight: 700; text-decoration: none; }
 .mesa-action { width: 100%; margin-top: .75rem; padding: .55rem; }
 .mesa-modal-action { width: 100%; margin-top: 1rem; padding: .7rem; }
-.mesa-action:hover, .mesa-modal-action:hover { background: #8f2520; }
+.mesa-action:hover, .mesa-modal-action:hover { background: var(--color-hover); }
 .mesa-action:disabled, .mesa-modal-action:disabled { cursor: wait; opacity: .65; }
 .mesa-cancel-action, .mesa-modal-cancel-action { box-sizing: border-box; border: 1px solid var(--color-border-strong); border-radius: 8px; background: #fff; color: var(--color-muted); cursor: pointer; font-weight: 700; }
+.mesa-danger-action { border-color: var(--color-error); color: var(--color-error); }
+.mesa-danger-action:hover { background: var(--color-error-bg); }
 .mesa-cancel-action { width: 100%; margin-top: .45rem; padding: .5rem; }
 .mesa-modal-cancel-action { width: 100%; margin-top: .65rem; padding: .65rem; }
 
