@@ -104,3 +104,8 @@
   .nueva-mesa-form { grid-template-columns: 1fr; }
   .nueva-mesa-form label:last-child { grid-column: auto; }
 }
+
+.editor-delete-table { display: inline-flex; align-items: center; justify-content: center; gap: .4rem; width: 100%; border: 1px solid #fda29b; border-radius: 8px; background: #fff; color: #b42318; padding: .65rem .8rem; cursor: pointer; font-weight: 800; }
+.editor-delete-table:hover:not(:disabled) { background: #fef3f2; }
+.editor-delete-table:disabled { cursor: not-allowed; opacity: .5; }
+.editor-delete-help { margin: -.4rem 0 0; color: #b42318; font-size: .78rem; line-height: 1.4; }
