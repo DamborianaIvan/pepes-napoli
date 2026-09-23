@@ -3,7 +3,7 @@ export const openapiDefinition = {
   info: {
     title: 'API Pepes Pizza',
     version: '1.0.0',
-    description: 'API para autenticación, productos, pedidos, mesas, caja, pagos, tickets, stock y reportes.'
+    description: 'API para autenticación, productos, pedidos, mesas, caja, pagos, tickets, stock, reportes y auditoría.'
   },
   servers: [{ url: process.env.BASE_URL || 'http://localhost:5000', description: 'Servidor configurado' }],
   tags: [
@@ -14,7 +14,8 @@ export const openapiDefinition = {
     { name: 'Caja', description: 'Apertura, cobros, movimientos y cierre de caja' },
     { name: 'Tickets', description: 'Comprobantes de venta imprimibles' },
     { name: 'Stock', description: 'Ingredientes, recetas, movimientos y alertas de inventario' },
-    { name: 'Reportes', description: 'Ventas, caja y stock por período' }
+    { name: 'Reportes', description: 'Ventas, caja y stock por período' },
+    { name: 'Auditoría', description: 'Trazabilidad de operaciones críticas' }
   ],
   components: {
     securitySchemes: { bearerAuth: { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' } },
@@ -200,6 +201,27 @@ export const openapiDefinition = {
           motivo: { type: 'string' },
           pedidoId: { type: 'string', nullable: true },
           usuarioId: { type: 'string', nullable: true },
+          fecha: { type: 'string', format: 'date-time' }
+        }
+      },
+      AuditLog: {
+        type: 'object',
+        properties: {
+          _id: { type: 'string', readOnly: true },
+          accion: {
+            type: 'string',
+            example: 'PEDIDO_ESTADO_CAMBIADO'
+          },
+          entidad: {
+            type: 'string',
+            enum: ['PEDIDO', 'CAJA', 'STOCK', 'USUARIO', 'PRODUCTO']
+          },
+          entidadId: { type: 'string', nullable: true },
+          usuarioId: { type: 'object', nullable: true, readOnly: true },
+          usuarioNombreSnapshot: { type: 'string', nullable: true },
+          antes: { type: 'object', nullable: true },
+          despues: { type: 'object', nullable: true },
+          metadata: { type: 'object', nullable: true },
           fecha: { type: 'string', format: 'date-time' }
         }
       },
