@@ -180,8 +180,18 @@ router.patch('/:id/listo', protect, restrictTo(ROLES.ADMIN, ROLES.CAJERO, ROLES.
     });
   }
 
+  const estadoAnterior = pedido.estadoPedido;
   pedido.estadoPedido = ESTADOS_PEDIDO.LISTO;
   await pedido.save();
+
+  await registrarAuditoria({
+    accion: ACCIONES_AUDITORIA.PEDIDO_ESTADO_CAMBIADO,
+    entidad: ENTIDADES_AUDITORIA.PEDIDO,
+    entidadId: pedido._id,
+    usuario: req.usuario,
+    antes: { estadoPedido: estadoAnterior },
+    despues: { estadoPedido: pedido.estadoPedido }
+  });
 
   return res.json(pedido);
 }));
