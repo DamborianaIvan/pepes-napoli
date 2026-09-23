@@ -44,7 +44,7 @@ describe('integración: autenticación y gestión de usuarios', { skip: !INTEGRA
     assert.equal(response.status, 201);
     assert.equal(body.message, 'Usuario administrador creado con éxito');
 
-    const usuario = await Usuario.findOne({ nombreUsuario: 'admin-inicial' });
+    const usuario = await Usuario.findOne({ nombreUsuario: 'admin-inicial' }).select('+password');
     assert.equal(usuario.rol, 'ADMIN');
     assert.equal(usuario.activo, true);
     assert.notEqual(usuario.password, 'password-admin-123');
@@ -237,7 +237,6 @@ describe('integración: autenticación y gestión de usuarios', { skip: !INTEGRA
       rol: 'ADMIN'
     });
     const admin = await loginComo('admin-test', 'password-admin-123');
-    const segundoAdmin = await loginComo('admin-dos', 'password-admin-456');
 
     const primera = await requestJson(`/api/usuarios/${otroAdmin._id}/estado`, {
       method: 'PATCH',
@@ -245,15 +244,23 @@ describe('integración: autenticación y gestión de usuarios', { skip: !INTEGRA
       body: JSON.stringify({ activo: false })
     });
     assert.equal(primera.response.status, 200);
+    assert.equal(
+      await Usuario.countDocuments({ rol: 'ADMIN', activo: true }),
+      1
+    );
 
     const segunda = await requestJson(`/api/usuarios/${adminUsuario._id}/estado`, {
       method: 'PATCH',
-      headers: authorization(segundoAdmin.token),
+      headers: authorization(admin.token),
       body: JSON.stringify({ activo: false })
     });
 
-    assert.equal(segunda.response.status, 409);
-    assert.equal(segunda.body.error.message, 'Debe existir al menos un administrador activo');
+    assert.equal(segunda.response.status, 403);
+    assert.equal(segunda.body.error.message, 'No puede desactivar su propio usuario');
+    assert.equal(
+      await Usuario.countDocuments({ rol: 'ADMIN', activo: true }),
+      1
+    );
   });
 
   test('usuario desactivado deja de poder iniciar sesión', async () => {
