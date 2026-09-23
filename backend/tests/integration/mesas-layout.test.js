@@ -82,6 +82,84 @@ describe('integración: plano visual de mesas', { skip: !INTEGRATION_ENABLED }, 
     assert.equal(await Mesa.countDocuments({ numero: 10 }), 1);
   });
 
+  test('ADMIN elimina físicamente una mesa libre sin historial', async () => {
+    const { admin } = await prepararUsuarios();
+    const mesa = await crearMesa({ numero: 20 });
+
+    const eliminado = await requestJson('/api/mesas/' + mesa._id, {
+      method: 'DELETE',
+      headers: authorization(admin.token)
+    });
+
+    assert.equal(eliminado.response.status, 200);
+    assert.equal(eliminado.body.modo, 'ELIMINADA');
+    assert.equal(await Mesa.countDocuments({ _id: mesa._id }), 0);
+  });
+
+  test('ADMIN archiva una mesa con historial y la oculta del salón', async () => {
+    const { admin } = await prepararUsuarios();
+    const mesa = await crearMesa({ numero: 21 });
+    const producto = await (await import('../../models/Producto.js')).default.create({
+      categoria: 'PIZZAS',
+      nombre: 'Pizza Historial Mesa',
+      precio: 1000,
+      disponible: true
+    });
+    const Pedido = (await import('../../models/Pedido.js')).default;
+
+    await Pedido.create({
+      tipoPedido: 'SALON',
+      mesaId: mesa._id,
+      usuarioId: admin.id,
+      productos: [{
+        productoId: producto._id,
+        nombreSnapshot: producto.nombre,
+        cantidad: 1,
+        precioUnitario: 1000,
+        subtotal: 1000
+      }],
+      total: 1000,
+      totalFinal: 1000,
+      estadoPedido: 'SERVIDO',
+      estadoPago: 'PAGADO',
+      cierre: {
+        cerrado: true,
+        fecha: new Date(),
+        usuarioId: admin.id
+      }
+    });
+
+    const eliminado = await requestJson('/api/mesas/' + mesa._id, {
+      method: 'DELETE',
+      headers: authorization(admin.token)
+    });
+
+    assert.equal(eliminado.response.status, 200);
+    assert.equal(eliminado.body.modo, 'ARCHIVADA');
+
+    const guardada = await Mesa.findById(mesa._id).lean();
+    assert.equal(guardada.activa, false);
+
+    const listado = await requestJson('/api/mesas', {
+      headers: authorization(admin.token)
+    });
+    assert.equal(listado.response.status, 200);
+    assert.equal(listado.body.some((item) => item._id === mesa._id.toString()), false);
+  });
+
+  test('rechaza eliminar una mesa ocupada', async () => {
+    const { admin } = await prepararUsuarios();
+    const mesa = await crearMesa({ numero: 22, estado: 'OCUPADA' });
+
+    const eliminado = await requestJson('/api/mesas/' + mesa._id, {
+      method: 'DELETE',
+      headers: authorization(admin.token)
+    });
+
+    assert.equal(eliminado.response.status, 409);
+    assert.equal(await Mesa.countDocuments({ _id: mesa._id }), 1);
+  });
+
   test('ADMIN persiste posición, tamaño, rotación y forma del plano', async () => {
     const { admin } = await prepararUsuarios();
     const mesa1 = await crearMesa({ numero: 1 });
