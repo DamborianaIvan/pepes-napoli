@@ -283,6 +283,34 @@ const Reportes = () => {
 
           {tab === "ventas" && (
             <Stack spacing={2}>
+              <Card variant="outlined">
+                <CardContent>
+                  <Typography variant="h6" mb={2}>Evolución diaria</Typography>
+                  {data.ventas.serieDiaria.length ? (
+                    <div className="reportes-chart">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={data.ventas.serieDiaria}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="fecha" />
+                          <YAxis yAxisId="importe" />
+                          <YAxis yAxisId="cantidad" orientation="right" allowDecimals={false} />
+                          <Tooltip
+                            formatter={(value, name) =>
+                              name === "Ingresos" ? moneda(Number(value)) : numero(Number(value))
+                            }
+                          />
+                          <Legend />
+                          <Bar yAxisId="importe" dataKey="ingresos" name="Ingresos" fill="#344054" />
+                          <Bar yAxisId="cantidad" dataKey="cantidad" name="Ventas" fill="#98a2b3" />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  ) : (
+                    <Typography color="text.secondary">Sin ventas en el período.</Typography>
+                  )}
+                </CardContent>
+              </Card>
+
               <Box className="reportes-chart-grid">
                 <Card variant="outlined">
                   <CardContent>
