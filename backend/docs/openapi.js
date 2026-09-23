@@ -226,6 +226,17 @@ export const openapiDefinition = {
               unidadesVendidas: { type: 'number' },
               porTipo: { type: 'object' },
               porMetodoPago: { type: 'object' },
+              serieDiaria: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    fecha: { type: 'string', format: 'date' },
+                    cantidad: { type: 'integer' },
+                    ingresos: { type: 'number' }
+                  }
+                }
+              },
               productos: { type: 'array', items: { type: 'object' } },
               categorias: { type: 'array', items: { type: 'object' } }
             }
