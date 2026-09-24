@@ -1,16 +1,14 @@
 import mongoose from 'mongoose';
+import { normalizarNombreCategoriaProducto } from '../utils/categoriaProducto.js';
 
 const ProductoSchema = new mongoose.Schema({
   categoria: {
     type: String,
     required: true,
-    enum: [
-      'PIZZAS',
-      'EMPANADAS',
-      'BEBIDAS',
-      'POSTRES',
-      'ADICIONALES'
-    ]
+    trim: true,
+    minlength: 2,
+    maxlength: 40,
+    set: normalizarNombreCategoriaProducto
   },
 
   nombre: {

@@ -5,7 +5,9 @@ import Producto from '../models/Producto.js';
 import Pedido from '../models/Pedido.js';
 import Receta from '../models/Receta.js';
 import { registrarAuditoria } from '../services/auditoriaService.js';
+import { categoriaProductoExiste } from '../services/categoriaProductoService.js';
 import { ACCIONES_AUDITORIA, ENTIDADES_AUDITORIA } from '../constants/auditoria.js';
+import { normalizarNombreCategoriaProducto } from '../utils/categoriaProducto.js';
 import { productoRequiereArchivo } from '../utils/producto.js';
 
 const router = express.Router();
@@ -28,8 +30,8 @@ router.post('/', protect, requirePermission(PERMISSIONS.PRODUCTS_MANAGE), async 
       return res.status(400).json({ message: 'Categoria, nombre y precio son obligatorios' });
     }
 
-    const categoriasValidas = ['PIZZAS', 'EMPANADAS', 'BEBIDAS', 'POSTRES', 'ADICIONALES'];
-    if (!categoriasValidas.includes(categoria)) {
+    const categoriaNormalizada = normalizarNombreCategoriaProducto(categoria);
+    if (!(await categoriaProductoExiste(categoriaNormalizada))) {
       return res.status(400).json({ message: 'Categoria invalida' });
     }
 
@@ -57,7 +59,7 @@ router.post('/', protect, requirePermission(PERMISSIONS.PRODUCTS_MANAGE), async 
     }
 
     const nuevoProducto = new Producto({
-      categoria,
+      categoria: categoriaNormalizada,
       nombre: nombreLimpio,
       descripcion,
       precio: Number(precio),
@@ -117,10 +119,18 @@ router.put('/:id', protect, requirePermission(PERMISSIONS.PRODUCTS_MANAGE), asyn
     }
     const antes = snapshotProducto(productoAnterior);
 
+    const categoriaNormalizada = categoria === undefined
+      ? undefined
+      : normalizarNombreCategoriaProducto(categoria);
+
+    if (categoriaNormalizada !== undefined && !(await categoriaProductoExiste(categoriaNormalizada))) {
+      return res.status(400).json({ message: 'Categoria invalida' });
+    }
+
     const productoActualizado = await Producto.findByIdAndUpdate(
       req.params.id,
       {
-        categoria,
+        categoria: categoriaNormalizada,
         nombre: nombre?.trim(),
         descripcion,
         precio,
