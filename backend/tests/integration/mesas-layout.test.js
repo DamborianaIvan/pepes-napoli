@@ -69,6 +69,18 @@ describe('integración: plano visual de mesas', { skip: !INTEGRATION_ENABLED }, 
     assert.equal(primera.body.capacidad, 6);
     assert.equal(primera.body.estado, 'LIBRE');
 
+    const sinNombre = await requestJson('/api/mesas', {
+      method: 'POST',
+      headers: authorization(admin.token),
+      body: JSON.stringify({
+        numero: 11,
+        capacidad: 4
+      })
+    });
+
+    assert.equal(sinNombre.response.status, 201);
+    assert.equal(sinNombre.body.nombre, 'Mesa 11');
+
     const duplicada = await requestJson('/api/mesas', {
       method: 'POST',
       headers: authorization(admin.token),
