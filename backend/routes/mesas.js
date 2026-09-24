@@ -133,7 +133,7 @@ router.post('/', protect, restrictTo(...ROLES_GESTION_MESAS), async (req, res) =
 
     const mesa = new Mesa({
       numero: numeroNormalizado,
-      nombre: typeof nombre === 'string' && nombre.trim() ? nombre.trim() : null,
+      nombre: typeof nombre === 'string' && nombre.trim() ? nombre.trim() : `Mesa ${numeroNormalizado}`,
       capacidad: capacidadNormalizada,
       observaciones: typeof observaciones === 'string' ? observaciones.trim() : ''
     });
