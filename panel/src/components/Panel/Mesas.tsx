@@ -862,7 +862,7 @@ const Mesas = () => {
                 <input
                   type="text"
                   maxLength={80}
-                  placeholder="Ej: Ventana"
+                  placeholder={`Ej: Ventana · vacío: Mesa ${nuevaMesa.numero || "N"}`}
                   value={nuevaMesa.nombre}
                   onChange={(event) => setNuevaMesa((actual) => ({ ...actual, nombre: event.target.value }))}
                 />
