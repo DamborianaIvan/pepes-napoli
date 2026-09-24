@@ -190,7 +190,7 @@ const Sidebar = () => {
                   onClick={() => setOpen(false)}
                 >
                   <ReceiptLongIcon className="sidebar-icon" />
-                  MENÚ
+                  PRODUCTOS
                 </NavLink>
               )}
 

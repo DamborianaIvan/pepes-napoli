@@ -12,6 +12,7 @@ import IconButton from "@mui/material/IconButton";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import AddCircleIcon from "@mui/icons-material/AddCircle";
+import Inventory2OutlinedIcon from "@mui/icons-material/Inventory2Outlined";
 import CircularProgress from "@mui/material/CircularProgress";
 import Checkbox from "@mui/material/Checkbox";
 import FormControlLabel from "@mui/material/FormControlLabel";
@@ -58,20 +59,22 @@ const ProductoManager = () => {
   const [openDialog, setOpenDialog] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Producto | null>(null);
   const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; id: string | null }>({ open: false, id: null });
+  const [busqueda, setBusqueda] = useState("");
+  const [categoriaFiltro, setCategoriaFiltro] = useState("TODAS");
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: "success" | "error" | "info" }>({
     open: false,
     message: "",
     severity: "info",
   });
-  
+
   const [formData, setFormData] = useState<ProductoForm>({
-  nombre: "",
-  categoria: "",
-  descripcion: "",
-  precio: undefined,
-  disponible: true,
-  imagen: "",
-});
+    nombre: "",
+    categoria: "",
+    descripcion: "",
+    precio: undefined,
+    disponible: true,
+    imagen: "",
+  });
 
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const token = getSession()?.token || "";
@@ -84,7 +87,7 @@ const ProductoManager = () => {
 
   const fetchProductos = useCallback(async () => {
     setLoading(true);
-    setError(null); 
+    setError(null);
     try {
       const res = await axios.get(`${API_URL}/api/productos`, axiosConfig);
       const data = Array.isArray(res.data) ? res.data : res.data.productos;
@@ -97,31 +100,68 @@ const ProductoManager = () => {
     }
   }, [axiosConfig]);
 
-
   useEffect(() => {
     fetchProductos();
   }, [fetchProductos]);
 
-  const handleOpenDialog = (producto?: Producto) => {
-  setFormErrors({});
-  if (producto) {
-    setEditingProduct(producto);
-    setFormData({ ...producto });
-    setImagePreview(producto.imagen);
-  } else {
-    setEditingProduct(null);
-    setFormData({
-      nombre: "",
-      categoria: "",
-      descripcion: "",
-      precio: undefined,
-      disponible: true,
-      imagen: "",
+  const productosFiltrados = useMemo(() => {
+    const termino = busqueda.trim().toLocaleLowerCase("es");
+
+    return productos.filter((producto) => {
+      const coincideCategoria =
+        categoriaFiltro === "TODAS" || producto.categoria === categoriaFiltro;
+      const coincideBusqueda =
+        !termino ||
+        producto.nombre.toLocaleLowerCase("es").includes(termino) ||
+        producto.descripcion?.toLocaleLowerCase("es").includes(termino);
+
+      return coincideCategoria && coincideBusqueda;
     });
-    setImagePreview(null);
-  }
-  setOpenDialog(true);
-};
+  }, [productos, busqueda, categoriaFiltro]);
+
+  const productosAgrupados = useMemo(() => {
+    const grupos = new Map<string, Producto[]>();
+
+    productosFiltrados.forEach((producto) => {
+      const categoria = producto.categoria || "SIN CATEGORÍA";
+      const grupo = grupos.get(categoria) ?? [];
+      grupo.push(producto);
+      grupos.set(categoria, grupo);
+    });
+
+    return Array.from(grupos.entries()).sort(([categoriaA], [categoriaB]) => {
+      const indiceA = CATEGORIAS.indexOf(categoriaA);
+      const indiceB = CATEGORIAS.indexOf(categoriaB);
+
+      if (indiceA === -1 && indiceB === -1) {
+        return categoriaA.localeCompare(categoriaB, "es");
+      }
+      if (indiceA === -1) return 1;
+      if (indiceB === -1) return -1;
+      return indiceA - indiceB;
+    });
+  }, [productosFiltrados]);
+
+  const handleOpenDialog = (producto?: Producto) => {
+    setFormErrors({});
+    if (producto) {
+      setEditingProduct(producto);
+      setFormData({ ...producto });
+      setImagePreview(producto.imagen);
+    } else {
+      setEditingProduct(null);
+      setFormData({
+        nombre: "",
+        categoria: "",
+        descripcion: "",
+        precio: undefined,
+        disponible: true,
+        imagen: "",
+      });
+      setImagePreview(null);
+    }
+    setOpenDialog(true);
+  };
 
   const handleCloseDialog = () => {
     setOpenDialog(false);
@@ -142,7 +182,7 @@ const ProductoManager = () => {
     if (file) {
       const reader = new FileReader();
       reader.onload = () => {
-        setFormData(prev => ({ ...prev, image: reader.result as string }));
+        setFormData(prev => ({ ...prev, imagen: reader.result as string }));
         setImagePreview(reader.result as string);
       };
       reader.readAsDataURL(file);
@@ -155,7 +195,6 @@ const ProductoManager = () => {
     if (!formData.nombre.trim()) errors.nombre = "El nombre es obligatorio";
     if (formData.nombre.trim().length < 3) errors.nombre = "El nombre debe tener al menos 3 caracteres";
     if (!formData.categoria.trim()) errors.categoria = "La categoría es obligatoria";
-    
 
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors);
@@ -173,15 +212,15 @@ const ProductoManager = () => {
       handleCloseDialog();
       fetchProductos();
     } catch (error) {
-        const message = axios.isAxiosError(error)
-          ? error.response?.data?.message
-          : undefined;
-        setSnackbar({
-          open: true,
-          message: message || "Error al guardar el producto",
-          severity: "error"
-        });
-      }
+      const message = axios.isAxiosError(error)
+        ? error.response?.data?.message
+        : undefined;
+      setSnackbar({
+        open: true,
+        message: message || "Error al guardar el producto",
+        severity: "error"
+      });
+    }
   };
 
   const confirmDelete = async () => {
@@ -197,14 +236,31 @@ const ProductoManager = () => {
     }
   };
 
+  const formatPrecio = (precio: number) =>
+    new Intl.NumberFormat("es-AR", {
+      style: "currency",
+      currency: "ARS",
+      minimumFractionDigits: 0,
+    }).format(precio);
+
   return (
     <div className="producto-manager">
       <div className="header">
-           <Typography variant="h4" mb={2}>
-                <AddCircleIcon/>GESTIÓN DEL MENÚ
-            </Typography>
-        <Button startIcon={<AddCircleIcon />} variant="contained" color="primary" onClick={() => handleOpenDialog()}>
-          Nuevo Producto
+        <div className="producto-heading">
+          <Typography variant="h4">
+            <Inventory2OutlinedIcon />
+            PRODUCTOS
+          </Typography>
+          <p>Administrá precios, disponibilidad y categorías desde un solo lugar.</p>
+        </div>
+
+        <Button
+          startIcon={<AddCircleIcon />}
+          variant="contained"
+          color="primary"
+          onClick={() => handleOpenDialog()}
+        >
+          Nuevo producto
         </Button>
       </div>
 
@@ -213,30 +269,100 @@ const ProductoManager = () => {
       ) : error ? (
         <p className="error">{error}</p>
       ) : productos.length > 0 ? (
-        <div className="producto-lista">
-          {productos.map(producto => (
-            <div className="producto-card" key={producto._id}>
-              <img src={producto.imagen} alt={producto.nombre} />
-              <h2>{producto.nombre}</h2>
-              <span className="categoria-badge">
-                {producto.categoria}
-              </span>
-              <p>{producto.descripcion}</p>
-              <h3>
-                  {new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", minimumFractionDigits: 0 }).format(producto.precio)}
-              </h3>
-              <span className={`estado-producto ${producto.disponible ? "disponible" : "no-disponible"}`}>
-                {producto.disponible ? "Disponible" : "No disponible"}
-              </span>
-              <div className="acciones">
-                <IconButton onClick={() => handleOpenDialog(producto)}><EditIcon /></IconButton>
-                <IconButton onClick={() => setDeleteDialog({ open: true, id: producto._id })}><DeleteIcon color="error" /></IconButton>
-              </div>
+        <>
+          <div className="productos-toolbar">
+            <TextField
+              className="productos-buscador"
+              label="Buscar productos"
+              placeholder="Nombre o descripción"
+              size="small"
+              value={busqueda}
+              onChange={(event) => setBusqueda(event.target.value)}
+            />
+
+            <TextField
+              className="productos-filtro"
+              select
+              label="Categoría"
+              size="small"
+              value={categoriaFiltro}
+              onChange={(event) => setCategoriaFiltro(event.target.value)}
+            >
+              <MenuItem value="TODAS">Todas las categorías</MenuItem>
+              {CATEGORIAS.map((categoria) => (
+                <MenuItem key={categoria} value={categoria}>
+                  {categoria}
+                </MenuItem>
+              ))}
+            </TextField>
+          </div>
+
+          {productosFiltrados.length > 0 ? (
+            <div className="productos-secciones">
+              {productosAgrupados.map(([categoria, productosCategoria]) => (
+                <section className="producto-grupo" key={categoria}>
+                  <div className="producto-grupo-header">
+                    <h2>{categoria}</h2>
+                    <span>
+                      {productosCategoria.length} {productosCategoria.length === 1 ? "producto" : "productos"}
+                    </span>
+                  </div>
+
+                  <div className="producto-tabla">
+                    <div className="producto-row producto-row-header" aria-hidden="true">
+                      <span>Producto</span>
+                      <span>Precio</span>
+                      <span>Estado</span>
+                      <span>Acciones</span>
+                    </div>
+
+                    {productosCategoria.map((producto) => (
+                      <div className="producto-row" key={producto._id}>
+                        <div className="producto-info">
+                          <strong>{producto.nombre}</strong>
+                          <small>{producto.descripcion || "Sin descripción"}</small>
+                        </div>
+
+                        <div className="producto-precio">
+                          {formatPrecio(producto.precio)}
+                        </div>
+
+                        <div className="producto-estado-cell">
+                          <span className={`estado-producto ${producto.disponible ? "disponible" : "no-disponible"}`}>
+                            {producto.disponible ? "Disponible" : "No disponible"}
+                          </span>
+                        </div>
+
+                        <div className="acciones">
+                          <IconButton
+                            aria-label={`Editar ${producto.nombre}`}
+                            onClick={() => handleOpenDialog(producto)}
+                          >
+                            <EditIcon />
+                          </IconButton>
+                          <IconButton
+                            aria-label={`Eliminar ${producto.nombre}`}
+                            onClick={() => setDeleteDialog({ open: true, id: producto._id })}
+                          >
+                            <DeleteIcon color="error" />
+                          </IconButton>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              ))}
             </div>
-          ))}
-        </div>
+          ) : (
+            <div className="producto-empty">
+              No encontramos productos con los filtros seleccionados.
+            </div>
+          )}
+        </>
       ) : (
-        <p>No hay productos para mostrar.</p>
+        <div className="producto-empty">
+          No hay productos para mostrar.
+        </div>
       )}
 
       <Dialog open={openDialog} onClose={handleCloseDialog}>
@@ -248,7 +374,7 @@ const ProductoManager = () => {
             fullWidth
             value={formData.nombre}
             onChange={handleChange}
-            placeholder="Ej: Sushi Salmón"
+            placeholder="Ej: Pizza Margherita"
             error={!!formErrors.nombre}
             helperText={formErrors.nombre}
           />
@@ -269,15 +395,41 @@ const ProductoManager = () => {
               </MenuItem>
             ))}
           </TextField>
-          <TextField label="Descripción" name="descripcion" fullWidth multiline value={formData.descripcion} onChange={handleChange} placeholder="Ej: Con queso y palta" />
-          <TextField label="Precio (ARS)" name="precio" type="number" fullWidth value={formData.precio ?? ""} onChange={handleChange} placeholder="Ej: 2500"  />
-          <FormControlLabel control={<Checkbox checked={formData.disponible} onChange={(e) => setFormData(prev => ({ ...prev, disponible: e.target.checked }))} />} label="Producto disponible" />
+          <TextField
+            label="Descripción"
+            name="descripcion"
+            fullWidth
+            multiline
+            value={formData.descripcion}
+            onChange={handleChange}
+            placeholder="Ej: Tomate, mozzarella y albahaca"
+          />
+          <TextField
+            label="Precio (ARS)"
+            name="precio"
+            type="number"
+            fullWidth
+            value={formData.precio ?? ""}
+            onChange={handleChange}
+            placeholder="Ej: 12000"
+          />
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={formData.disponible}
+                onChange={(e) => setFormData(prev => ({ ...prev, disponible: e.target.checked }))}
+              />
+            }
+            label="Producto disponible"
+          />
           <input type="file" accept="image/*" onChange={handleImageUpload} />
-          {imagePreview && <img src={imagePreview} className="preview" alt="preview" />}
+          {imagePreview && <img src={imagePreview} className="preview" alt="Vista previa del producto" />}
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseDialog}>Cancelar</Button>
-          <Button onClick={handleSubmit} variant="contained" color="primary">{editingProduct ? "Actualizar" : "Crear"}</Button>
+          <Button onClick={handleSubmit} variant="contained" color="primary">
+            {editingProduct ? "Actualizar" : "Crear"}
+          </Button>
         </DialogActions>
       </Dialog>
 
@@ -290,8 +442,19 @@ const ProductoManager = () => {
         </DialogActions>
       </Dialog>
 
-      <Snackbar open={snackbar.open} autoHideDuration={3000} onClose={() => setSnackbar(prev => ({ ...prev, open: false }))} anchorOrigin={{ vertical: "bottom", horizontal: "center" }}>
-        <Alert severity={snackbar.severity} variant="filled" onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}>{snackbar.message}</Alert>
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={3000}
+        onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        <Alert
+          severity={snackbar.severity}
+          variant="filled"
+          onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
+        >
+          {snackbar.message}
+        </Alert>
       </Snackbar>
     </div>
   );
