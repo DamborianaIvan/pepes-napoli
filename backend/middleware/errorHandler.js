@@ -8,7 +8,15 @@ export const notFound = (req, res) => {
 };
 
 export const errorHandler = (error, req, res, next) => {
-  console.error(error);
+  console.error(JSON.stringify({
+    level: 'error',
+    event: 'request_error',
+    method: req.method,
+    path: req.originalUrl.split('?')[0],
+    status: error.statusCode || error.status || 500,
+    name: error.name,
+    message: error.message
+  }));
 
   if (res.headersSent) {
     return next(error);

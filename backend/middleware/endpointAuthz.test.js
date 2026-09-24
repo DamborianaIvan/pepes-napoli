@@ -32,10 +32,17 @@ test('pedidos: crear respeta orders:create', async () => {
   }
 });
 
-test('pedidos: cambio de estado respeta orders:change_status', async () => {
-  for (const role of [ROLES.ADMIN, ROLES.CAJERO, ROLES.CHEF, ROLES.DELIVERY]) {
+test('pedidos: cambio de estado generico respeta orders:change_status', async () => {
+  for (const role of [ROLES.ADMIN, ROLES.CAJERO, ROLES.CHEF]) {
     assert.equal(await authorizationError(endpointPolicies.pedidosChangeStatus, role), undefined);
   }
+
+  const deliveryError = await authorizationError(
+    endpointPolicies.pedidosChangeStatus,
+    ROLES.DELIVERY
+  );
+  assert.equal(deliveryError.statusCode, 403);
+  assert.equal(deliveryError.details.reason, 'INSUFFICIENT_PERMISSION');
 });
 
 test('productos: administración respeta products:manage', async () => {
@@ -62,5 +69,5 @@ test('matriz de permisos: solo los roles definidos reciben cada permiso', () => 
   assert.equal(hasPermission(ROLES.ADMIN, PERMISSIONS.PRODUCTS_MANAGE), true);
   assert.equal(hasPermission(ROLES.CAJERO, PERMISSIONS.PRODUCTS_MANAGE), false);
   assert.equal(hasPermission(ROLES.CHEF, PERMISSIONS.ORDERS_CHANGE_STATUS), true);
-  assert.equal(hasPermission(ROLES.DELIVERY, PERMISSIONS.ORDERS_CHANGE_STATUS), true);
+  assert.equal(hasPermission(ROLES.DELIVERY, PERMISSIONS.ORDERS_CHANGE_STATUS), false);
 });

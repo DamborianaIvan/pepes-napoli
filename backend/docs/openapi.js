@@ -7,6 +7,7 @@ export const openapiDefinition = {
   },
   servers: [{ url: process.env.BASE_URL || 'http://localhost:5000', description: 'Servidor configurado' }],
   tags: [
+    { name: 'Health', description: 'Estado del servicio y conexión a base de datos' },
     { name: 'Auth', description: 'Autenticación de usuarios' },
     { name: 'Productos', description: 'Catálogo y disponibilidad' },
     { name: 'Pedidos', description: 'Gestión de pedidos' },

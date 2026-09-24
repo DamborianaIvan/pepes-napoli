@@ -31,9 +31,7 @@ export const PERMISSIONS_BY_ROLE = Object.freeze({
   [ROLES.CHEF]: Object.freeze([
     PERMISSIONS.ORDERS_CHANGE_STATUS
   ]),
-  [ROLES.DELIVERY]: Object.freeze([
-    PERMISSIONS.ORDERS_CHANGE_STATUS
-  ])
+  [ROLES.DELIVERY]: Object.freeze([])
 });
 
 export const hasPermission = (role, permission) =>

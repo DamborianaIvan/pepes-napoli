@@ -124,9 +124,54 @@ router.post('/', protect, requirePermission(PERMISSIONS.ORDERS_CREATE), asyncHan
   return res.status(201).json(pedido);
 }));
 
-router.get('/', protect, asyncHandler(async (req, res) => {
+router.get('/', protect, restrictTo(ROLES.ADMIN, ROLES.CAJERO, ROLES.CHEF), asyncHandler(async (req, res) => {
   const pedidos = await Pedido.find().sort({ fechaPedido: -1 });
   return res.json(pedidos);
+}));
+
+router.get('/delivery', protect, restrictTo(ROLES.DELIVERY), asyncHandler(async (req, res) => {
+  const pedidos = await Pedido.find({
+    tipoPedido: TIPOS_PEDIDO.DELIVERY,
+    estadoPedido: { $in: [ESTADOS_PEDIDO.LISTO, ESTADOS_PEDIDO.EN_CAMINO] },
+    'cierre.cerrado': { $ne: true }
+  }).sort({ fechaPedido: 1 });
+
+  return res.json(pedidos);
+}));
+
+router.patch('/delivery/:id/entregado', protect, restrictTo(ROLES.DELIVERY), asyncHandler(async (req, res) => {
+  const pedido = await Pedido.findById(req.params.id);
+  if (!pedido) throw new ApiError(404, 'Pedido no encontrado');
+
+  if (pedido.tipoPedido !== TIPOS_PEDIDO.DELIVERY) {
+    throw new ApiError(403, 'El usuario delivery solo puede operar pedidos de delivery');
+  }
+
+  if (pedido.cierre?.cerrado) {
+    throw new ApiError(409, 'El pedido ya está cerrado');
+  }
+
+  if (![ESTADOS_PEDIDO.LISTO, ESTADOS_PEDIDO.EN_CAMINO].includes(pedido.estadoPedido)) {
+    throw new ApiError(409, 'El pedido todavía no está disponible para entrega', {
+      estadoPedido: pedido.estadoPedido
+    });
+  }
+
+  const estadoAnterior = pedido.estadoPedido;
+  pedido.estadoPedido = ESTADOS_PEDIDO.ENTREGADO;
+  await pedido.save();
+
+  await registrarAuditoria({
+    accion: ACCIONES_AUDITORIA.PEDIDO_ESTADO_CAMBIADO,
+    entidad: ENTIDADES_AUDITORIA.PEDIDO,
+    entidadId: pedido._id,
+    usuario: req.usuario,
+    antes: { estadoPedido: estadoAnterior },
+    despues: { estadoPedido: pedido.estadoPedido },
+    metadata: { origen: 'DELIVERY' }
+  });
+
+  return res.json(pedido);
 }));
 
 router.get('/cocina', protect, restrictTo(ROLES.ADMIN, ROLES.CAJERO, ROLES.CHEF), asyncHandler(async (req, res) => {
@@ -485,7 +530,7 @@ router.post('/:id/cerrar', protect, requirePermission(PERMISSIONS.CASH_CHARGE), 
   return res.json(pedido);
 }));
 
-router.get('/:id', protect, asyncHandler(async (req, res) => {
+router.get('/:id', protect, restrictTo(ROLES.ADMIN, ROLES.CAJERO, ROLES.CHEF), asyncHandler(async (req, res) => {
   const pedido = await Pedido.findById(req.params.id);
   if (!pedido) throw new ApiError(404, 'Pedido no encontrado');
   return res.json(pedido);
@@ -513,11 +558,15 @@ router.patch('/:id', protect, requirePermission(PERMISSIONS.ORDERS_EDIT), asyncH
     });
   }
 
+  const nombreClienteFinal = nombreCliente ?? pedido.nombreCliente;
+  const telefonoFinal = telefono ?? pedido.telefono;
+  const direccionFinal = direccion ?? pedido.direccion;
+
   validarDatosClientePedido({
     tipoPedido: pedido.tipoPedido,
-    nombreCliente,
-    telefono,
-    direccion
+    nombreCliente: nombreClienteFinal,
+    telefono: telefonoFinal,
+    direccion: direccionFinal
   });
 
   const productoIds = productos.map((item) => item?.productoId);
@@ -530,10 +579,10 @@ router.patch('/:id', protect, requirePermission(PERMISSIONS.ORDERS_EDIT), asyncH
   const productosDB = await Producto.find({ _id: { $in: productoIds } });
   const productosNormalizados = normalizarProductosEdicionPedido(productos, pedido, productosDB);
 
-  pedido.nombreCliente = nombreCliente;
-  pedido.telefono = telefono;
-  pedido.direccion = direccion;
-  pedido.comentario = comentario ?? '';
+  pedido.nombreCliente = nombreClienteFinal;
+  pedido.telefono = telefonoFinal;
+  pedido.direccion = direccionFinal;
+  if (comentario !== undefined) pedido.comentario = comentario;
   pedido.productos = productosNormalizados;
   pedido.total = calcularTotalPedido(productosNormalizados);
 
@@ -548,7 +597,12 @@ router.patch('/:id', protect, requirePermission(PERMISSIONS.ORDERS_EDIT), asyncH
   return res.json(pedido);
 }));
 
-router.patch('/:id/estado', protect, requirePermission(PERMISSIONS.ORDERS_CHANGE_STATUS), asyncHandler(async (req, res) => {
+router.patch(
+  '/:id/estado',
+  protect,
+  requirePermission(PERMISSIONS.ORDERS_CHANGE_STATUS),
+  restrictTo(ROLES.ADMIN, ROLES.CAJERO, ROLES.CHEF),
+  asyncHandler(async (req, res) => {
   const { estadoPedido } = req.body;
 
   if (!isEnumValue(estadoPedido, ESTADOS_PEDIDO)) {

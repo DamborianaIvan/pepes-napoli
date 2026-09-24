@@ -16,7 +16,9 @@ router.get('/', (req, res) => {
   return res.status(healthy ? 200 : 503).json({
     status: healthy ? 'ok' : 'degraded',
     service: 'backend',
-    database
+    database,
+    uptimeSeconds: Math.floor(process.uptime()),
+    timestamp: new Date().toISOString()
   });
 });
 

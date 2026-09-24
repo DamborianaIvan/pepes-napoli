@@ -59,9 +59,7 @@ export const PERMISSIONS_BY_ROLE: Record<Rol, readonly Permission[]> = {
   CHEF: [
     PERMISSIONS.ORDERS_CHANGE_STATUS,
   ],
-  DELIVERY: [
-    PERMISSIONS.ORDERS_CHANGE_STATUS,
-  ],
+  DELIVERY: [],
 };
 
 export const isValidRol = (rol: unknown): rol is Rol =>

@@ -62,6 +62,8 @@ const CajaSchema = new mongoose.Schema({
   timestamps: true
 });
 
+CajaSchema.index({ fechaCierre: -1 });
+
 CajaSchema.index(
   { estado: 1 },
   {

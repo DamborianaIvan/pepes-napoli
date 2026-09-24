@@ -221,4 +221,12 @@ const PedidoSchema = new mongoose.Schema({
   timestamps: true
 });
 
+PedidoSchema.index({ estadoPedido: 1, fechaPedido: 1 });
+PedidoSchema.index({
+  estadoPago: 1,
+  'cierre.cerrado': 1,
+  'cierre.fecha': -1,
+  estadoPedido: 1
+});
+
 export default mongoose.model('Pedido', PedidoSchema);

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { TextField, MenuItem, Box, Typography, Button } from "@mui/material";
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import InventoryIcon from "@mui/icons-material/Inventory";
@@ -26,6 +26,7 @@ export const Dashboard = () => {
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [mesas, setMesas] = useState<Mesa[]>([]);
   const session = getSession();
+  const token = session?.token;
   const rol = session?.rol ?? null;
   const canCreateOrders = rol ? hasPermission(rol, PERMISSIONS.ORDERS_CREATE) : false;
   const canChangeStatus = rol ? hasPermission(rol, PERMISSIONS.ORDERS_CHANGE_STATUS) : false;
@@ -33,19 +34,7 @@ export const Dashboard = () => {
   const [snackbar, setSnackbar] = useState<{ mensaje: string; tipo: "ok" | "error" } | null>(null);
   const [mostrarDashboardCards, setMostrarDashboardCards] = useState(true);
 
-  useEffect(() => {
-    
-
-   
-
-    obtenerPedidos();
-    const intervalo = setInterval(obtenerPedidos, 65000);
-    return () => clearInterval(intervalo);
-  }, []);
-
-
-  const obtenerPedidos = () => {
-    const token = session?.token;
+  const obtenerPedidos = useCallback(() => {
     const rolGuardado = rol;
     fetch(`${import.meta.env.VITE_API_URL}/api/pedidos`, {
       headers: { Authorization: `Bearer ${token}` },
@@ -142,7 +131,14 @@ export const Dashboard = () => {
       .catch(() => {
         setSnackbar({ mensaje: "❌ Error cargando pedidos", tipo: "error" });
       });
-  };
+  }, [token, rol]);
+
+  useEffect(() => {
+    obtenerPedidos();
+    const intervalo = setInterval(obtenerPedidos, 65000);
+    return () => clearInterval(intervalo);
+  }, [obtenerPedidos]);
+
   const actualizarEstado = async (id: string, nuevoEstado: EstadoPedido) => {
     const token = session?.token;
     try {
