@@ -166,7 +166,7 @@ const NuevoPedido = () => {
                       .filter((mesa) => mesa.estado === "LIBRE" || mesa._id === mesaId)
                       .map((mesa) => (
                         <MenuItem key={mesa._id} value={mesa._id}>
-                          Mesa {mesa.numero}{mesa.nombre ? ` · ${mesa.nombre}` : ""}
+                          {mesa.nombre || `Mesa ${mesa.numero}`}
                         </MenuItem>
                       ))}
                   </TextField>
