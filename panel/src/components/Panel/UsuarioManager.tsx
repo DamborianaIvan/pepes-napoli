@@ -149,7 +149,7 @@ export default function UsuarioManager() {
   }
 
   return (
-    <Box sx={{ p: 2 }}>
+    <Box className="usuarios-page">
       <Typography variant="h4" sx={{ mb: 2 }}>USUARIOS Y ROLES</Typography>
 
       <Paper component="form" onSubmit={guardar} sx={{ p: 2, mb: 3 }}>

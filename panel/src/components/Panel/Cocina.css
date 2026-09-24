@@ -1,6 +1,4 @@
-.cocina-container {
-  padding: 1.5rem;
-}
+.cocina-container { padding: 0; }
 
 .cocina-header {
   display: flex;
@@ -19,6 +17,7 @@
 
 .cocina-card {
   height: 100%;
+  border-top: 3px solid var(--primary-500);
 }
 
 .cocina-card-header {
@@ -32,6 +31,7 @@
 .cocina-contexto {
   font-weight: 700;
   margin-bottom: 1rem;
+  color: var(--color-primary);
 }
 
 .cocina-productos {
@@ -45,13 +45,17 @@
   display: flex;
   gap: 0.6rem;
   align-items: baseline;
+  padding: .55rem .7rem;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-raised);
 }
+.cocina-producto .MuiTypography-root:first-child { min-width: 2rem; color: var(--color-primary); }
 
 .cocina-comentario {
   padding: 0.75rem;
   margin-bottom: 1rem;
-  border-radius: 6px;
-  background: #f5f5f5;
+  border-radius: var(--radius-md);
+  background: var(--color-surface-secondary);
 }
 
 .cocina-estado {
@@ -62,12 +66,14 @@
   align-items: center;
   gap: 0.75rem;
   text-align: center;
+  border: 1px dashed var(--color-border-strong);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
 }
+.cocina-estado > svg { color: var(--color-success); }
 
 @media (max-width: 768px) {
-  .cocina-container {
-    padding: 1rem;
-  }
+  .cocina-container { padding: 0; }
 
   .cocina-header {
     flex-direction: column;

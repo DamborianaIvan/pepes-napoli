@@ -504,7 +504,7 @@ const Mesas = () => {
     if (!pedido && mesa.estado === "OCUPADA" && puedeGestionarMesas) {
       return (
         <button
-          className={modal ? "mesa-modal-cancel-action" : "mesa-cancel-action"}
+          className={`${modal ? "mesa-modal-cancel-action" : "mesa-cancel-action"} mesa-danger-action`}
           type="button"
           onClick={(event) => {
             event.stopPropagation();
@@ -545,7 +545,7 @@ const Mesas = () => {
 
         {["EN_COCINA", "LISTO"].includes(pedido.estadoPedido) && (
           <button
-            className={modal ? "mesa-modal-cancel-action" : "mesa-cancel-action"}
+            className={`${modal ? "mesa-modal-cancel-action" : "mesa-cancel-action"} mesa-danger-action`}
             type="button"
             disabled={cerrandoPedidoId === pedido._id}
             onClick={(event) => {

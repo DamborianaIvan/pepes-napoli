@@ -239,7 +239,7 @@ const Caja = () => {
 
   if (!caja) {
     return (
-      <Box sx={{ p: 3, maxWidth: 720 }}>
+      <Box className="caja-page" sx={{ maxWidth: 720 }}>
         <Typography variant="h4" mb={3}><PointOfSaleIcon /> CAJA</Typography>
         {mensaje && <Alert severity={mensaje.tipo} sx={{ mb: 2 }}>{mensaje.texto}</Alert>}
         <Card>
@@ -269,7 +269,7 @@ const Caja = () => {
   }
 
   return (
-    <Box sx={{ p: 3 }}>
+    <Box className="caja-page">
       <Typography variant="h4" mb={3}><PointOfSaleIcon /> CAJA</Typography>
       {mensaje && <Alert severity={mensaje.tipo} sx={{ mb: 2 }}>{mensaje.texto}</Alert>}
 
