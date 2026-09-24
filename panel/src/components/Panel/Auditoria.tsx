@@ -74,7 +74,7 @@ const ETIQUETAS_ACCION: Record<string, string> = {
   PRODUCTO_CREADO: "Producto creado",
   PRODUCTO_ACTUALIZADO: "Producto actualizado",
   PRODUCTO_DISPONIBILIDAD_CAMBIADA: "Disponibilidad de producto modificada",
-  PRODUCTO_ELIMINADO: "Producto eliminado",
+  PRODUCTO_ELIMINADO: "Producto eliminado",\n  CATEGORIA_PRODUCTO_CREADA: "Categoría de producto creada",\n  CATEGORIA_PRODUCTO_ELIMINADA: "Categoría de producto eliminada",
 };
 
 const ETIQUETAS_CAMPO: Record<string, string> = {

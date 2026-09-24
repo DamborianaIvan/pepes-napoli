@@ -12,6 +12,7 @@ import IconButton from "@mui/material/IconButton";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import AddCircleIcon from "@mui/icons-material/AddCircle";
+import CategoryOutlinedIcon from "@mui/icons-material/CategoryOutlined";
 import Inventory2OutlinedIcon from "@mui/icons-material/Inventory2Outlined";
 import CircularProgress from "@mui/material/CircularProgress";
 import Checkbox from "@mui/material/Checkbox";
@@ -41,9 +42,15 @@ interface ProductoForm {
   imagen: string;
 }
 
+interface CategoriaProducto {
+  _id: string;
+  nombre: string;
+  esPredeterminada: boolean;
+}
+
 const API_URL = import.meta.env.VITE_API_URL;
 
-const CATEGORIAS = [
+const CATEGORIAS_BASE = [
   "PIZZAS",
   "EMPANADAS",
   "BEBIDAS",
@@ -53,14 +60,18 @@ const CATEGORIAS = [
 
 const ProductoManager = () => {
   const [productos, setProductos] = useState<Producto[]>([]);
+  const [categorias, setCategorias] = useState<CategoriaProducto[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadingCategorias, setLoadingCategorias] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [formErrors, setFormErrors] = useState<{ nombre?: string; categoria?: string }>({});
   const [openDialog, setOpenDialog] = useState(false);
+  const [openCategorias, setOpenCategorias] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Producto | null>(null);
   const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; id: string | null }>({ open: false, id: null });
   const [busqueda, setBusqueda] = useState("");
   const [categoriaFiltro, setCategoriaFiltro] = useState("TODAS");
+  const [nuevaCategoria, setNuevaCategoria] = useState("");
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: "success" | "error" | "info" }>({
     open: false,
     message: "",
@@ -100,9 +111,35 @@ const ProductoManager = () => {
     }
   }, [axiosConfig]);
 
+  const fetchCategorias = useCallback(async () => {
+    setLoadingCategorias(true);
+    try {
+      const res = await axios.get(`${API_URL}/api/categorias-producto`);
+      setCategorias(Array.isArray(res.data) ? res.data : []);
+    } catch {
+      setCategorias([]);
+      setSnackbar({
+        open: true,
+        message: "No se pudieron cargar las categorías personalizadas",
+        severity: "error",
+      });
+    } finally {
+      setLoadingCategorias(false);
+    }
+  }, []);
+
   useEffect(() => {
-    fetchProductos();
-  }, [fetchProductos]);
+    void fetchProductos();
+    void fetchCategorias();
+  }, [fetchProductos, fetchCategorias]);
+
+  const categoriasDisponibles = useMemo(() => {
+    if (categorias.length > 0) {
+      return categorias.map((categoria) => categoria.nombre);
+    }
+
+    return CATEGORIAS_BASE;
+  }, [categorias]);
 
   const productosFiltrados = useMemo(() => {
     const termino = busqueda.trim().toLocaleLowerCase("es");
@@ -130,8 +167,8 @@ const ProductoManager = () => {
     });
 
     return Array.from(grupos.entries()).sort(([categoriaA], [categoriaB]) => {
-      const indiceA = CATEGORIAS.indexOf(categoriaA);
-      const indiceB = CATEGORIAS.indexOf(categoriaB);
+      const indiceA = categoriasDisponibles.indexOf(categoriaA);
+      const indiceB = categoriasDisponibles.indexOf(categoriaB);
 
       if (indiceA === -1 && indiceB === -1) {
         return categoriaA.localeCompare(categoriaB, "es");
@@ -140,7 +177,20 @@ const ProductoManager = () => {
       if (indiceB === -1) return -1;
       return indiceA - indiceB;
     });
-  }, [productosFiltrados]);
+  }, [productosFiltrados, categoriasDisponibles]);
+
+  const cantidadPorCategoria = useMemo(() => {
+    const cantidades = new Map<string, number>();
+
+    productos.forEach((producto) => {
+      cantidades.set(
+        producto.categoria,
+        (cantidades.get(producto.categoria) ?? 0) + 1
+      );
+    });
+
+    return cantidades;
+  }, [productos]);
 
   const handleOpenDialog = (producto?: Producto) => {
     setFormErrors({});
@@ -210,7 +260,7 @@ const ProductoManager = () => {
         setSnackbar({ open: true, message: "Producto creado correctamente", severity: "success" });
       }
       handleCloseDialog();
-      fetchProductos();
+      void fetchProductos();
     } catch (error) {
       const message = axios.isAxiosError(error)
         ? error.response?.data?.message
@@ -223,12 +273,77 @@ const ProductoManager = () => {
     }
   };
 
+  const handleCrearCategoria = async () => {
+    const nombre = nuevaCategoria.trim();
+    if (nombre.length < 2) {
+      setSnackbar({
+        open: true,
+        message: "La categoría debe tener al menos 2 caracteres",
+        severity: "error",
+      });
+      return;
+    }
+
+    try {
+      await axios.post(
+        `${API_URL}/api/categorias-producto`,
+        { nombre },
+        axiosConfig
+      );
+      setNuevaCategoria("");
+      await fetchCategorias();
+      setSnackbar({
+        open: true,
+        message: "Categoría creada correctamente",
+        severity: "success",
+      });
+    } catch (error) {
+      const message = axios.isAxiosError(error)
+        ? error.response?.data?.message
+        : undefined;
+      setSnackbar({
+        open: true,
+        message: message || "Error al crear la categoría",
+        severity: "error",
+      });
+    }
+  };
+
+  const handleEliminarCategoria = async (categoria: CategoriaProducto) => {
+    try {
+      await axios.delete(
+        `${API_URL}/api/categorias-producto/${categoria._id}`,
+        axiosConfig
+      );
+
+      if (categoriaFiltro === categoria.nombre) {
+        setCategoriaFiltro("TODAS");
+      }
+
+      await fetchCategorias();
+      setSnackbar({
+        open: true,
+        message: "Categoría eliminada correctamente",
+        severity: "success",
+      });
+    } catch (error) {
+      const message = axios.isAxiosError(error)
+        ? error.response?.data?.message
+        : undefined;
+      setSnackbar({
+        open: true,
+        message: message || "Error al eliminar la categoría",
+        severity: "error",
+      });
+    }
+  };
+
   const confirmDelete = async () => {
     if (!deleteDialog.id) return;
     try {
       await axios.delete(`${API_URL}/api/productos/${deleteDialog.id}`, axiosConfig);
       setSnackbar({ open: true, message: "Producto eliminado correctamente", severity: "success" });
-      fetchProductos();
+      void fetchProductos();
     } catch {
       setSnackbar({ open: true, message: "Error al eliminar el producto", severity: "error" });
     } finally {
@@ -254,14 +369,23 @@ const ProductoManager = () => {
           <p>Administrá precios, disponibilidad y categorías desde un solo lugar.</p>
         </div>
 
-        <Button
-          startIcon={<AddCircleIcon />}
-          variant="contained"
-          color="primary"
-          onClick={() => handleOpenDialog()}
-        >
-          Nuevo producto
-        </Button>
+        <div className="producto-header-actions">
+          <Button
+            startIcon={<CategoryOutlinedIcon />}
+            variant="outlined"
+            onClick={() => setOpenCategorias(true)}
+          >
+            Categorías
+          </Button>
+          <Button
+            startIcon={<AddCircleIcon />}
+            variant="contained"
+            color="primary"
+            onClick={() => handleOpenDialog()}
+          >
+            Nuevo producto
+          </Button>
+        </div>
       </div>
 
       {loading ? (
@@ -289,7 +413,7 @@ const ProductoManager = () => {
               onChange={(event) => setCategoriaFiltro(event.target.value)}
             >
               <MenuItem value="TODAS">Todas las categorías</MenuItem>
-              {CATEGORIAS.map((categoria) => (
+              {categoriasDisponibles.map((categoria) => (
                 <MenuItem key={categoria} value={categoria}>
                   {categoria}
                 </MenuItem>
@@ -385,8 +509,10 @@ const ProductoManager = () => {
             fullWidth
             value={formData.categoria}
             onChange={handleChange}
+            error={!!formErrors.categoria}
+            helperText={formErrors.categoria}
           >
-            {CATEGORIAS.map((categoria) => (
+            {categoriasDisponibles.map((categoria) => (
               <MenuItem
                 key={categoria}
                 value={categoria}
@@ -430,6 +556,84 @@ const ProductoManager = () => {
           <Button onClick={handleSubmit} variant="contained" color="primary">
             {editingProduct ? "Actualizar" : "Crear"}
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={openCategorias}
+        onClose={() => setOpenCategorias(false)}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle>Gestionar categorías</DialogTitle>
+        <DialogContent className="categorias-dialog">
+          <p className="categorias-help">
+            Creá categorías nuevas para organizar productos sin modificar el sistema.
+          </p>
+
+          <div className="categoria-crear">
+            <TextField
+              label="Nueva categoría"
+              placeholder="Ej: PASTAS"
+              fullWidth
+              size="small"
+              value={nuevaCategoria}
+              onChange={(event) => setNuevaCategoria(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  void handleCrearCategoria();
+                }
+              }}
+              inputProps={{ maxLength: 40 }}
+            />
+            <Button
+              variant="contained"
+              onClick={() => void handleCrearCategoria()}
+              disabled={loadingCategorias || nuevaCategoria.trim().length < 2}
+            >
+              Agregar
+            </Button>
+          </div>
+
+          {loadingCategorias ? (
+            <div className="categorias-loading"><CircularProgress size={26} /></div>
+          ) : (
+            <div className="categorias-lista">
+              {categorias.map((categoria) => {
+                const cantidad = cantidadPorCategoria.get(categoria.nombre) ?? 0;
+
+                return (
+                  <div className="categoria-item" key={categoria._id}>
+                    <div>
+                      <strong>{categoria.nombre}</strong>
+                      <small>
+                        {categoria.esPredeterminada
+                          ? "Categoría base"
+                          : cantidad === 0
+                            ? "Sin productos"
+                            : `${cantidad} ${cantidad === 1 ? "producto" : "productos"}`}
+                      </small>
+                    </div>
+
+                    {!categoria.esPredeterminada && (
+                      <IconButton
+                        aria-label={`Eliminar categoría ${categoria.nombre}`}
+                        disabled={cantidad > 0}
+                        onClick={() => void handleEliminarCategoria(categoria)}
+                        title={cantidad > 0 ? "Mové o eliminá sus productos antes de borrar la categoría" : "Eliminar categoría"}
+                      >
+                        <DeleteIcon color={cantidad > 0 ? "disabled" : "error"} />
+                      </IconButton>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenCategorias(false)}>Cerrar</Button>
         </DialogActions>
       </Dialog>
 
